@@ -198,6 +198,31 @@ Every agent you have gets a desk, whatever it is called: the zone comes from a
 its name (`…-reviewer` reviews, `ui-…` designs, `…-docs` writes), else build.
 A floor has 18 desks; more agents than that take a guest desk while they work.
 
+### The 3D office and the characters
+
+The office floor is drawn in 3D: one floating white podium per person, with a
+desk, a chair and their character, and a portrait card above it whose frame
+is their state (blue working, amber waiting or quiet, red failed, green done,
+grey idle). Drag to pan, right-drag to orbit, wheel to zoom, click a podium to
+fly to it, **Fit** (or Esc) for the whole office; the camera stays where you
+left it through every redraw. The campus is light isometric white buildings on
+plinths, one plot per office, with the office's card above its building.
+Without WebGL, and in the built file, the office stays the flat isometric one.
+
+- **three.js r184**, pinned and served from the page itself, never a CDN:
+  `tools/vendor/three/` (MIT, see `three-LICENSE.txt` and the `README.md`
+  there).
+- **The default character** is `tools/characters/default.glb`: a low-poly
+  seated person made from three.js primitives by
+  `tools/characters/make-default-character.cjs`, our own work, released as
+  **CC0 1.0** (`tools/characters/LICENSE.txt`). No model was downloaded. Each
+  person's copy gets their own skin, hair and role colour.
+- **Your own characters**, one per person: drop a `.glb` on their podium (kept
+  in that browser), use **Load .glb…** in the details panel, or put
+  `<agent-name>.glb` in `ARSENALE_HOME/characters/`. Name the clips `Idle`,
+  `Typing`, `Thinking` and `Celebrate`; the rest of the file conventions are in
+  [`tools/OFFICE-WORLD-NOTE.md`](tools/OFFICE-WORLD-NOTE.md).
+
 ## Office packs
 
 Seven packs ship in `packs/`: Content & Marketing, Research, Operations &

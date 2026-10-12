@@ -65,6 +65,14 @@ function dataWords(sb) {
   for (const o of company('offices') || []) { if (!o.nameFa) add(o.name); for (const k of ['id', 'leadEmployeeId']) add(o[k] || '') }
   for (const p of company('projects') || []) { add(p.id); add(p.name); add(p.key); (p.aliases || []).forEach(add) }
   for (const e of Object.keys(company('employees') || {})) add(e)
+  // the characters on the 3D floor are data too: a file's name and the names of its clips
+  const chars = path.join(sb.tools, 'characters')
+  for (const f of fs.existsSync(chars) ? fs.readdirSync(chars) : []) {
+    if (!f.endsWith('.glb')) continue
+    add(f.replace(/\.glb$/, ''))
+    const b = fs.readFileSync(path.join(chars, f))
+    for (const c of JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString('utf8')).animations || []) add(c.name)
+  }
   // the company log is a record on disk, written in English by the CLI: the
   // Activity screen shows its lines as written, like a task text
   try { for (const l of fs.readFileSync(path.join(sb.company, 'activity.jsonl'), 'utf8').split('\n')) if (l.trim()) walk(JSON.parse(l)) } catch { /* no company log */ }
@@ -78,7 +86,7 @@ function dataWords(sb) {
 }
 
 /** What stays English by nature: file names, paths, flags, code. */
-const TECHNICAL = /(?:(?<![\w-])--?[A-Za-z][\w-]*|[\w./-]*\.(?:json|jsonl|md|cjs)\b|[\w.-]*\/[\w./-]*|\.claude\/agents|ARSENALE_[A-Z_]+|[\w-]+(?:\.[\w-]+)*\.(?:org|net|sh|com)\b)/g
+const TECHNICAL = /(?:(?<![\w-])--?[A-Za-z][\w-]*|[\w./-]*\.(?:json|jsonl|md|cjs|glb)\b|[\w.-]*\/[\w./-]*|\.claude\/agents|ARSENALE_[A-Z_]+|[\w-]+(?:\.[\w-]+)*\.(?:org|net|sh|com)\b)/g
 // product names, which are not translated (and the plan names they sell)
 const BRANDS = ['claude', 'desktop', 'code', 'cursor', 'gemini', 'codex', 'cli', 'chatgpt', 'mcp', 'http', 'https', 'ntfy', 'telegram', 'pushover', 'botfather', 'api', 'pro', 'plus', 'arsenale', 'board', 'url',
   // the MCP tool names the instructions mention: identifiers, never translated

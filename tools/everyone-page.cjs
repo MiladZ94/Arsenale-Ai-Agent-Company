@@ -46,9 +46,9 @@ const EVERYONE_STYLE = `
 .ev .eh .sub{color:var(--ink-soft);font-size:14.5px;margin-top:4px}
 .ev .eh .ea{margin-inline-start:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .ev .crumb{font-size:13px;color:var(--ink-dim);display:flex;gap:8px;align-items:center;margin-bottom:6px}
-.ev .crumb button{font:13px var(--fa);color:var(--cyan);background:none;border:0;padding:0;cursor:pointer}
-.ev .lbl{font:600 11px/1.3 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim)}
-[dir=rtl] .ev .lbl,[dir=rtl] .wz .lbl{letter-spacing:0;font-family:var(--fa);text-transform:none}
+.ev .crumb button{font:13px var(--font-ui);color:var(--cyan);background:none;border:0;padding:0;cursor:pointer}
+.ev .lbl{font:700 11px/1.3 var(--font-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim)}
+[dir=rtl] .ev .lbl,[dir=rtl] .wz .lbl{letter-spacing:0;font-family:var(--font-ui);text-transform:none}
 .ev .mut{color:var(--ink-dim)}.ev .soft{color:var(--ink-soft)}.ev .hi{color:var(--ink-hi)}
 .ev .rw{display:flex;align-items:center;gap:12px}
 .ev .sp{flex:1}
@@ -56,28 +56,28 @@ const EVERYONE_STYLE = `
 .ev .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--rc);min-width:0}
 .ev .pad{padding:18px 20px}
 .ev .sec{font-size:15.5px;font-weight:700;color:var(--ink-hi);margin:0 0 12px;display:flex;align-items:center;gap:10px}
-.ev .sec small{font-weight:500;color:var(--ink-dim);font-size:13px}
-.ev .b,.wz .b{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border-radius:8px;border:1px solid var(--line-strong);background:var(--panel-raised);color:var(--ink-hi);font:600 14px var(--fa);cursor:pointer;white-space:nowrap;text-decoration:none}
+.ev .sec small{font-weight:400;color:var(--ink-dim);font-size:13px}
+.ev .b,.wz .b{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:38px;padding:0 16px;border-radius:8px;border:1px solid var(--line-strong);background:var(--panel-raised);color:var(--ink-hi);font:700 14px var(--font-ui);cursor:pointer;white-space:nowrap;text-decoration:none}
 .ev .b.pri,.wz .b.pri{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .ev .b.bad{border-color:rgba(255,95,95,.5);color:#FF8F8F;background:transparent}
-.ev .b.ghost,.wz .b.ghost{background:transparent;border-color:transparent;color:var(--ink-soft);font-weight:500}
+.ev .b.ghost,.wz .b.ghost{background:transparent;border-color:transparent;color:var(--ink-soft);font-weight:400}
 .ev .b.sm,.wz .b.sm{height:32px;padding:0 12px;font-size:13px}
 .ev .b.big,.wz .b.big{height:46px;padding:0 22px;font-size:15px}
 .ev .b.armed,.wz .b.armed{background:var(--gate);border-color:var(--gate);color:#1D2530}
 .ev .b:disabled,.wz .b:disabled{opacity:.45;cursor:default}
 .ev .b:focus-visible,.wz .b:focus-visible,.ev input:focus-visible,.ev textarea:focus-visible,.ev select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.ev .chip,.wz .chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:12px;font:600 12px var(--fa);border:1px solid var(--line-strong);color:var(--ink-soft);white-space:nowrap;background:none}
+.ev .chip,.wz .chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:12px;font:700 12px var(--font-ui);border:1px solid var(--line-strong);color:var(--ink-soft);white-space:nowrap;background:none}
 button.chip{cursor:pointer}
 .ev .chip.ok,.wz .chip.ok{color:var(--accent);background:var(--accent-soft);border-color:var(--accent-line)}
 .ev .chip.warn{color:var(--warn);background:var(--warn-bg);border-color:rgba(229,163,61,.4)}
 .ev .chip.bad{color:#FF8F8F;background:var(--bad-bg);border-color:rgba(255,95,95,.4)}
 .ev .chip[aria-pressed=true]{color:var(--accent);background:var(--accent-soft);border-color:var(--accent-line)}
-.ev .risk{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:5px;font:700 10.5px var(--mono);letter-spacing:.04em;text-transform:uppercase;color:#FFB4B4;background:var(--bad-bg);border:1px solid rgba(255,95,95,.5)}
+.ev .risk{white-space:nowrap;display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 9px;border-radius:5px;font:700 10.5px var(--font-ui);letter-spacing:.04em;text-transform:uppercase;color:#FFB4B4;background:var(--bad-bg);border:1px solid rgba(255,95,95,.5)}
 .ev .risk.safe{color:var(--accent);background:var(--accent-soft);border-color:var(--accent-line)}
 .ev .risk.mid{color:#F2C06B;background:var(--warn-bg);border-color:rgba(229,163,61,.5)}
 .ev .risk.big{height:30px;font-size:12px}
-[dir=rtl] .ev .risk{letter-spacing:0;font-family:var(--fa);text-transform:none}
-.ev .pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;border-radius:12px;padding:2px 10px;height:24px;white-space:nowrap}
+[dir=rtl] .ev .risk{letter-spacing:0;font-family:var(--font-ui);text-transform:none}
+.ev .pill{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;border-radius:12px;padding:2px 10px;height:24px;white-space:nowrap}
 .ev .pill:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
 .ev .pill.working{color:#3BE8B0;background:rgba(59,232,176,.10)}.ev .pill.waiting{color:#E5A33D;background:rgba(229,163,61,.13)}
 .ev .pill.idle,.ev .pill.paused{color:#8A97A6;background:rgba(138,151,166,.12)}.ev .pill.done{color:#56B6C2;background:rgba(86,182,194,.12)}
@@ -89,21 +89,21 @@ button.chip{cursor:pointer}
 .ev .msg,.wz .msg{font-size:13px;margin-top:8px}
 .ev .msg.err,.wz .msg.err{color:#FF8F8F}.ev .msg.ok,.wz .msg.ok{color:var(--ok)}
 .ev .empty{color:var(--ink-dim);font-size:13.5px;padding:8px 0}
-.ev label.fl,.wz label.fl{display:flex;flex-direction:column;gap:6px;font-weight:600;color:var(--ink-hi);font-size:13px;margin:0 0 14px}
+.ev label.fl,.wz label.fl{display:flex;flex-direction:column;gap:6px;font-weight:700;color:var(--ink-hi);font-size:13px;margin:0 0 14px}
 .ev label.fl .op{font-weight:400;color:var(--ink-dim)}
-.ev input[type=text],.ev input[type=date],.ev input[type=number],.ev input[type=search],.ev textarea,.ev select,.wz input[type=text],.wz textarea{display:block;width:100%;font:14px var(--fa);color:var(--ink-hi);background:var(--ground);border:1px solid var(--line-strong);border-radius:8px;padding:9px 12px;box-sizing:border-box;font-weight:400}
+.ev input[type=text],.ev input[type=date],.ev input[type=number],.ev input[type=search],.ev textarea,.ev select,.wz input[type=text],.wz textarea{display:block;width:100%;font:14px var(--font-ui);color:var(--ink-hi);background:var(--ground);border:1px solid var(--line-strong);border-radius:8px;padding:9px 12px;box-sizing:border-box;font-weight:400}
 .ev textarea,.wz textarea{min-height:96px;resize:vertical;line-height:1.5}
 .ev input.bad{border-color:var(--bad)}
 .ev input[type=checkbox],.wz input[type=checkbox],.ev input[type=radio],.wz input[type=radio]{accent-color:var(--accent);width:17px;height:17px;margin:0;flex:none}
-.ev pre{font:12px/1.5 var(--mono);white-space:pre-wrap;word-break:break-word;background:var(--ground);border:1px solid var(--line);border-radius:6px;padding:10px 12px;color:var(--ink-soft);max-height:420px;overflow:auto;direction:ltr;text-align:left;margin:0}
-.ev pre.txt{direction:auto;text-align:start;font:13px/1.55 var(--fa)}
+.ev pre{font:12px/1.5 var(--font-ui);white-space:pre-wrap;word-break:break-word;background:var(--ground);border:1px solid var(--line);border-radius:6px;padding:10px 12px;color:var(--ink-soft);max-height:420px;overflow:auto;direction:ltr;text-align:left;margin:0}
+.ev pre.txt{direction:auto;text-align:start;font:13px/1.55 var(--font-ui)}
 .ev details>summary{cursor:pointer;color:var(--ink-soft);font-size:13px}
 .tgl{appearance:none;-webkit-appearance:none;width:40px!important;height:22px!important;border-radius:11px;background:#2B3A49;position:relative;cursor:pointer;flex:none;margin:0}
 .tgl:after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:16px;height:16px;border-radius:50%;background:#C6D0DA;transition:inset-inline-start .12s}
 .tgl:checked{background:var(--accent)}.tgl:checked:after{inset-inline-start:21px;background:#04140E}
 .tgl:disabled{opacity:.45;cursor:default}
 .seg{display:inline-flex;border:1px solid var(--line-strong,#2B3A49);border-radius:7px;overflow:hidden}
-.seg button{font:12.5px var(--fa);background:transparent;border:0;border-inline-start:1px solid var(--line-strong,#2B3A49);color:var(--ink-dim);padding:6px 12px;cursor:pointer;white-space:nowrap}
+.seg button{font:12.5px var(--font-ui);background:transparent;border:0;border-inline-start:1px solid var(--line-strong,#2B3A49);color:var(--ink-dim);padding:6px 12px;cursor:pointer;white-space:nowrap}
 .seg button:first-child{border-inline-start:0}
 .seg button[aria-pressed=true]{background:#1E2A36;color:var(--ink-hi,#E9EFF5);font-weight:700}
 .seg button.never[aria-pressed=true]{background:var(--bad-bg);color:#FF8F8F}
@@ -114,26 +114,26 @@ button.chip{cursor:pointer}
 .ev .board4{display:grid;grid-template-columns:1fr 1fr 1.05fr 1fr;gap:20px;align-items:start}
 .ev .col{display:flex;flex-direction:column;gap:10px;min-width:0}
 .ev .colh{display:flex;align-items:center;gap:8px;padding:0 2px 4px;font-weight:700;color:var(--ink-hi);font-size:14.5px}
-.ev .colh .n{font:600 12px var(--mono);color:var(--ink-dim)}
+.ev .colh .n{font:700 12px var(--font-ui);color:var(--ink-dim)}
 .ev .colw{background:rgba(229,163,61,.05);border:1px dashed rgba(229,163,61,.35);border-radius:12px;padding:10px;margin:-10px}
 .ev .tk{padding:14px 16px;text-align:start;cursor:pointer;font:inherit;color:inherit;display:block;width:100%}
 .ev .tk:hover{border-color:var(--line-strong)}
 .ev .tk.wtk{border-color:rgba(229,163,61,.65);background:linear-gradient(0deg,var(--warn-bg),var(--warn-bg)),var(--panel);box-shadow:inset 4px 0 0 var(--warn)}
 [dir=rtl] .ev .tk.wtk{box-shadow:inset -4px 0 0 var(--warn)}
 .ev .tk.dn{opacity:.85}
-.ev .tk .tt{color:var(--ink-hi);font-weight:600;font-size:14.5px;line-height:1.35;overflow-wrap:anywhere}
+.ev .tk .tt{color:var(--ink-hi);font-weight:700;font-size:14.5px;line-height:1.35;overflow-wrap:anywhere}
 .ev .tk .q{color:var(--ink-soft);font-size:13px;margin-top:6px;padding:6px 10px;border-inline-start:3px solid var(--warn);background:rgba(0,0,0,.18);border-radius:0 6px 6px 0}
-.ev .wb{display:inline-flex;gap:6px;align-items:center;margin-bottom:8px;font:700 11px var(--mono);color:#F2C06B;text-transform:uppercase;letter-spacing:.05em}
-[dir=rtl] .ev .wb{letter-spacing:0;font-family:var(--fa);text-transform:none}
-.ev .list .lr{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel);margin:0 0 6px;cursor:pointer;width:100%;text-align:start;font:13.5px var(--fa);color:var(--ink-soft)}
+.ev .wb{display:inline-flex;gap:6px;align-items:center;margin-bottom:8px;font:700 11px var(--font-ui);color:#F2C06B;text-transform:uppercase;letter-spacing:.05em}
+[dir=rtl] .ev .wb{letter-spacing:0;font-family:var(--font-ui);text-transform:none}
+.ev .list .lr{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel);margin:0 0 6px;cursor:pointer;width:100%;text-align:start;font:13.5px var(--font-ui);color:var(--ink-soft)}
 .ev .list .lr:hover{border-color:var(--line-strong)}
-.ev .list h4{font:600 12px var(--fa);color:var(--ink-dim);margin:18px 0 8px}
+.ev .list h4{font:700 12px var(--font-ui);color:var(--ink-dim);margin:18px 0 8px}
 .ev .two{display:grid;grid-template-columns:1fr 360px;gap:26px;align-items:start}
 .ev .pick{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;margin:0 -10px;cursor:pointer;font-weight:400;color:var(--ink-soft);font-size:13.5px}
 .ev .pick:has(input:checked){background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent-line);color:var(--ink-hi)}
 .ev .facts>div{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:7px 0}
 .ev .tl{display:flex;gap:12px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)}
-.ev .tl time{font:13px var(--mono);color:var(--ink-dim);width:46px;flex:none;direction:ltr}
+.ev .tl time{font:13px var(--font-ui);color:var(--ink-dim);width:46px;flex:none;direction:ltr}
 .ev .cm{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
 .ev .cm .cb{flex:1;background:var(--panel-raised);border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:0}
 .ev .wbox{border-color:rgba(229,163,61,.6);background:linear-gradient(0deg,var(--warn-bg),var(--warn-bg)),var(--panel);box-shadow:inset 4px 0 0 var(--warn)}
@@ -154,18 +154,18 @@ button.chip{cursor:pointer}
 .ev .fc{overflow:hidden;display:flex;flex-direction:column}
 .ev .th{height:150px;position:relative;border-bottom:1px solid var(--line);background:#0D1319;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .ev .th img{width:100%;height:100%;object-fit:cover}
-.ev .tb{position:absolute;inset-inline-start:10px;top:10px;display:inline-flex;gap:5px;align-items:center;background:rgba(10,15,20,.88);border:1px solid var(--line-strong);border-radius:5px;padding:2px 7px;font:700 11px var(--mono);color:var(--ink-hi)}
+.ev .tb{position:absolute;inset-inline-start:10px;top:10px;display:inline-flex;gap:5px;align-items:center;background:rgba(10,15,20,.88);border:1px solid var(--line-strong);border-radius:5px;padding:2px 7px;font:700 11px var(--font-ui);color:var(--ink-hi)}
 /* settings */
 .ev .setw{display:flex;align-items:flex-start;gap:30px}
 .ev .snav{display:flex;flex-direction:column;gap:4px;width:210px;flex:none}
-.ev .snav button{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:8px;border:0;background:none;color:var(--ink-soft);font:14.5px var(--fa);cursor:pointer;text-align:start}
+.ev .snav button{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:8px;border:0;background:none;color:var(--ink-soft);font:14.5px var(--font-ui);cursor:pointer;text-align:start}
 .ev .snav button[aria-pressed=true]{background:var(--panel-raised);color:var(--ink-hi);font-weight:700;box-shadow:inset 3px 0 0 var(--accent)}
 [dir=rtl] .ev .snav button[aria-pressed=true]{box-shadow:inset -3px 0 0 var(--accent)}
 .ev .rows>.r{display:flex;align-items:center;gap:12px;padding:13px 18px;border-top:1px solid var(--line)}
 .ev .rows>.r:first-child{border-top:0}
 .ev .rows>.more{padding:4px 18px 16px 60px;border-top:0}
 [dir=rtl] .ev .rows>.more{padding:4px 60px 16px 18px}
-.ev .exp{font:600 10px var(--mono);color:var(--warn);border:1px solid rgba(229,163,61,.45);border-radius:3px;padding:0 4px;margin-inline-start:6px;vertical-align:1px;text-transform:uppercase}
+.ev .exp{font:700 10px var(--font-ui);color:var(--warn);border:1px solid rgba(229,163,61,.45);border-radius:3px;padding:0 4px;margin-inline-start:6px;vertical-align:1px;text-transform:uppercase}
 .ev .phone{background:var(--ground);border:1px solid var(--line);border-radius:12px;padding:14px}
 .ev .phone .n{background:var(--panel-raised);border-radius:10px;padding:12px 14px;border-inline-start:4px solid var(--warn)}
 .ev .packs{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
@@ -177,7 +177,7 @@ button.chip{cursor:pointer}
 .ev .scene .seat{cursor:pointer}
 .ev .float{position:absolute;z-index:3;background:rgba(16,22,29,.94);border:1px solid var(--line-strong);border-radius:10px}
 .ev .camp{left:20px;top:20px;padding:12px 14px;width:220px}
-.ev .camp button{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;border:0;background:none;width:100%;color:var(--ink-soft);font:13.5px var(--fa);cursor:pointer;text-align:start}
+.ev .camp button{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;border:0;background:none;width:100%;color:var(--ink-soft);font:13.5px var(--font-ui);cursor:pointer;text-align:start}
 .ev .camp button[aria-current=true]{background:var(--panel-raised);box-shadow:inset 0 0 0 1px var(--line-strong);color:var(--ink-hi);font-weight:700}
 .ev .sw{width:10px;height:10px;border-radius:2px;display:inline-block;flex:none}
 .ev .roster{inset-inline:20px;bottom:56px;padding:10px 14px;display:flex;gap:10px;align-items:center;overflow:auto hidden}
@@ -203,19 +203,19 @@ button.chip{cursor:pointer}
 .ev .asks label{display:flex;gap:8px;align-items:center;color:var(--ink-soft);font-weight:400}
 .ev table.pol{border-collapse:collapse;width:100%;font-size:13px}
 .ev table.pol td,.ev table.pol th{border-top:1px solid var(--line);padding:8px 6px;text-align:start;vertical-align:middle}
-.ev table.pol th{font-weight:600;color:var(--ink-dim)}
+.ev table.pol th{font-weight:700;color:var(--ink-dim)}
 /* the Today strip on the campus */
 .today{position:absolute;inset-inline-start:16px;top:12px;z-index:5;background:rgba(16,22,29,.94);border:1px solid var(--line);border-radius:5px;padding:6px 12px;font-size:12.5px;color:var(--ink-soft);display:flex;gap:10px;align-items:center;flex-wrap:wrap;max-width:calc(100% - 40px)}
-.today b{color:var(--ink);font-weight:600}
-.today button{font:12.5px var(--fa);color:var(--cyan);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline dotted}
+.today b{color:var(--ink);font-weight:700}
+.today button{font:12.5px var(--font-ui);color:var(--cyan);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline dotted}
 /* the first-start wizard: the whole window, a campus on one side, the form on the other */
 .wiz-back{position:fixed;inset:0;background:#080C10;z-index:70;--line-strong:#2B3A49;--ink-hi:#E9EFF5;--on-accent:#04140E}
 .wiz-back[hidden]{display:none}
 .wz{position:absolute;inset:0;display:flex;flex-direction:column;font-size:14px;color:var(--ink-soft)}
 .wz .wtop{height:56px;flex:none;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;padding:0 18px}
 .wz .wtop .logo{font-weight:700;font-size:18px;color:var(--ink-hi);display:flex;align-items:center;gap:8px;margin-inline-end:24px}
-.wz .wtop .logo small{font:700 9.5px var(--mono);letter-spacing:.08em;color:var(--accent);border:1px solid var(--accent-line);padding:2px 5px;border-radius:3px}
-.wz .stp{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:8px;border:1px solid transparent;color:var(--ink-soft);font-weight:600;font-size:14px}
+.wz .wtop .logo small{font:700 9.5px var(--font-ui);letter-spacing:.08em;color:var(--accent);border:1px solid var(--accent-line);padding:2px 5px;border-radius:3px}
+.wz .stp{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:8px;border:1px solid transparent;color:var(--ink-soft);font-weight:700;font-size:14px}
 .wz .stp.on{background:var(--panel-raised);border-color:var(--line-strong);color:var(--ink-hi)}
 .wz .stp.done{color:var(--accent)}
 .wz .wbody{flex:1;display:flex;min-height:0}
@@ -234,20 +234,20 @@ button.chip{cursor:pointer}
 .wz .oprow b{display:block;color:var(--ink-hi);font-size:14.5px}
 .wz .oprow span.d{font-size:12.5px;color:var(--ink-dim)}
 .wz .seg2{display:inline-flex;border:1px solid var(--line-strong);border-radius:7px;overflow:hidden}
-.wz .seg2 button,.wz .seg2 label{font:600 13.5px var(--fa);background:transparent;border:0;border-inline-start:1px solid var(--line-strong);color:var(--ink-dim);padding:8px 16px;cursor:pointer;display:flex;gap:6px;align-items:center;margin:0}
+.wz .seg2 button,.wz .seg2 label{font:700 13.5px var(--font-ui);background:transparent;border:0;border-inline-start:1px solid var(--line-strong);color:var(--ink-dim);padding:8px 16px;cursor:pointer;display:flex;gap:6px;align-items:center;margin:0}
 .wz .seg2>:first-child{border-inline-start:0}
 .wz .seg2 [aria-pressed=true],.wz .seg2 label:has(input:checked){background:#1E2A36;color:var(--ink-hi)}
 .wz .seg2 input{position:absolute;opacity:0;width:1px;height:1px}
 .wz .step{display:flex;gap:14px;align-items:flex-start}
-.wz .step .num{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:700 13px var(--mono);flex:none;border:2px solid var(--accent);color:var(--accent)}
+.wz .step .num{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font:700 13px var(--font-ui);flex:none;border:2px solid var(--accent);color:var(--accent)}
 .wz .step .num.ok{background:var(--accent);color:var(--on-accent)}
 .wz .wt{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:8px;background:var(--warn-bg);border:1px solid rgba(229,163,61,.4)}
 .wz .wt .dot{width:12px;height:12px;border-radius:50%;background:var(--warn);box-shadow:0 0 0 5px rgba(229,163,61,.25);flex:none}
 .wz .wt.ok{background:var(--accent-soft);border-color:var(--accent-line)}
 .wz .wt.ok .dot{background:var(--accent);box-shadow:0 0 0 5px rgba(59,232,176,.2)}
 .wz .card{background:var(--panel-raised);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
-.wz pre{font:12px/1.5 var(--mono);white-space:pre-wrap;word-break:break-all;background:var(--ground);border:1px solid var(--line);border-radius:6px;padding:8px 10px;max-height:200px;overflow:auto;direction:ltr;text-align:left;margin:6px 0 0}
-.wz .lbl{font:600 11px/1.3 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim)}
+.wz pre{font:12px/1.5 var(--font-ui);white-space:pre-wrap;word-break:break-all;background:var(--ground);border:1px solid var(--line);border-radius:6px;padding:8px 10px;max-height:200px;overflow:auto;direction:ltr;text-align:left;margin:6px 0 0}
+.wz .lbl{font:700 11px/1.3 var(--font-ui);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim)}
 .wz .hint{font-size:12.5px;color:var(--ink-dim)}
 .wz .mut{color:var(--ink-dim)}
 .wz .rw{display:flex;align-items:center;gap:12px}
@@ -543,7 +543,7 @@ function everyoneViews(h) {
     const samples = samplesOf()
     if (samples.length) html += '<p class="mut" style="font-size:12.5px;margin-top:14px">' + T('Quick ideas:') + '</p><div class="rw" style="gap:8px;margin-top:6px;flex-wrap:wrap">' + samples.slice(0, 4).map((s, i) => '<button type="button" class="chip" data-ev="task-sample" data-arg="' + i + '" dir="auto">' + esc(s.title.length > 42 ? s.title.slice(0, 40) + '…' : s.title) + '</button>').join('') + '</div>'
     html += msgHtml() + '</div><div style="display:flex;flex-direction:column;gap:18px">'
-    html += '<div class="card pad"><div class="hi" style="font-weight:600;font-size:13px;margin-bottom:10px">' + T('Who should do it?') + '</div><div style="max-height:300px;overflow:auto;padding:0 10px;margin:0 -10px">' + who('', T('Let my assistant choose'), A.robot(26)) +
+    html += '<div class="card pad"><div class="hi" style="font-weight:700;font-size:13px;margin-bottom:10px">' + T('Who should do it?') + '</div><div style="max-height:300px;overflow:auto;padding:0 10px;margin:0 -10px">' + who('', T('Let my assistant choose'), A.robot(26)) +
       people.map((e) => who(e.id, esc(nameLine(e.id)), face(e.id, 26))).join('') + offices().map((o) => who('office:' + o.id, T('Anyone in ') + esc(officeName(o.id)), '<span class="sw" style="width:22px;height:22px;border-radius:5px;background:' + esc(o.color || '#56B6C2') + '"></span>')).join('') + who('board', T('Me'), A.owner(26)) + '</div></div>'
     html += '<div class="card pad"><label class="fl">' + T('When is it due?') + ' <span class="op">' + T('Optional') + '</span><input type="date" name="dueDate"><span class="hint" style="font-weight:400">' + T('A date in the past is allowed and shown in red.') + '</span></label><label class="rw" style="margin:0;cursor:pointer"><span class="sp"><b class="hi" style="font-size:14px;display:block">' + T('Ask me before it is finished') + '</b><span class="mut" style="font-size:12.5px">' + T('You see the result first') + '</span></span><input type="checkbox" class="tgl" name="needsSignOff"' + (pre.needsSignOff ? ' checked' : '') + '></label></div>'
     html += '<p class="note">' + ic('info', 14) + T('The task goes into your assistant\'s inbox. It is picked up the next time your assistant checks, usually when you open a chat.') + '</p></div></div></form>'
@@ -587,7 +587,7 @@ function everyoneViews(h) {
     const g = waiting().find((x) => x.taskId === t.id)
     if (g) {
       const who = askerOf(g)
-      html += '<div class="card pad wbox"><div class="rw" style="align-items:flex-start;gap:14px">' + face(who, 44) + '<div style="flex:1;min-width:0"><div class="lbl" style="color:#F2C06B">' + esc(nameOf(who)) + ' ' + T('is waiting for you') + '</div><div class="hi" dir="auto" style="font-size:17px;font-weight:600;margin-top:4px">' + esc(plainQ(g)) + '</div>' + (g.approvalType === 'action' && g.action.target ? '<p class="soft" dir="auto" style="font-size:13.5px;margin-top:4px">' + T('Where: ') + esc(g.action.target) + '</p>' : '') +
+      html += '<div class="card pad wbox"><div class="rw" style="align-items:flex-start;gap:14px">' + face(who, 44) + '<div style="flex:1;min-width:0"><div class="lbl" style="color:#F2C06B">' + esc(nameOf(who)) + ' ' + T('is waiting for you') + '</div><div class="hi" dir="auto" style="font-size:17px;font-weight:700;margin-top:4px">' + esc(plainQ(g)) + '</div>' + (g.approvalType === 'action' && g.action.target ? '<p class="soft" dir="auto" style="font-size:13.5px;margin-top:4px">' + T('Where: ') + esc(g.action.target) + '</p>' : '') +
         (canWrite() ? '<div class="rw" style="margin-top:14px;gap:10px;flex-wrap:wrap">' + answerButtons(g) + (g.approvalType !== 'hire' ? replyForm(g, g.kind === 'approval' ? T('Reply with a note') : T('Your answer')) : '') + '<span class="sp"></span>' + riskHtml(g) + '</div>' : '') + (st.err['ap|' + g.id] ? '<p class="msg err">' + esc(errTxt(st.err['ap|' + g.id])) + '</p>' : '') + '</div></div></div>'
     }
     if (t.description) html += '<div class="card pad"><div class="sec">' + T('What you asked for') + '</div><pre class="txt">' + esc(t.description) + '</pre></div>'
@@ -622,7 +622,7 @@ function everyoneViews(h) {
       '<div><span class="mut">' + T('Created') + '</span><span class="hi">' + (t.createdBy === 'board' ? T('by you, ') : T('by your assistant, ')) + esc(day(t.createdAt)) + '</span></div></div>'
     if (canWrite()) html += '<button type="button" class="b" data-ev="task-copy" data-arg="' + esc(t.id) + '">' + ic('copy', 15) + T('Copy a message for your assistant') + '</button>'
     const dls = ((st.data.dlv && st.data.dlv.deliverables) || []).filter((d) => d.taskId === t.id)
-    html += '<div class="card pad"><div class="sec">' + T('Finished work') + ' <small>' + fa(dls.length) + '</small></div>' + (dls.length ? dls.map((d) => '<button type="button" class="rw" data-ev="dlv-open" data-arg="' + esc(d.id) + '" style="padding:8px 0;gap:12px;background:none;border:0;width:100%;cursor:pointer;text-align:start;font:inherit"><span style="width:56px;height:36px;border-radius:5px;overflow:hidden;border:1px solid var(--line);flex:none">' + A.thumb(kindArt(d), colorOfMember(d.agent)) + '</span><span style="flex:1;min-width:0"><span class="hi ell" dir="auto" style="font-size:13.5px;font-weight:600;display:block">' + esc(d.title) + '</span><span class="mut" style="font-size:12px">' + esc(extOf(d)) + (d.bytes ? ', ' + sizeOf(d.bytes) : '') + '</span></span></button>').join('') : '<p class="mut" style="font-size:13px">' + T('Nothing handed in yet.') + '</p>') + '</div>'
+    html += '<div class="card pad"><div class="sec">' + T('Finished work') + ' <small>' + fa(dls.length) + '</small></div>' + (dls.length ? dls.map((d) => '<button type="button" class="rw" data-ev="dlv-open" data-arg="' + esc(d.id) + '" style="padding:8px 0;gap:12px;background:none;border:0;width:100%;cursor:pointer;text-align:start;font:inherit"><span style="width:56px;height:36px;border-radius:5px;overflow:hidden;border:1px solid var(--line);flex:none">' + A.thumb(kindArt(d), colorOfMember(d.agent)) + '</span><span style="flex:1;min-width:0"><span class="hi ell" dir="auto" style="font-size:13.5px;font-weight:700;display:block">' + esc(d.title) + '</span><span class="mut" style="font-size:12px">' + esc(extOf(d)) + (d.bytes ? ', ' + sizeOf(d.bytes) : '') + '</span></span></button>').join('') : '<p class="mut" style="font-size:13px">' + T('Nothing handed in yet.') + '</p>') + '</div>'
     if ((t.links || []).length) {
       html += '<div class="card pad"><div class="sec">' + T('Links') + '</div>'
       for (const l of t.links) html += l.url ? '<p style="margin:4px 0"><a href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer" dir="ltr" style="color:var(--cyan)">' + esc(l.title || l.url) + '</a></p>' : '<p class="rw" style="gap:8px;margin:4px 0">' + ltr(l.path) + '<button type="button" class="b sm" data-ev="copy" data-arg="' + esc(l.path) + '">' + T('Copy path') + '</button></p>'
@@ -651,7 +651,7 @@ function everyoneViews(h) {
       html += '<div class="appr"><div class="card" style="overflow:hidden">' + wait.map((g) => {
         const who = askerOf(g)
         const e = emp(who)
-        return '<button type="button" class="ai" data-ev="appr-sel" data-arg="' + esc(g.id) + '" aria-current="' + (g.id === st.apprSel) + '">' + face(who, 34) + '<span style="min-width:0;flex:1"><span class="rw" style="justify-content:space-between;gap:8px"><b class="hi ell" style="font-size:13.5px">' + esc(nameOf(who)) + (e && e.name && titleOf(e) ? ' <span class="mut" style="font-weight:400">' + esc(titleOf(e)) + '</span>' : '') + '</b><span class="mut" style="font:12px var(--mono);flex:none">' + esc(isToday(g.askedAt) ? hm(g.askedAt) : day(g.askedAt)) + '</span></span><span class="soft" dir="auto" style="display:block;font-size:13.5px;line-height:1.35;margin-top:2px">' + esc(plainQ(g)) + '</span><span style="display:block;margin-top:6px">' + riskHtml(g) + '</span></span></button>'
+        return '<button type="button" class="ai" data-ev="appr-sel" data-arg="' + esc(g.id) + '" aria-current="' + (g.id === st.apprSel) + '">' + face(who, 34) + '<span style="min-width:0;flex:1"><span class="rw" style="justify-content:space-between;gap:8px"><b class="hi ell" style="font-size:13.5px">' + esc(nameOf(who)) + (e && e.name && titleOf(e) ? ' <span class="mut" style="font-weight:400">' + esc(titleOf(e)) + '</span>' : '') + '</b><span class="mut" style="font:12px var(--font-ui);flex:none">' + esc(isToday(g.askedAt) ? hm(g.askedAt) : day(g.askedAt)) + '</span></span><span class="soft" dir="auto" style="display:block;font-size:13.5px;line-height:1.35;margin-top:2px">' + esc(plainQ(g)) + '</span><span style="display:block;margin-top:6px">' + riskHtml(g) + '</span></span></button>'
       }).join('') + '</div>' + letter(wait.find((g) => g.id === st.apprSel)) + '</div>'
     }
     const done = gates().filter((g) => g.status !== 'waiting').sort((a, b) => String(b.answeredAt || b.expiredAt || '').localeCompare(String(a.answeredAt || a.expiredAt || ''))).slice(0, 10)
@@ -725,7 +725,7 @@ function everyoneViews(h) {
     let html = '<svg class="scene" viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges" role="img" aria-label="' + esc(T('The office room') + ': ' + (st.teamOffice === 'unassigned' ? T('No office') : officeName(st.teamOffice))) + '">' + svg + '</svg>'
     html += '<div class="float camp"><div class="lbl" style="margin-bottom:8px">' + T('Your campus') + '</div>' + offs.map((o) => {
       const list = teamMembers(o.id)
-      return '<button type="button" data-ev="team-office" data-arg="' + esc(o.id) + '" aria-current="' + (o.id === st.teamOffice) + '"><span class="sw" style="background:' + esc(o.id === 'unassigned' ? '#8A97A6' : colorOf(o.id)) + '"></span><span class="sp ell">' + esc(o.id === 'unassigned' ? T('No office') : officeName(o.id)) + '</span><span class="mut" style="font:12px var(--mono)">' + fa(list.length) + '</span>' + (list.some((m) => statusOf(m.id) === 'waiting') ? '<i style="width:8px;height:8px;background:var(--warn);display:block" title="' + T('Waiting for you') + '"></i>' : '') + '</button>'
+      return '<button type="button" data-ev="team-office" data-arg="' + esc(o.id) + '" aria-current="' + (o.id === st.teamOffice) + '"><span class="sw" style="background:' + esc(o.id === 'unassigned' ? '#8A97A6' : colorOf(o.id)) + '"></span><span class="sp ell">' + esc(o.id === 'unassigned' ? T('No office') : officeName(o.id)) + '</span><span class="mut" style="font:12px var(--font-ui)">' + fa(list.length) + '</span>' + (list.some((m) => statusOf(m.id) === 'waiting') ? '<i style="width:8px;height:8px;background:var(--warn);display:block" title="' + T('Waiting for you') + '"></i>' : '') + '</button>'
     }).join('') + (notSetUp() ? '<p class="mut" style="font-size:12.5px;padding:8px 8px 0;border-top:1px solid var(--line);margin-top:6px">' + esc(notSetUp()) + '</p>' : '') + '<div class="rw" style="gap:6px;border-top:1px solid var(--line);margin-top:6px;padding-top:8px;flex-wrap:wrap"><button type="button" class="b sm ghost" data-goto="org" style="padding:0 6px">' + T('Org chart') + '</button><button type="button" class="b sm ghost" data-ev="goto-packs" style="padding:0 6px">' + T('Add an office') + '</button></div></div>'
     html += '<div class="float roster"><span class="lbl" style="width:90px;flex:none">' + T('In this office') + '</span>' + (here.length ? here.map((m) => '<button type="button" class="m" data-ev="member-open" data-arg="' + esc(m.id) + '" aria-current="' + (m.id === hot) + '">' + face(m.id, 26) + '<span><b class="hi" style="font-size:13px;display:block">' + esc(nameOf(m.id)) + '</b><span class="mut" style="font-size:11.5px;line-height:1.1">' + esc(m.name && titleOf(m) && m.name !== titleOf(m) ? titleOf(m) : T(STATUS_WORD[statusOf(m.id)])) + '</span></span></button>').join('') : '<span class="mut">' + T('No one works here yet.') + '</span>') +
       (canWrite() && st.teamOffice !== 'unassigned' ? '<button type="button" class="b pri sm" data-ev="hire-new" style="margin-inline-start:auto;flex:none">' + ic('plus', 14, 2.4) + T('New desk') + '</button>' : '') + '</div>'
@@ -754,8 +754,8 @@ function everyoneViews(h) {
     const g = waiting().find((x) => askerOf(x) === m.id)
     let html = '<div class="ph">' + face(m.id, 54, true) + '<div style="min-width:0"><h2 dir="auto">' + esc(nameOf(m.id)) + '</h2><div class="mut" style="font-size:13px;margin-top:2px">' + esc(m.name && titleOf(m) && m.name !== titleOf(m) ? titleOf(m) + ' · ' : '') + esc(officeName(m.homeOfficeId)) + '</div></div><button type="button" class="x" data-ev="drawer-close" aria-label="' + T('Close') + '">' + ic('x', 18) + '</button></div><div class="pb">'
     html += '<div class="rw"><span class="pill ' + s + '">' + T(STATUS_WORD[s]) + '</span>' + (m.reportsTo ? '<span class="mut" style="font-size:13px">' + T('Reports to ') + esc(nameOf(m.reportsTo)) + '</span>' : '') + '</div>'
-    if (g) html += '<div class="stat now w"><div class="lbl" style="color:#F2C06B">' + T('Waiting for you') + '</div><div class="hi" dir="auto" style="font-size:15px;font-weight:600;margin-top:2px">' + esc(plainQ(g)) + '</div><button type="button" class="b sm" data-ev="goto-appr" data-arg="' + esc(g.id) + '" style="margin-top:8px">' + T('Answer') + '</button></div>'
-    else if (r) html += '<div class="stat now"><div class="lbl" style="color:var(--accent)">' + T('Right now') + '</div><div class="hi" dir="auto" style="font-size:16px;font-weight:600;margin-top:2px">' + esc(r.doing || r.task) + '</div><div class="soft" style="font-size:13px">' + T('Started ') + esc(ago(r.startedAt)) + '</div></div>'
+    if (g) html += '<div class="stat now w"><div class="lbl" style="color:#F2C06B">' + T('Waiting for you') + '</div><div class="hi" dir="auto" style="font-size:15px;font-weight:700;margin-top:2px">' + esc(plainQ(g)) + '</div><button type="button" class="b sm" data-ev="goto-appr" data-arg="' + esc(g.id) + '" style="margin-top:8px">' + T('Answer') + '</button></div>'
+    else if (r) html += '<div class="stat now"><div class="lbl" style="color:var(--accent)">' + T('Right now') + '</div><div class="hi" dir="auto" style="font-size:16px;font-weight:700;margin-top:2px">' + esc(r.doing || r.task) + '</div><div class="soft" style="font-size:13px">' + T('Started ') + esc(ago(r.startedAt)) + '</div></div>'
     const cost = co().company.payModel === 'plan' ? T('Included in your plan') : runs.some((x) => typeof x.costUsd === 'number') ? '$' + fa(runs.reduce((n, x) => n + (x.costUsd || 0), 0).toFixed(2)) : T('not counted')
     html += '<div class="rw" style="gap:12px;align-items:stretch"><div class="stat"><div class="lbl">' + T('This month') + '</div><div class="hi" style="font-size:24px;font-weight:700">' + (ms ? esc(dur(ms)) : '—') + '</div><div class="mut" style="font-size:12.5px">' + fa(runs.length) + ' ' + T(runs.length === 1 ? 'job finished' : 'jobs finished') + '</div></div><div class="stat"><div class="lbl">' + T('Details') + '</div><div class="mut" style="font-size:12.5px;line-height:1.6;margin-top:4px">' + tokens(tok) + ' ' + T('tokens') + '<br>' + T('Cost: ') + esc(cost) + '<br>' + T('Role file: ') + ltr(m.id) + (m.tier ? '<br>' + T('Strength: ') + T(TIER[m.tier]) : '') + '</div></div></div>'
     const def = (DATA.agents || []).find((x) => x.name === m.id) || {}
@@ -765,7 +765,7 @@ function everyoneViews(h) {
     const asks = d.categories.filter((c) => m.policy[c.id] && m.policy[c.id].value === 'ask'), never = d.categories.filter((c) => m.policy[c.id] && m.policy[c.id].value === 'never')
     html += '<div><div class="sec" style="margin-bottom:8px">' + T('Asks you first before') + ' ' + ic('lock', 14) + '</div><div class="rw" style="flex-wrap:wrap;gap:6px">' + (asks.length ? asks.map((c) => '<span class="risk">' + ic('out', 11) + ' ' + esc(T(CAT[c.id] ? CAT[c.id][0] : c.label)) + '</span>').join('') : '<span class="mut" style="font-size:13px">' + T('Nothing: every action is allowed or never done.') + '</span>') + '</div>' + (never.length ? '<p class="mut" style="font-size:12.5px;margin-top:8px">' + T('Never does: ') + never.map((c) => esc(T(CAT[c.id] ? CAT[c.id][0] : c.label))).join(T(', ')) + '</p>' : '') + '</div>'
     const recent = runsOf((x) => x.agent === m.id).slice(0, 5)
-    html += '<div><div class="sec" style="margin-bottom:8px">' + T('Recent jobs') + '</div>' + (r ? '<div class="jr"><span style="color:var(--warn)">' + ic('clock', 15, 2.2) + '</span><span class="hi sp" dir="auto">' + esc(r.task) + '</span><b class="hi" style="font:12.5px var(--mono)">' + esc(dur(Date.now() - Date.parse(r.startedAt))) + '</b></div>' : '') + (recent.length ? recent.map((x) => '<div class="jr"><span style="color:' + (x.status === 'failed' ? 'var(--bad)' : 'var(--accent)') + '">' + ic(x.status === 'failed' ? 'x' : 'check', 15, 2.2) + '</span><span class="hi sp" dir="auto">' + esc(x.summary && x.summary.length < 90 ? x.summary : x.task) + '</span><b class="hi" style="font:12.5px var(--mono)">' + esc(dur(x.durMs)) + '</b></div>').join('') : r ? '' : '<p class="mut" style="font-size:13px">' + T('No jobs yet.') + '</p>') + '</div>'
+    html += '<div><div class="sec" style="margin-bottom:8px">' + T('Recent jobs') + '</div>' + (r ? '<div class="jr"><span style="color:var(--warn)">' + ic('clock', 15, 2.2) + '</span><span class="hi sp" dir="auto">' + esc(r.task) + '</span><b class="hi" style="font:12.5px var(--font-ui)">' + esc(dur(Date.now() - Date.parse(r.startedAt))) + '</b></div>' : '') + (recent.length ? recent.map((x) => '<div class="jr"><span style="color:' + (x.status === 'failed' ? 'var(--bad)' : 'var(--accent)') + '">' + ic(x.status === 'failed' ? 'x' : 'check', 15, 2.2) + '</span><span class="hi sp" dir="auto">' + esc(x.summary && x.summary.length < 90 ? x.summary : x.task) + '</span><b class="hi" style="font:12.5px var(--font-ui)">' + esc(dur(x.durMs)) + '</b></div>').join('') : r ? '' : '<p class="mut" style="font-size:13px">' + T('No jobs yet.') + '</p>') + '</div>'
     // the rules of this one member, and the file behind them: the detail a curious owner opens
     html += '<details' + (st.profOpen === 'rules' ? ' open' : '') + ' data-ev-toggle="rules"><summary>' + T('Safety rules for this member') + '</summary><div style="margin-top:10px">' + policyTable(d.categories, m.policy, m.id) + '</div></details>'
     html += '<details' + (st.profOpen === 'instr' ? ' open' : '') + ' data-ev-toggle="instr"><summary>' + T('Instructions and earlier versions') + '</summary><div style="margin-top:10px">' + instrPart(m) + '</div></details>'
@@ -823,8 +823,8 @@ function everyoneViews(h) {
       if (err.title) html += '<p class="msg err" style="margin-top:-8px">' + ic('warn', 14) + ' ' + T('Please give a job title so the team list is easy to read.') + '</p>'
       html += '<label class="fl" style="margin:0">' + esc(T('What should ') + name + T(' do?')) + '<textarea name="instructions" maxlength="8000" dir="auto" style="min-height:110px"' + (err.instructions ? ' class="bad" aria-invalid="true"' : '') + '>' + v('instructions') + '</textarea></label>'
       if (err.instructions) html += '<p class="msg err" style="margin-top:-8px">' + ic('warn', 14) + ' ' + T('Describe the job in a few more words (at least 10 characters).') + '</p>'
-      html += '<div><div class="hi" style="font-weight:600;font-size:13px;margin-bottom:6px">' + T('Good at') + '</div><div class="rw" style="gap:6px;flex-wrap:wrap">' + (f.skills || []).map((x, i) => '<button type="button" class="chip" data-ev="skill-del" data-arg="' + i + '" title="' + T('Remove') + '" dir="auto">' + esc(x) + ' ×</button>').join('') + ((f.skills || []).length < 8 ? '<input type="text" name="skill" maxlength="40" dir="auto" placeholder="' + T('+ Add') + '" style="width:150px;padding:4px 10px;border-style:dashed" data-ev-enter="skill-add">' : '') + '</div></div>'
-      html += '<div><div class="hi" style="font-weight:600;font-size:13px;margin-bottom:6px">' + T('Pick a look') + '</div><div class="looks" role="radiogroup" aria-label="' + T('Pick a look') + '">' + [0, 1, 2, 3, 4, 5].map((i) => '<label><input type="radio" name="look" value="' + i + '"' + ((f.look || 0) === i ? ' checked' : '') + ' aria-label="' + T('Look ') + fa(i + 1) + '">' + A.person((f.id || slug(f.name) || 'new-member') + (i ? ':' + i : ''), colorOf(f.officeId), 30, true) + '</label>').join('') + '</div></div>'
+      html += '<div><div class="hi" style="font-weight:700;font-size:13px;margin-bottom:6px">' + T('Good at') + '</div><div class="rw" style="gap:6px;flex-wrap:wrap">' + (f.skills || []).map((x, i) => '<button type="button" class="chip" data-ev="skill-del" data-arg="' + i + '" title="' + T('Remove') + '" dir="auto">' + esc(x) + ' ×</button>').join('') + ((f.skills || []).length < 8 ? '<input type="text" name="skill" maxlength="40" dir="auto" placeholder="' + T('+ Add') + '" style="width:150px;padding:4px 10px;border-style:dashed" data-ev-enter="skill-add">' : '') + '</div></div>'
+      html += '<div><div class="hi" style="font-weight:700;font-size:13px;margin-bottom:6px">' + T('Pick a look') + '</div><div class="looks" role="radiogroup" aria-label="' + T('Pick a look') + '">' + [0, 1, 2, 3, 4, 5].map((i) => '<label><input type="radio" name="look" value="' + i + '"' + ((f.look || 0) === i ? ' checked' : '') + ' aria-label="' + T('Look ') + fa(i + 1) + '">' + A.person((f.id || slug(f.name) || 'new-member') + (i ? ':' + i : ''), colorOf(f.officeId), 30, true) + '</label>').join('') + '</div></div>'
       if (f.op !== 'edit') {
         const cats = (st.data.team && st.data.team.categories) || []
         const def = (st.data.team && st.data.team.policy && st.data.team.policy.defaults) || {}
@@ -837,7 +837,7 @@ function everyoneViews(h) {
       html += '<label class="fl">' + T('Short id (letters, digits, hyphens; used in files)') + '<input type="text" name="id" maxlength="60" dir="ltr" value="' + v('id') + '"' + (f.op === 'edit' ? ' readonly' : '') + '><span class="hint" style="font-weight:400">' + T('Left empty, it is made from a Latin name.') + '</span></label>'
       html += '<label class="fl">' + T('Strength') + '<select name="tier">' + ['light', 'standard', 'heavy'].map((x) => '<option value="' + x + '"' + ((f.tier || 'standard') === x ? ' selected' : '') + '>' + T(TIER[x]) + '</option>').join('') + '</select><span class="hint" style="font-weight:400">' + T('Light is quick and cheap, Strong is for hard work. Claude Code uses this; other assistants ignore it.') + '</span></label>'
       if (f.op !== 'edit') html += '<label class="fl">' + T('Monthly budget in USD (optional)') + '<input type="text" name="usd" dir="ltr" value="' + v('usd') + '" placeholder="25.50"></label>'
-      html += '<p class="hi" style="font-weight:600;font-size:13px;margin:6px 0">' + T('In Claude Code') + '</p>'
+      html += '<p class="hi" style="font-weight:700;font-size:13px;margin:6px 0">' + T('In Claude Code') + '</p>'
       html += '<label class="rw" style="gap:8px;margin:4px 0"><input type="checkbox" name="edit"' + (f.caps && f.caps.edit === false ? '' : ' checked') + '><span class="soft">' + T('Create and edit files') + '</span></label>'
       html += '<label class="rw" style="gap:8px;margin:4px 0"><input type="checkbox" name="web"' + (f.caps && f.caps.web ? ' checked' : '') + '><span class="soft">' + T('Search the web') + '</span></label>'
       html += '<label class="rw" style="gap:8px;margin:4px 0"><input type="checkbox" name="commands"' + (f.caps && f.caps.commands ? ' checked' : '') + '><span class="soft">' + T('Run commands (advanced)') + '</span></label>'
@@ -909,7 +909,7 @@ function everyoneViews(h) {
       const c = colorOfMember(d.agent)
       const open = d.state === 'stored' ? '<a class="b sm" style="flex:1" href="deliverables/' + esc(d.id) + '" target="_blank" rel="noopener">' + ic('eye', 14) + T('Open') + '</a>' : d.url ? '<a class="b sm" style="flex:1" href="' + esc(d.url) + '" target="_blank" rel="noopener noreferrer">' + ic('globe', 14) + T('Open page') + '</a>' : d.originalPath ? '<button type="button" class="b sm" style="flex:1" data-ev="copy" data-arg="' + esc(d.originalPath) + '">' + ic('copy', 14) + T('Copy path') + '</button>' : ''
       return '<div class="card fc"><button type="button" class="th" data-ev="dlv-open" data-arg="' + esc(d.id) + '" aria-label="' + esc(T('Preview: ') + d.title) + '" style="border:0;border-bottom:1px solid var(--line);cursor:pointer;padding:0;width:100%">' + (d.image && d.state === 'stored' ? '<img src="deliverables/' + esc(d.id) + '" alt="" loading="lazy">' : A.thumb(kindArt(d), c)) + '<span class="tb">' + ic({ image: 'image', link: 'link', sheet: 'table' }[groupOf(d)] || 'doc', 12) + ' ' + esc(extOf(d)) + '</span></button>' +
-        '<div style="padding:12px 14px 14px;display:flex;flex-direction:column;flex:1"><div class="hi" dir="auto" style="font-weight:600;font-size:14.5px;line-height:1.3;min-height:38px">' + esc(d.title) + '</div><div class="rw" style="margin-top:8px;gap:8px">' + face(d.agent || 'supervisor', 22) + '<span class="soft ell" style="font-size:12.5px">' + esc(nameOf(d.agent || 'supervisor')) + '</span><span class="sp"></span><span class="mut" style="font-size:12.5px;flex:none">' + esc(day(d.createdAt)) + '</span></div>' +
+        '<div style="padding:12px 14px 14px;display:flex;flex-direction:column;flex:1"><div class="hi" dir="auto" style="font-weight:700;font-size:14.5px;line-height:1.3;min-height:38px">' + esc(d.title) + '</div><div class="rw" style="margin-top:8px;gap:8px">' + face(d.agent || 'supervisor', 22) + '<span class="soft ell" style="font-size:12.5px">' + esc(nameOf(d.agent || 'supervisor')) + '</span><span class="sp"></span><span class="mut" style="font-size:12.5px;flex:none">' + esc(day(d.createdAt)) + '</span></div>' +
         (d.state === 'missing' ? '<span class="chip warn" style="margin-top:8px;align-self:flex-start">' + T('File no longer there') + '</span>' : '') +
         '<div class="rw" style="margin-top:12px;gap:8px">' + open + '<button type="button" class="b sm ghost" data-ev="dlv-open" data-arg="' + esc(d.id) + '" aria-label="' + T('Preview') + '" title="' + T('Preview') + '">' + ic('eye', 15) + '</button></div></div></div>'
     }).join('') + '</div>'
@@ -999,7 +999,7 @@ function everyoneViews(h) {
     const rest = d.clients.filter((x) => !known.has(x.id))
     if (d.clients.length) html += '<div><div class="sec">' + T('What Arsenale remembers') + ' <small>' + T('The name an assistant gives is a label, not proof of who it is.') + '</small></div><div class="card rows">' + d.clients.map((c) => { const quiet = Date.now() - Date.parse(c.lastSeen) > 7 * 86400000; return '<div class="r"><b class="hi" dir="ltr">' + esc(c.name || c.id) + '</b><span class="mut sp" style="font-size:13px">' + esc(c.transport) + ' · ' + T('last call ') + esc(ago(c.lastSeen)) + ' · ' + fa(c.callsToday) + ' ' + T('calls today') + (quiet ? ' <span class="chip warn">' + T('quiet') + '</span>' : '') + (rest.includes(c) ? '' : '') + '</span><button type="button" class="b sm ghost' + armedCls('forget|' + c.id) + '" data-ev="forget" data-arg="' + esc(c.id) + '" title="' + T('A forgotten assistant can connect again; this only clears what Arsenale remembers about it.') + '">' + esc(armedLabel('forget|' + c.id, T('Forget'))) + '</button></div>' }).join('') + '</div></div>'
     html += '<details><summary>' + T('Advanced: custom instructions and MCP over HTTP') + '</summary><div style="margin-top:12px;display:flex;flex-direction:column;gap:10px"><p class="soft">' + T('Some assistants ignore the instructions Arsenale sends. Paste this into your assistant\'s custom instructions:') + '</p><pre>' + esc(T(d.customInstructions)) + '</pre><div><button type="button" class="b sm" data-ev="copy" data-arg="' + esc(T(d.customInstructions)) + '">' + T('Copy') + '</button></div>'
-    html += '<p class="hi" style="font-weight:600">' + T('MCP over HTTP') + '</p><p class="soft">' + T('For assistants that accept only a web address. It works only while this dashboard runs, and needs a secret token on every call.') + '</p>'
+    html += '<p class="hi" style="font-weight:700">' + T('MCP over HTTP') + '</p><p class="soft">' + T('For assistants that accept only a web address. It works only while this dashboard runs, and needs a secret token on every call.') + '</p>'
     html += d.http.on ? '<p class="soft">' + T('On, at ') + ltr(d.http.url) + '</p>' : '<p class="soft">' + T('Off. To turn it on, set the environment variable ARSENALE_MCP_TOKEN to a random value of 32 or more characters and restart the dashboard.') + '</p><div><button type="button" class="b sm" data-ev="mktoken">' + T('Make a random token to copy') + '</button></div>' + (st.token ? '<pre>' + esc(st.token) + '</pre>' : '')
     html += '<p class="note">' + T('The token is stored in your assistant\'s settings in plain text. Anyone who can read those files can log as your assistant, but cannot answer or approve anything.') + '</p></div></details>'
     return html + msgHtml()
@@ -1155,7 +1155,7 @@ function everyoneViews(h) {
     // the first look at the offices ticks the ones the description suggests
     if (w.step === 2 && !w.picked && packs.length) { w.picked = true; const text = w.name + ' ' + w.mission; w.packs = packs.filter((p) => KEYWORDS[p.id] && KEYWORDS[p.id].test(text)).map((p) => p.id).slice(0, 3) }
     const steps = [T('Welcome'), T('Offices'), T('Connect'), T('Review')]
-    const top = '<div class="wtop"><div class="logo">' + ic('spark', 22) + ' Arsenale <small>' + T('SETUP') + '</small></div>' + steps.map((s, i) => '<span class="stp' + (i + 1 === w.step ? ' on' : i + 1 < w.step || w.step > 4 ? ' done' : '') + '">' + (i + 1 < w.step || w.step > 4 ? ic('check', 15, 2.8) : '<span style="font:12px var(--mono)">' + fa(i + 1) + '</span>') + ' ' + s + '</span>' + (i < 3 ? '<span class="mut" style="line-height:0">' + ic(LANG === 'fa' ? 'back' : 'chev', 14) + '</span>' : '')).join('') +
+    const top = '<div class="wtop"><div class="logo">' + ic('spark', 22) + ' Arsenale <small>' + T('SETUP') + '</small></div>' + steps.map((s, i) => '<span class="stp' + (i + 1 === w.step ? ' on' : i + 1 < w.step || w.step > 4 ? ' done' : '') + '">' + (i + 1 < w.step || w.step > 4 ? ic('check', 15, 2.8) : '<span style="font:12px var(--font-ui)">' + fa(i + 1) + '</span>') + ' ' + s + '</span>' + (i < 3 ? '<span class="mut" style="line-height:0">' + ic(LANG === 'fa' ? 'back' : 'chev', 14) + '</span>' : '')).join('') +
       '<span style="flex:1"></span>' + (w.step < 5 ? '<button type="button" class="b sm ghost" data-ev="wiz-close">' + T('Close (nothing is saved)') + '</button>' : '') + '</div>'
     const say = { 1: 'Hello! I am your assistant. Tell me about your company and we will build your team together.', 2: 'Tick an office and its building appears on your campus.', 3: 'Almost there. I will wait right here until I hear from you.', 4: 'This is your campus. Everyone is ready at their desk.', 5: 'Your company is set up. Give me a first task whenever you like.' }[Math.min(5, w.step)]
     const scene = '<div class="wscene">' + wizScene(w, packs) + '<div class="guide">' + A.robot(64) + '<div class="say">' + T(say) + '</div></div></div>'
@@ -1168,8 +1168,8 @@ function everyoneViews(h) {
       form += lbl(1) + '<h1>' + T('Welcome. Let us build your office.') + '</h1><p class="lead">' + T('You give jobs in plain words. Your team gets them done and asks you before anything leaves this computer.') + '</p>'
       form += '<label class="fl">' + T('What is your company called?') + '<input type="text" name="name" maxlength="60" dir="auto" required value="' + esc(w.name) + '" style="font-size:16px;padding:12px"></label>'
       form += '<label class="fl">' + T('What does it do?') + '<textarea name="mission" maxlength="300" dir="auto" style="min-height:80px">' + esc(w.mission) + '</textarea><span class="hint" style="font-weight:400">' + T('Helps your team write in the right tone.') + '</span></label>'
-      form += '<div class="fl" style="display:flex;flex-direction:column;gap:6px;font-weight:600;color:var(--ink-hi);font-size:13px">' + T('Language') + '<span class="seg2"><button type="button" data-lang="en" aria-pressed="' + (LANG !== 'fa') + '">English</button><button type="button" data-lang="fa" aria-pressed="' + (LANG === 'fa') + '" style="font-family:var(--fa)">فارسی</button></span></div>'
-      form += '<div class="fl" style="display:flex;flex-direction:column;gap:6px;font-weight:600;color:var(--ink-hi);font-size:13px;margin-top:6px">' + T('How do you pay for your AI assistant?') + '<span class="seg2" role="radiogroup">' + [['plan', T('A monthly plan')], ['api', T('Pay per use')], ['unknown', T('Not sure')]].map(([v, a]) => '<label><input type="radio" name="payModel" value="' + v + '"' + (w.payModel === v ? ' checked' : '') + '>' + a + '</label>').join('') + '</span><span class="hint" style="font-weight:400">' + T('On a plan Arsenale shows time, not money. Budgets can be set later.') + '</span></div>'
+      form += '<div class="fl" style="display:flex;flex-direction:column;gap:6px;font-weight:700;color:var(--ink-hi);font-size:13px">' + T('Language') + '<span class="seg2"><button type="button" data-lang="en" aria-pressed="' + (LANG !== 'fa') + '">English</button><button type="button" data-lang="fa" aria-pressed="' + (LANG === 'fa') + '" style="font-family:var(--font-ui)">فارسی</button></span></div>'
+      form += '<div class="fl" style="display:flex;flex-direction:column;gap:6px;font-weight:700;color:var(--ink-hi);font-size:13px;margin-top:6px">' + T('How do you pay for your AI assistant?') + '<span class="seg2" role="radiogroup">' + [['plan', T('A monthly plan')], ['api', T('Pay per use')], ['unknown', T('Not sure')]].map(([v, a]) => '<label><input type="radio" name="payModel" value="' + v + '"' + (w.payModel === v ? ' checked' : '') + '>' + a + '</label>').join('') + '</span><span class="hint" style="font-weight:400">' + T('On a plan Arsenale shows time, not money. Budgets can be set later.') + '</span></div>'
       form += '<p class="hint">' + T('To try it first on an invented company, run "arsenale demo" in a terminal: it opens a demo dashboard that is deleted when it stops.') + '</p>'
       foot = '<span class="hint">' + ic('lock', 14) + ' ' + T('Nothing is saved until the last step. About 3 minutes.') + '</span>' + next(T('Choose offices'))
     } else if (w.step === 2) {

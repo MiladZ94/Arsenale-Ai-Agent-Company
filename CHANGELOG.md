@@ -3,6 +3,25 @@
 All notable changes are listed here. Versions follow
 [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+- **The office in 3D.** One floating podium per person with a desk, a chair
+  and their character, a portrait card framed by their state, the handed-in
+  tray, and a camera that pans, orbits, zooms and survives every redraw. The
+  bubbles, the details panel, the shift board and the questions waiting for
+  you are the same as before. Without WebGL the flat office stays.
+- **A light campus.** White isometric buildings on plinths, one plot per
+  office, no streets or trees, the office's card above its building, zoom and
+  pan.
+- **Characters.** A default character (`tools/characters/default.glb`, CC0,
+  made by `make-default-character.cjs`) with the clips Idle, Typing, Thinking
+  and Celebrate; replace it per person by dropping a `.glb` on a podium or with
+  `ARSENALE_HOME/characters/<agent>.glb`.
+- three.js r184 is pinned in `tools/vendor/three/` and inlined into the page.
+  The page's Content-Security-Policy now allows `blob:` images and fetches,
+  which GLTFLoader uses for the textures inside a dropped character file.
+- Every font is Arial, in weights 400 and 700.
+
 ## 1.0.0 (2026-10-06)
 
 First public release.

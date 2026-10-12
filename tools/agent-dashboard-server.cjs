@@ -55,7 +55,7 @@ const http = require('http')
 const fs = require('fs')
 const crypto = require('crypto')
 
-const PARTS = ['./build-agent-dashboard.cjs', './agent-office-page.cjs', './dashboard-strings.cjs', './agent-company.cjs', './agent-company-page.cjs', './activity-page.cjs', './everyone-page.cjs', './everyone-art.cjs', './paths.cjs'].map((f) => require.resolve(f))
+const PARTS = ['./build-agent-dashboard.cjs', './agent-office-page.cjs', './dashboard-strings.cjs', './agent-company.cjs', './agent-company-page.cjs', './activity-page.cjs', './everyone-page.cjs', './everyone-art.cjs', './office-world.cjs', './paths.cjs'].map((f) => require.resolve(f))
 let stamp = ''
 let page = null
 function pages() {
@@ -80,8 +80,10 @@ const KEY_HELP = 'This dashboard opens only with its key. Run `arsenale open`, o
 // Style attributes are drawn by the page's own script on every redraw, so
 // style-src needs 'unsafe-inline'; scripts do not.
 // Images may also come from this server's deliverable store, and from
-// nowhere else on it (spec R-7.8).
-const csp = (nonce, port) => "default-src 'none'; script-src 'nonce-" + nonce + "'; style-src 'unsafe-inline'; img-src data: http://localhost:" + port + "/deliverables/ http://127.0.0.1:" + port + "/deliverables/; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'"
+// nowhere else on it (spec R-7.8). blob: is for the 3D office: the textures
+// inside a character file someone drops on a desk are read through blob URLs
+// the page makes itself (GLTFLoader), as images and by fetch.
+const csp = (nonce, port) => "default-src 'none'; script-src 'nonce-" + nonce + "'; style-src 'unsafe-inline'; img-src data: blob: http://localhost:" + port + "/deliverables/ http://127.0.0.1:" + port + "/deliverables/; connect-src 'self' blob:; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'"
 
 function start(opts = {}) {
   const port = Number(opts.port) || 4310

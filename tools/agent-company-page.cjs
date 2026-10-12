@@ -18,46 +18,28 @@ const COMPANY_STYLE = `
 .board.rail-mini.rail-open .rail{display:block}
 .board.rail-mini .rail h2 .x{display:inline-block}
 h1.co{white-space:nowrap;font-size:17px}
-.brand-b{font:600 10px var(--mono);color:var(--accent);border:1px solid var(--accent-line);padding:1px 5px;border-radius:3px;margin-inline-start:8px;vertical-align:3px;white-space:nowrap}
+.brand-b{font:700 10px var(--font-ui);color:var(--accent);border:1px solid var(--accent-line);padding:1px 5px;border-radius:3px;margin-inline-start:8px;vertical-align:3px;white-space:nowrap}
 .views .omenu-wrap{position:relative;display:flex}
 .omenu{position:fixed;z-index:40;background:var(--panel);border:1px solid #3A4757;border-radius:4px;padding:4px;min-width:220px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
-.omenu button{display:flex;gap:8px;align-items:center;width:100%;text-align:start;font:12.5px var(--fa);color:var(--ink-soft);background:none;border:0;padding:6px 8px;border-radius:3px;cursor:pointer}
+.omenu button{display:flex;gap:8px;align-items:center;width:100%;text-align:start;font:12.5px var(--font-ui);color:var(--ink-soft);background:none;border:0;padding:6px 8px;border-radius:3px;cursor:pointer}
 .omenu button:hover,.omenu button[aria-current=true]{background:var(--panel-raised);color:var(--ink)}
 .sq{display:inline-block;width:10px;height:10px;flex:none}
 .cv{position:absolute;left:0;right:var(--rw);top:52px;bottom:0;overflow:hidden}
 .cv[hidden]{display:none}
-.cbtn{font:600 12px var(--fa);border:1px solid var(--line);background:#16202A;color:var(--ink);border-radius:4px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+.cbtn{font:700 12px var(--font-ui);border:1px solid var(--line);background:#16202A;color:var(--ink);border-radius:4px;padding:4px 10px;cursor:pointer;white-space:nowrap}
 .cbtn.go{color:var(--accent);border-color:var(--accent-line);background:var(--accent-soft)}
 .cbtn.ok{background:var(--accent);color:#06241B;border-color:var(--accent)}
-.cbtn.sm{font-size:11px;padding:1px 7px;font-weight:600}
+.cbtn.sm{font-size:11px;padding:1px 7px;font-weight:700}
 .cbtn.armed{background:var(--gate);color:#1D2530;border-color:var(--gate)}
 .cbtn:disabled{opacity:.45;cursor:default}
-.ch{font:600 11px var(--mono);letter-spacing:.8px;text-transform:uppercase;color:var(--ink-dim);margin:0 0 8px;display:flex;gap:8px;align-items:center}
+.ch{font:700 11px var(--font-ui);letter-spacing:.8px;text-transform:uppercase;color:var(--ink-dim);margin:0 0 8px;display:flex;gap:8px;align-items:center}
 .ch .sp{flex:1}
-/* campus */
-.cwrap{display:flex;height:100%}
-.cmap{flex:1;position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#0F1820 0%,#0A0F14 70%);min-width:0}
-.cmap-in{position:absolute;left:0;top:0;width:1060px;height:848px;transform-origin:0 0}
-.cmap-in svg{position:absolute;left:0;top:0}
-.cmap .bld{cursor:pointer}
-.cmap .bld:hover polygon{filter:brightness(1.12)}
-.sign{position:absolute;width:224px;background:rgba(16,22,29,.96);border:1px solid var(--line);border-top:3px solid var(--c);border-radius:5px;padding:8px 10px 9px;text-align:start}
-.sign h3{margin:0 0 5px;font-size:14px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sign .n{display:flex;gap:11px;font-family:var(--mono);font-size:12px;margin-bottom:6px;white-space:nowrap;direction:ltr;justify-content:flex-end}
-[dir=ltr] .sign .n{justify-content:flex-start}
-.sign .n .a{color:var(--ok)}.sign .n .b{color:var(--warn)}.sign .n .c{color:var(--ink)}
-.sign .cbar{margin:0 0 7px}
-.sign.small{width:auto;padding:4px 8px}
-.sign.small h3{font-size:12px}
-.ctip{position:absolute;left:18px;bottom:56px;font-size:12px;color:var(--ink-dim);background:rgba(16,22,29,.9);border:1px solid var(--line);padding:6px 10px;border-radius:5px}
-.ctip b{font-family:var(--mono);color:var(--ink)}
-.cleg{position:absolute;right:16px;bottom:16px;display:flex;gap:14px;font-size:12px;color:var(--ink-soft);background:rgba(16,22,29,.9);border:1px solid var(--line);padding:6px 10px;border-radius:5px;flex-wrap:wrap}
-.cleg i{display:inline-block;width:9px;height:9px;margin-inline-end:6px;vertical-align:-1px}
+/* campus: the map, its cards and its zoom bar are WORLD_STYLE in office-world.cjs */
 .cside{width:380px;flex:none;border-inline-start:1px solid var(--line);background:var(--panel);padding:16px 18px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#2A3644 transparent}
 .ckpis{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
 .ckpi{border:1px solid var(--line);border-radius:5px;padding:8px 10px;background:var(--panel-raised);min-width:0}
-.ckpi b{display:block;font:700 20px var(--mono);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ckpi b small{font-size:11px;font-weight:600}
+.ckpi b{display:block;font:700 20px var(--font-ui);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ckpi b small{font-size:11px;font-weight:700}
 .ckpi span{font-size:11.5px;color:var(--ink-dim);display:block}
 .ckpi.cw b{color:var(--warn)}.ckpi.cg b{color:var(--ok)}
 .cmaster{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--ink-soft);margin:0 0 14px;flex-wrap:wrap}
@@ -65,29 +47,29 @@ h1.co{white-space:nowrap;font-size:17px}
 .cmaster .off{color:var(--warn)}
 .orow{display:grid;grid-template-columns:10px 1fr auto;gap:2px 10px;padding:9px 0;border-top:1px solid var(--line);align-items:center}
 .orow .sq{grid-row:1 / span 2}
-.orow .on{font:600 13px var(--fa);color:var(--ink);background:none;border:0;padding:0;text-align:start;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.orow .on{font:700 13px var(--font-ui);color:var(--ink);background:none;border:0;padding:0;text-align:start;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .orow .on:hover{color:#fff;text-decoration:underline dotted}
-.orow .ct{font:12px var(--mono);color:var(--ink-soft);white-space:nowrap;direction:ltr}
+.orow .ct{font:12px var(--font-ui);color:var(--ink-soft);white-space:nowrap;direction:ltr}
 .orow .ct u{text-decoration:none;color:var(--ok)}.orow .ct s{text-decoration:none;color:var(--warn)}
 .orow .bw{grid-column:2 / span 2;display:flex;gap:8px;align-items:center;font-size:11px;color:var(--ink-dim)}
 .orow .bw .cbar{flex:1}
 .cbar{height:6px;background:#1A2530;border-radius:1px;position:relative;min-width:40px;direction:ltr}
 .cbar i{display:block;height:100%;max-width:100%}
 .cbar b{position:absolute;top:-2px;bottom:-2px;width:1px;background:#6C7886}
-.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.num{font-family:var(--font-ui);font-variant-numeric:tabular-nums}
 .cfeed{margin:0 0 14px;padding:0;list-style:none;font-size:12.5px;color:var(--ink-soft)}
 .cfeed li{padding:6px 0;border-top:1px solid var(--line);display:flex;gap:8px}
-.cfeed time{font-family:var(--mono);color:var(--ink-dim);flex:none;width:40px}
-.cfeed b{font-family:var(--mono);color:var(--ink);font-weight:600}
+.cfeed time{font-family:var(--font-ui);color:var(--ink-dim);flex:none;width:40px}
+.cfeed b{font-family:var(--font-ui);color:var(--ink);font-weight:700}
 .cfeed li>span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .cnote{font-size:11.5px;color:var(--ink-dim);margin:0 0 10px}
-.cnote code{font-family:var(--mono);color:var(--ink)}
+.cnote code{font-family:var(--font-ui);color:var(--ink)}
 .cbanner{margin:0 0 12px;padding:8px 10px;border:1px solid var(--gate-line);background:var(--warn-bg);border-radius:4px;font-size:12px;color:var(--ink)}
-.cbanner code{font-family:var(--mono)}
+.cbanner code{font-family:var(--font-ui)}
 .csetup{position:absolute;inset:40px;display:flex;align-items:center;justify-content:center}
 .csetup div{max-width:560px;background:var(--panel);border:1px dashed #3A4757;border-radius:6px;padding:22px 26px;font-size:13px;color:var(--ink-soft)}
 .csetup h2{margin:0 0 8px;font-size:16px;color:var(--ink)}
-.csetup code{font-family:var(--mono);color:var(--cyan);direction:ltr;display:inline-block}
+.csetup code{font-family:var(--font-ui);color:var(--cyan);direction:ltr;display:inline-block}
 /* office strip, over the floor */
 .board.co .zoombar{left:auto;right:12px}
 [dir=rtl] .board.co .zoombar{right:auto;left:12px}
@@ -100,17 +82,17 @@ h1.co{white-space:nowrap;font-size:17px}
 .ohead{position:absolute;left:14px;top:10px;z-index:3;display:flex;flex-direction:column;gap:6px;pointer-events:none}
 .ohead>*{pointer-events:auto}
 .crumb{display:flex;align-items:center;gap:10px;font-size:13px;flex-wrap:wrap}
-.crumb button{font:13px var(--fa);color:var(--ink-dim);background:none;border:0;padding:0;cursor:pointer}
+.crumb button{font:13px var(--font-ui);color:var(--ink-dim);background:none;border:0;padding:0;cursor:pointer}
 .crumb button:hover{color:var(--ink)}
 .crumb b{font-size:16px;color:#fff}
 .ostats{display:flex;gap:6px;flex-wrap:wrap}
 .ostats div{background:rgba(16,22,29,.95);border:1px solid var(--line);border-radius:5px;padding:4px 10px;font-size:11.5px;color:var(--ink-dim);min-width:64px}
-.ostats b{display:block;font:700 15px var(--mono);color:var(--ink);white-space:nowrap}
+.ostats b{display:block;font:700 15px var(--font-ui);color:var(--ink);white-space:nowrap}
 .ostats .a b{color:var(--ok)}.ostats .b b{color:var(--warn)}.ostats .r b{color:var(--bad)}
-.tag.away{font-family:var(--fa);background:#1B2430;border-style:dashed;color:var(--ink-soft)}
-.ovf{position:absolute;transform:translate(0,-100%) scale(var(--bs,1));transform-origin:0 100%;background:rgba(16,22,29,.95);border:1px solid var(--gate-line);border-radius:3px;padding:4px 8px;font:11.5px var(--fa);color:var(--ink-soft);z-index:2;max-width:260px}
+.tag.away{font-family:var(--font-ui);background:#1B2430;border-style:dashed;color:var(--ink-soft)}
+.ovf{position:absolute;transform:translate(0,-100%) scale(var(--bs,1));transform-origin:0 100%;background:rgba(16,22,29,.95);border:1px solid var(--gate-line);border-radius:3px;padding:4px 8px;font:11.5px var(--font-ui);color:var(--ink-soft);z-index:2;max-width:260px}
 .ovf b{color:var(--gate)}
-.ovf button{font:11px var(--mono);color:var(--cyan);background:none;border:0;padding:0 3px;cursor:pointer;text-decoration:underline dotted}
+.ovf button{font:11px var(--font-ui);color:var(--cyan);background:none;border:0;padding:0 3px;cursor:pointer;text-decoration:underline dotted}
 .chip.despite{color:var(--bad);border-color:rgba(255,95,95,.45);background:var(--bad-bg)}
 /* org chart */
 .org{padding:14px 20px 40px;height:100%;overflow:auto;scrollbar-width:thin;scrollbar-color:#2A3644 transparent;position:relative}
@@ -121,7 +103,7 @@ h1.co{white-space:nowrap;font-size:17px}
 .olvl{display:flex;flex-direction:column;align-items:center}
 .node{display:flex;gap:10px;align-items:center;background:var(--panel-raised);border:1px solid var(--line);border-radius:6px;padding:7px 10px;position:relative;text-align:start;min-width:0}
 .node.big{min-width:320px;padding:10px 14px}
-.node .nm{font:700 13px var(--mono);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:start}
+.node .nm{font:700 13px var(--font-ui);color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:start}
 .node .tt{font-size:11.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .node .meta{display:flex;gap:6px;margin-top:4px;align-items:center;flex-wrap:wrap}
 .node .mid{min-width:0;flex:1}
@@ -136,21 +118,21 @@ h1.co{white-space:nowrap;font-size:17px}
 .ocols{display:grid;gap:14px;width:100%}
 .ocol{position:relative;padding-top:16px;min-width:0}
 .ocol:before{content:"";position:absolute;left:50%;top:0;width:1px;height:16px;background:#3C4856}
-.ocolh{font:11px var(--mono);color:var(--ink-dim);display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 6px;padding:6px 2px 4px}
+.ocolh{font:11px var(--font-ui);color:var(--ink-dim);display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 6px;padding:6px 2px 4px}
 .ocolh b{color:var(--ink)}
 .node.head{border-top:3px solid var(--c);width:100%}
 .oemps{margin:0;margin-inline-start:22px;padding:0;list-style:none;border-inline-start:1px solid #3C4856}
 .oemps li{position:relative;padding-top:8px}
 .oemps li:before{content:"";position:absolute;inset-inline-start:0;top:30px;width:14px;height:1px;background:#3C4856}
 .oemps .node{margin-inline-start:14px}
-.mdlc{font:11px var(--mono);padding:1px 6px;border:1px solid rgba(86,182,194,.3);border-radius:4px;color:#7FB7C0;background:rgba(86,182,194,.07);white-space:nowrap}
+.mdlc{font:11px var(--font-ui);padding:1px 6px;border:1px solid rgba(86,182,194,.3);border-radius:4px;color:#7FB7C0;background:rgba(86,182,194,.07);white-space:nowrap}
 .pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:0 6px;border-radius:4px;white-space:nowrap;border:1px solid}
-.pill .g{font-family:var(--mono);font-weight:700;min-width:0}
+.pill .g{font-family:var(--font-ui);font-weight:700;min-width:0}
 .pill.working{color:var(--ok);border-color:var(--accent-line);background:var(--accent-soft)}
 .pill.quiet,.pill.waiting{color:var(--warn);border-color:rgba(229,163,61,.4);background:var(--warn-bg)}
 .pill.idle,.pill.away{color:var(--ink-soft);border-color:var(--line);background:rgba(138,151,166,.1)}
 .pill.paused{color:var(--bad);border-color:rgba(255,95,95,.4);background:var(--bad-bg)}
-.alert{font:10px var(--mono);padding:0 4px;border-radius:2px;white-space:nowrap}
+.alert{font:10px var(--font-ui);padding:0 4px;border-radius:2px;white-space:nowrap}
 .alert.s{color:var(--warn);border:1px solid rgba(229,163,61,.5)}.alert.h{color:var(--bad);border:1px solid rgba(255,95,95,.5)}
 .ocont{margin-top:18px}
 .ocont .chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
@@ -171,16 +153,16 @@ h1.co{white-space:nowrap;font-size:17px}
 .onode .av{line-height:0;flex:none}
 .olink{height:38px;position:relative;width:100%;display:flex;justify-content:center}
 .olink i{width:2px;height:100%;background:var(--accent);display:block}
-.olink span{position:absolute;inset-inline-start:calc(50% + 14px);top:10px;font:12px var(--mono);color:var(--ink-dim)}
-[dir=rtl] .olink span{font-family:var(--fa)}
+.olink span{position:absolute;inset-inline-start:calc(50% + 14px);top:10px;font:12px var(--font-ui);color:var(--ink-dim)}
+[dir=rtl] .olink span{font-family:var(--font-ui)}
 .obus{width:calc(100% - (100% / var(--n)));height:2px;background:#2B3A49;display:flex;justify-content:space-between;margin:0 auto}
 .obus i{width:9px;height:9px;margin-top:-3.5px;display:block}
 .org .ocols{gap:16px;margin-top:0}
 .org .ocol{padding-top:30px}
 .org .ocol:before{top:0;height:30px;width:2px;background:#2B3A49}
-.org .ocolh{font:700 15px var(--fa);color:#0A0F14;border-radius:10px 10px 0 0;padding:11px 16px;align-items:center;flex-wrap:nowrap}
+.org .ocolh{font:700 15px var(--font-ui);color:#0A0F14;border-radius:10px 10px 0 0;padding:11px 16px;align-items:center;flex-wrap:nowrap}
 .org .ocolh b{color:#0A0F14;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.org .ocolh .ocnt{font:700 11px var(--mono);background:rgba(10,15,20,.28);color:#0A0F14;border-radius:9px;padding:1px 8px;flex:none}
+.org .ocolh .ocnt{font:700 11px var(--font-ui);background:rgba(10,15,20,.28);color:#0A0F14;border-radius:9px;padding:1px 8px;flex:none}
 .ompl{list-style:none;margin:0;padding:10px 14px;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;background:var(--panel)}
 .opr{display:flex;align-items:center;gap:6px}
 .opr.retired{opacity:.55}
@@ -205,7 +187,7 @@ h1.co{white-space:nowrap;font-size:17px}
 .cdlg .sub{color:var(--ink-dim);margin:0 0 12px;font-size:12px}
 .cdlg label{display:block;margin:0 0 10px;color:var(--ink-soft)}
 .cdlg label.ck{display:flex;gap:8px;align-items:flex-start}
-.cdlg input[type=text]{display:block;width:100%;margin-top:3px;font:13px var(--mono);color:var(--ink);background:var(--ground);border:1px solid #3A4757;border-radius:3px;padding:4px 8px;direction:ltr}
+.cdlg input[type=text]{display:block;width:100%;margin-top:3px;font:13px var(--font-ui);color:var(--ink);background:var(--ground);border:1px solid #3A4757;border-radius:3px;padding:4px 8px;direction:ltr}
 .cdlg input:focus{outline:1px solid var(--accent)}
 .cdlg .hint{display:block;font-size:11px;color:var(--ink-dim);margin-top:2px}
 .cdlg .row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
@@ -216,8 +198,10 @@ h1.co{white-space:nowrap;font-size:17px}
 function companyViews(h) {
   const { esc, fa, hhmm, ms, T, k, usd, errTxt, portrait, sprite, post, redraw, go, refresh } = h
   const QUIET_MS = 10 * 60000
-  const ST_COL = { working: '#3BE8B0', quiet: '#E5A33D', waiting: '#E5A33D', paused: '#FF5F5F', idle: '#3C4856', away: '#2A3440' }
   const st = { armed: '', armT: 0, retired: false, dlg: null, busy: false, mmsg: '' }
+  // the campus is drawn, zoomed and panned by the shared art (office-world.cjs); this file says what is on it
+  const CA = campusArt({ esc, fa, go })
+  const ST_COL = CA.ST_COL
   const C = () => COMPANY
   const canEdit = () => LIVE && !!ANSWER_TOKEN && !C().readOnly
   const officeList = () => C().offices.filter((o) => !o.archived)
@@ -362,26 +346,9 @@ function companyViews(h) {
   }
 
   // ---------- the campus
-  const SLOTS = [
-    { at: [1.0, 1.0], sign: [60, 14] }, { at: [6.2, 1.0], sign: [760, 14] },
-    { at: [1.0, 6.2], sign: [40, 560] }, { at: [6.2, 6.2], sign: [790, 610] },
-  ]
-  function iso(ox, oy, TW, TH) {
-    const P = (x, y, z) => [ox + (x - y) * TW / 2, oy + (x + y) * TH / 2 - (z || 0)]
-    const poly = (pts, fill) => '<polygon points="' + pts.map((p) => p.map((n) => Math.round(n * 10) / 10).join(',')).join(' ') + '" fill="' + fill + '"/>'
-    const box = (x, y, w, d, z, hgt, c) =>
-      poly([P(x, y + d, z), P(x + w, y + d, z), P(x + w, y + d, z + hgt), P(x, y + d, z + hgt)], c[1]) +
-      poly([P(x + w, y, z), P(x + w, y + d, z), P(x + w, y + d, z + hgt), P(x + w, y, z + hgt)], c[2]) +
-      poly([P(x, y, z + hgt), P(x + w, y, z + hgt), P(x + w, y + d, z + hgt), P(x, y + d, z + hgt)], c[0])
-    const winL = (Y, x0, x1, z0, z1, f) => poly([P(x0, Y, z0), P(x1, Y, z0), P(x1, Y, z1), P(x0, Y, z1)], f)
-    const winR = (X, y0, y1, z0, z1, f) => poly([P(X, y0, z0), P(X, y1, z0), P(X, y1, z1), P(X, y0, z1)], f)
-    return { P, poly, box, winL, winR }
-  }
-  const shade = (hex, f) => '#' + [1, 3, 5].map((i) => Math.max(0, Math.min(255, Math.round(parseInt(hex.substr(i, 2), 16) * f))).toString(16).padStart(2, '0')).join('')
-
-  /** Who has a window in an office building: the home staff, and visitors
-   *  while they work there. Busiest first, so the top floor shows the work. */
   function windowsOf(S, officeId) {
+    // who has a window in an office building: the home staff, and visitors
+    // while they work there; busiest first, so the top floor shows the work
     const order = { working: 0, quiet: 1, waiting: 2, paused: 3, idle: 4, away: 5 }
     const ids = new Set(C().employees.filter((e) => e.kind === 'employee' && e.homeOfficeId === officeId).map((e) => e.id))
     for (const a of S.active) if (a.officeId === officeId) ids.add(a.agent)
@@ -392,103 +359,32 @@ function companyViews(h) {
     const list = officeList().filter((o) => !o.builtIn)
     const un = officeById('unassigned')
     const unC = counts(S, 'unassigned')
-    const showUn = un && (unC.working || unC.today || unC.waiting)
-    const many = list.length > 4
-    const W = 1060, H = 848
-    const g = many ? Math.ceil(Math.sqrt(list.length)) : 2
-    const I = iso(530, many ? 160 : 200, many ? 200 / g : 100, many ? 100 / g : 50)
-    const { P, poly, box, winL, winR } = I
-    const N = many ? g * 5 : 10
-    let s = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" shape-rendering="crispEdges" aria-hidden="true">'
-    s += poly([P(0, 0), P(N, 0), P(N, N), P(0, N)], '#13201C')
-    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) if ((i + j) % 2) s += poly([P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], '#16251F')
-    s += poly([P(0, N), P(N, N), P(N, N, -14), P(0, N, -14)], '#0B1311') + poly([P(N, 0), P(N, N), P(N, N, -14), P(N, 0, -14)], '#08100D')
-    const roads = []
-    for (let r = 1; r < (many ? g : 2); r++) roads.push(r * 5 - 0.45)
-    for (const r of roads) {
-      s += poly([P(r, 0), P(r + 0.9, 0), P(r + 0.9, N), P(r, N)], '#27323E') + poly([P(0, r), P(N, r), P(N, r + 0.9), P(0, r + 0.9)], '#27323E')
-      for (let t = 0.2; t < N; t += 0.8) s += poly([P(r + 0.42, t), P(r + 0.48, t), P(r + 0.48, t + 0.4), P(r + 0.42, t + 0.4)], '#56606C') + poly([P(t, r + 0.42), P(t + 0.4, r + 0.42), P(t + 0.4, r + 0.48), P(t, r + 0.48)], '#56606C')
-    }
-    const tree = (x, y) => { const [px, py] = P(x, y); return '<rect x="' + (px - 2) + '" y="' + (py - 10) + '" width="4" height="10" fill="#5A3A22"/><rect x="' + (px - 10) + '" y="' + (py - 26) + '" width="20" height="16" fill="#1F5A3E"/><rect x="' + (px - 6) + '" y="' + (py - 32) + '" width="12" height="8" fill="#2A7A52"/>' }
-    const signs = []
-    const lines = []
-    const items = []
-    list.forEach((o, i) => {
-      const at = many ? [(i % g) * 5 + 1, Math.floor(i / g) * 5 + 1] : SLOTS[i].at
-      const wins = windowsOf(S, o.id)
-      const rows = Math.max(2, Math.min(4, Math.ceil(wins.length / 6)))
-      const hgt = 24 + rows * 28
-      const w = 2.8, d = 2.8, c = o.color || '#8A97A6'
-      let b = box(at[0], at[1], w, d, 0, hgt, ['#2B3744', '#1D2732', '#151D26'])
-      b += poly([P(at[0], at[1], hgt), P(at[0] + w, at[1], hgt), P(at[0] + w, at[1] + d, hgt), P(at[0], at[1] + d, hgt)], '#2F3C4A')
-      b += box(at[0] - 0.05, at[1] + d - 0.05, w + 0.1, 0.05, hgt - 8, 8, [shade(c, 1), shade(c, 0.8), shade(c, 0.6)])
-      b += box(at[0] + w - 0.05, at[1] - 0.05, 0.05, d + 0.1, hgt - 8, 8, [shade(c, 0.8), shade(c, 0.7), shade(c, 0.5)])
-      // the top floors' windows: one per employee, coloured by what they do
-      const cw = w / 6
-      for (let r = 0; r < rows; r++) for (let ci = 0; ci < 6; ci++) {
-        const z0 = 14 + r * ((hgt - 34) / rows), z1 = z0 + ((hgt - 34) / rows) - 8
-        const n = (rows - 1 - r) * 6 + ci
-        const who = wins[n]
-        const f = who ? ST_COL[who.s] : (ci + r) % 3 === 0 ? '#1E2B38' : '#101820'
-        b += winL(at[1] + d, at[0] + ci * cw + cw * 0.2, at[0] + ci * cw + cw * 0.8, z0, z1, f)
-        b += winR(at[0] + w, at[1] + ci * (d / 6) + d / 12 * 0.4, at[1] + ci * (d / 6) + d / 6 * 0.8, z0, z1, (ci + r) % 4 === 1 ? '#233241' : '#0F1720')
-      }
-      const label = oname(o) + T(', ') + fa(counts(S, o.id).working) + ' ' + T('working')
-      items.push([at[0] + at[1], '<g class="bld" data-goto="office:' + esc(o.id) + '" role="button" tabindex="0" aria-label="' + esc(label) + '">' + b + '</g>'])
-      const roof = P(at[0] + w / 2, at[1] + d / 2, hgt)
-      if (many) {
-        signs.push({ o, x: roof[0] - 70, y: roof[1] - 70, small: true })
-      } else {
-        const [sx, sy] = SLOTS[i].sign
-        signs.push({ o, x: sx, y: sy })
-        lines.push([sx + 112, sy + (sy < 400 ? 132 : -2), roof[0], roof[1]])
-      }
-    })
-    if (!many) {
-      // the supervisor's kiosk on the plaza; heads of offices sit in their buildings
-      s += poly([P(4.1, 4.1), P(5.9, 4.1), P(5.9, 5.9), P(4.1, 5.9)], '#2E3B48')
-      const [kx, ky] = P(5, 5)
-      items.push([9.5, '<g class="bld" data-goto="office:' + esc(hqId()) + '" role="button" tabindex="0" aria-label="' + esc(T('Supervisor desk')) + '">' + box(4.5, 4.5, 1, 1, 0, 26, ['#C9B6F2', '#7C6FA3', '#5A4F7C']) +
-        '<rect x="' + (kx - 1) + '" y="' + (ky - 58) + '" width="2" height="34" fill="#8A97A6"/><rect x="' + (kx + 1) + '" y="' + (ky - 58) + '" width="16" height="10" fill="' + (ceoAway() ? '#56606C' : '#FFD166') + '"/></g>'])
-      for (const [x, y] of [[4.2, 4.3], [0.5, 5.4], [9.6, 9.6], [4.2, 9.4], [5.8, 0.5]]) items.push([x + y, tree(x, y)])
-      if (!showUn) items.push([13.6, tree(9.3, 4.3)])
-    }
-    if (showUn && !many) {
-      // work no project claims sits in a shed by the road, not in an office
-      items.push([13.1, '<g class="bld" data-goto="office:unassigned" role="button" tabindex="0" aria-label="' + esc(oname(un)) + '">' + box(9.0, 3.85, 0.85, 0.6, 0, 26, ['#56606C', '#3C4856', '#2B3744']) + '</g>'])
-      const [ux, uy] = P(9.4, 4.1, 26)
-      signs.push({ o: un, x: ux - 40, y: uy - 92, small: true })
-    }
-    // visitors on their way: one figure on the road for each employee
-    // working in an office that is not their home
-    let v = 0
-    for (const a of S.active) {
-      const e = emp(a.agent)
-      if (!e || !e.homeOfficeId || e.homeOfficeId === a.officeId || v >= 6 || many) continue
-      const i = list.findIndex((o) => o.id === a.officeId)
-      if (i < 0) continue
-      const at = SLOTS[i].at
-      const spot = [[5, 2.3], [5, 3.2], [2.3, 5], [3.2, 5], [7.8, 5], [5, 7.6]][(i * 2 + v) % 6]
-      void at
-      const [px, py] = P(spot[0], spot[1])
-      items.push([spot[0] + spot[1], sprite('stand', a.agent, px, py, 2)])
-      v++
-    }
-    items.sort((a, b) => a[0] - b[0])
-    s += items.map((x) => x[1]).join('') + '</svg>'
-    const html = signs.map(({ o, x, y, small }) => {
+    const showUn = !!(un && (unC.working || unC.today || unC.waiting))
+    // work no project claims sits in a shed on its own plot, after the offices
+    const plots = list.map((o, i) => ({ o, kind: i % 4 })).concat(showUn ? [{ o: un, kind: 'shed' }] : [])
+    const cells = plots.map(({ o, kind }) => {
       const c = counts(S, o.id)
       const sd = o.standing || {}
-      return '<div class="sign' + (small ? ' small' : '') + '" style="--c:' + esc(o.color || '#8A97A6') + ';left:' + x + 'px;top:' + y + 'px">' +
-        '<h3 title="' + esc(oname(o)) + '">' + esc(oname(o)) + '</h3>' +
-        '<div class="n"><span class="a" title="' + T('working') + '">▸ ' + fa(c.working) + '</span><span class="b" title="' + T('waiting for you') + '">! ' + fa(c.waiting) + '</span>' + (small ? '' : '<span class="c">' + money(sd.spend) + '</span>') + '</div>' +
-        (small ? '' : bar(sd.budget)) +
-        '<button type="button" class="cbtn go" data-goto="office:' + esc(o.id) + '">' + T('Enter office →') + '</button></div>'
-    }).join('')
-    const svgLines = '<svg width="' + W + '" height="' + H + '" style="pointer-events:none" aria-hidden="true">' + lines.map((l) => '<line x1="' + l[0] + '" y1="' + l[1] + '" x2="' + l[2] + '" y2="' + l[3] + '" stroke="#3C4856" stroke-dasharray="3 3"/>').join('') + '</svg>'
-    const leg = '<div class="cleg"><span>' + T('Windows on the top floors: one per employee') + '</span><span><i style="background:#3BE8B0"></i>' + T('working') + '</span><span><i style="background:#E5A33D"></i>' + T('waiting') + '</span><span><i style="background:#FF5F5F"></i>' + T('paused') + '</span><span><i style="background:#3C4856"></i>' + T('idle') + '</span></div>'
-    const tip = many ? '' : '<div class="ctip">' + T('Lavender kiosk = ') + '<b>' + T('Supervisor desk') + '</b>. ' + T('Click a building to enter.') + '</div>'
-    return '<div class="cwrap"><div class="cmap" id="cmap"><div class="cmap-in" id="cmap-in">' + s + svgLines + html + '</div>' + tip + leg + '</div>' + side(S) + '</div>'
+      const small = kind === 'shed'
+      return {
+        id: o.id, name: oname(o), color: o.color || '#8A97A6', kind, small, wins: small ? [] : windowsOf(S, o.id),
+        label: oname(o) + T(', ') + fa(c.working) + ' ' + T('working'),
+        sign: '<h3 title="' + esc(oname(o)) + '">' + esc(oname(o)) + '</h3>' +
+          '<div class="n"><span class="a" title="' + T('working') + '">▸ ' + fa(c.working) + '</span><span class="b" title="' + T('waiting for you') + '">! ' + fa(c.waiting) + '</span>' + (small ? '' : '<span class="c">' + money(sd.spend) + '</span>') + '</div>' +
+          (small ? '' : bar(sd.budget)) +
+          '<button type="button" class="cbtn go" data-goto="office:' + esc(o.id) + '">' + T('Enter office →') + '</button>',
+      }
+    })
+    // visitors: a figure at the door for each employee working away from home
+    const visitors = []
+    for (const a of S.active) {
+      const e = emp(a.agent)
+      if (!e || !e.homeOfficeId || e.homeOfficeId === a.officeId) continue
+      visitors.push({ officeId: a.officeId, draw: (x, y) => sprite('stand', a.agent, x, y, 2) })
+    }
+    const legend = '<div class="cleg"><span>' + T('Windows on the top floors: one per employee') + '</span><span><i style="background:' + ST_COL.working + '"></i>' + T('working') + '</span><span><i style="background:' + ST_COL.waiting + '"></i>' + T('waiting') + '</span><span><i style="background:' + ST_COL.paused + '"></i>' + T('paused') + '</span><span><i style="background:' + ST_COL.idle + '"></i>' + T('idle') + '</span></div>'
+    const tip = '<div class="ctip">' + T('Lavender kiosk = ') + '<b>' + T('Supervisor desk') + '</b>. ' + T('Click a building to enter.') + '</div>'
+    return CA.draw({ cells, hq: { id: hqId(), lit: !ceoAway(), label: T('Supervisor desk') }, visitors, legend, tip, side: side(S) })
   }
   const hqId = () => { const o = officeList().find((x) => x.leadEmployeeId === 'supervisor') || officeList()[0]; return o ? o.id : 'unassigned' }
   const ceoAway = () => { const hb = C().heartbeat; return !hb || !hb.lastSeenAt || Date.now() - ms(hb.lastSeenAt) > 30 * 60000 }
@@ -670,16 +566,9 @@ function companyViews(h) {
     }
   })
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && st.dlg) { closeBudget(); e.stopPropagation() } }, true)
-  // keyboard: Enter on a building enters it, like a click
-  document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches && e.target.matches('g.bld')) go(e.target.getAttribute('data-goto')) })
 
-  /** The map is drawn at 1060x848 and scaled to the space it has. */
-  function fit() {
-    const box = document.getElementById('cmap'), inner = document.getElementById('cmap-in')
-    if (!box || !inner) return
-    const s = Math.min(box.clientWidth / 1060, box.clientHeight / 848)
-    inner.style.transform = 'translate(' + Math.max(0, (box.clientWidth - 1060 * s) / 2).toFixed(1) + 'px,0) scale(' + s.toFixed(4) + ')'
-  }
+  /** Lays the freshly drawn campus into its space, at the zoom and pan it was left at. */
+  const fit = () => CA.fit()
 
   return { scope, desks, campus, org, officeHead, counts, fit, oname, officeById, officeList, emp, dialogOpen: () => !!st.dlg }
 }

@@ -15,13 +15,13 @@
 
 const ACTIVITY_STYLE = `
 .act{overflow:auto;scrollbar-width:thin;scrollbar-color:#2A3644 transparent;flex:1;min-height:0}
-.act h3{font:600 11px var(--mono);letter-spacing:.8px;text-transform:uppercase;color:var(--ink-dim);margin:14px 0 6px;position:sticky;top:0;background:var(--ground);padding:4px 0;z-index:1}
+.act h3{font:700 11px var(--font-ui);letter-spacing:.8px;text-transform:uppercase;color:var(--ink-dim);margin:14px 0 6px;position:sticky;top:0;background:var(--ground);padding:4px 0;z-index:1}
 .act ol{list-style:none;margin:0;padding:0}
 .act li{display:grid;grid-template-columns:52px 120px 1fr auto;gap:10px;align-items:baseline;padding:6px 8px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft)}
-.act li time{font:12px var(--mono);color:var(--ink-dim);direction:ltr}
-.act li .who{font:600 12px var(--mono);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:start}
-.act li .what b{color:var(--ink);font-weight:600}
-.act li .k{font:10.5px var(--mono);padding:0 5px;border-radius:3px;border:1px solid var(--line);color:var(--ink-dim);white-space:nowrap}
+.act li time{font:12px var(--font-ui);color:var(--ink-dim);direction:ltr}
+.act li .who{font:700 12px var(--font-ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:start}
+.act li .what b{color:var(--ink);font-weight:700}
+.act li .k{font:10.5px var(--font-ui);padding:0 5px;border-radius:3px;border:1px solid var(--line);color:var(--ink-dim);white-space:nowrap}
 .act li .k.der{border-style:dashed}
 .act li.t-budget .k,.act li.t-company .k{color:var(--gate);border-color:var(--gate-line)}
 .act li.t-gate .k{color:var(--warn)}

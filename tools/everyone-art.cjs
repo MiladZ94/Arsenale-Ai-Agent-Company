@@ -93,7 +93,7 @@ function everyoneArt() {
     }
     return { P, poly, box }
   }
-  const text = (x, y, s, o) => { o = o || {}; return '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="middle" style="font:' + (o.w || 600) + ' ' + (o.size || 12) + 'px ' + (o.mono ? 'var(--mono)' : 'var(--fa)') + ';fill:' + (o.fill || '#C6D0DA') + '">' + s + '</text>' }
+  const text = (x, y, s, o) => { o = o || {}; return '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="middle" style="font:' + (o.w || 600) + ' ' + (o.size || 12) + 'px ' + (o.mono ? 'var(--font-ui)' : 'var(--font-ui)') + ';fill:' + (o.fill || '#C6D0DA') + '">' + s + '</text>' }
   // `s` is already escaped by the caller; its length only sizes the label
   const tag = (x, y, s, o) => {
     o = o || {}

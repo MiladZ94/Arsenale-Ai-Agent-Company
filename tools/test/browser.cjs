@@ -107,6 +107,8 @@ async function launch() {
       listeners.push((msg) => { if (msg.method === 'Log.entryAdded' || msg.method === 'Runtime.exceptionThrown' || msg.method === 'Runtime.consoleAPICalled') seen.push(msg) })
       return seen
     },
+    /** Run a script in every page this tab opens from now on, before the page's own (to take WebGL away, say). */
+    async onNewDocument(source) { await send('Page.addScriptToEvaluateOnNewDocument', { source }) },
     async close() {
       try { ws.close() } catch { /* already gone */ }
       child.kill()

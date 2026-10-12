@@ -51,6 +51,8 @@ function makeSandbox(opts = {}) {
   const tools = path.join(root, 'tools')
   fs.mkdirSync(tools, { recursive: true })
   for (const f of fs.readdirSync(TOOLS)) if (f.endsWith('.cjs')) fs.copyFileSync(path.join(TOOLS, f), path.join(tools, f))
+  // the 3D office's pinned three.js and its default character (office-world.cjs); opts.flat leaves them out
+  if (!opts.flat) for (const d of ['vendor', 'characters']) if (fs.existsSync(path.join(TOOLS, d))) fs.cpSync(path.join(TOOLS, d), path.join(tools, d), { recursive: true })
   fs.writeFileSync(path.join(root, 'model-prices.json'), JSON.stringify({ models: opts.prices || {} }))
   // the user's own settings never leak in: no agent or transcript folders from the environment
   const env = Object.assign({}, process.env, { ARSENALE_HOME: root }, opts.env || {})

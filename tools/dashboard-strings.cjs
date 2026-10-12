@@ -1212,6 +1212,27 @@ const FA = {
   'The deliverable store is full (5 GB): nothing more is stored': 'انبار تحویلی‌ها پر است (۵ گیگابایت): چیز دیگری نگه داشته نمی‌شود',
   'This page lost its key. Open the dashboard again with arsenale open.': 'این صفحه کلیدش را از دست داده است. داشبورد را دوباره با arsenale open باز کنید.',
   'This dashboard opens only with its key. Run `arsenale open`, or open the address that `arsenale serve` printed.': 'این داشبورد فقط با کلید خودش باز می‌شود. دستور `arsenale open` را اجرا کنید، یا نشانی‌ای را که `arsenale serve` چاپ کرد باز کنید.',
+
+  // ---------- the shared office world (office-world.cjs): the 3D office's own words
+  'Campus — mouse wheel or + and - to zoom, drag or arrow keys to pan, 0 to fit':
+    'محوطه — چرخ ماوس یا + و − برای زوم، کشیدن یا کلیدهای جهت برای جابه‌جایی، 0 برای نمای کامل',
+  'Campus zoom': 'بزرگ‌نمایی محوطه',
+  'Fit whole campus (0)': 'نمای کامل محوطه (0)',
+  'Fit all': 'نمای کامل',
+  'Character': 'شخصیت',
+  'Default character': 'شخصیت پیش‌فرض',
+  'remembered in this browser': 'در همین مرورگر نگه داشته شده',
+  'from the characters folder': 'از پوشهٔ شخصیت‌ها',
+  'Load .glb…': 'بارگذاری فایل شخصیت…',
+  'Use default': 'بازگشت به پیش‌فرض',
+  'Drop the .glb on a desk': 'فایل شخصیت را روی یک میز رها کنید',
+  'Drop the .glb onto a desk with a person': 'فایل شخصیت را روی میزی رها کنید که کسی پشت آن است',
+  'Only .glb files can be dropped': 'فقط فایل مدل سه‌بعدی شخصیت را می‌توان رها کرد',
+  'Could not read ': 'خوانده نشد: ',
+  ' now uses ': ' اکنون این شخصیت را دارد: ',
+  'typing': 'تایپ',
+  'thinking': 'فکر',
+  'celebrate': 'جشن',
 }
 
 /** English is the source text; a missing fa key falls back to it. */
