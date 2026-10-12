@@ -265,7 +265,8 @@ test('the page shows today\'s runs in their office and the company in the page d
   const html = B.renderPage(state, { live: true, token: 't', lang: 'en' })
   assert.match(html, /<title>Arsenale<\/title>/)
   assert.match(html, /"configured":true/)
-  assert.match(B.renderPage(state, { lang: 'fa' }), /<html lang="fa" dir="rtl">/)
+  // English only: a request for Persian still renders the English page
+  assert.match(B.renderPage(state, { lang: 'fa' }), /<html lang="en" dir="ltr">/)
   void thisMonth
 })
 

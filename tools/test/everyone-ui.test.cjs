@@ -85,19 +85,6 @@ test('the wizard does not open with runs but no company; closing it before Creat
   assert.deepEqual(fs.readdirSync(w.sb.agents).filter((f) => !['implementer.md', 'tester.md', 'ui-designer.md', 'code-reviewer.md', 'engineering-lead.md', 'product-lead.md', 'AGENT-RULES.md'].includes(f)), [])
 })
 
-test('a language switch in the wizard keeps what was typed', { skip: SKIP || false }, async (t) => {
-  const w = await open(t)
-  await w.page.goto(w.url + '?lang=en')
-  await w.waitFor(exists('.wz input[name=name]'))
-  await w.set('.wz input[name=name]', 'Lumen Atelier')
-  await w.set('.wz textarea[name=mission]', 'A small print studio')
-  await w.click('.wz [data-lang=fa]')
-  await w.waitFor("document.documentElement.dir === 'rtl' && !!document.querySelector('.wz input[name=name]')", 15000)
-  assert.equal(await w.page.eval("document.querySelector('.wz input[name=name]').value"), 'Lumen Atelier')
-  assert.equal(await w.page.eval("document.querySelector('.wz textarea[name=mission]').value"), 'A small print studio')
-  assert.equal(fs.existsSync(w.sb.company), false)
-})
-
 test('a task written on the page: saved as BLU-1, commented and moved; a bad link is refused with its reason', { skip: SKIP || false }, async (t) => {
   const w = await open(t, { company: true })
   await w.page.goto(w.url + '#/tasks')

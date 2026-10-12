@@ -103,13 +103,12 @@ function start(opts = {}) {
     }
     return false
   }
-  /** No key: JSON for the API, a short page in both languages for the rest. */
+  /** No key: JSON for the API, a short English page for the rest. */
   function noKey(res, url) {
     if (url.startsWith('/api/')) return sendJson(res, 401, { error: 'key' })
-    const { t } = require('./dashboard-strings.cjs')
     const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     res.writeHead(401, Object.assign({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Security-Policy': BARE_CSP }, FRAME))
-    res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Arsenale</title></head><body><p>' + esc(KEY_HELP) + '</p><p lang="fa" dir="rtl">' + esc(t('fa', KEY_HELP)) + '</p></body></html>')
+    res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Arsenale</title></head><body><p>' + esc(KEY_HELP) + '</p></body></html>')
   }
 
   function sendJson(res, code, body) {
@@ -240,12 +239,10 @@ function start(opts = {}) {
     if (url !== '/favicon.ico' && url !== '/mcp' && !hasKey(req)) return noKey(res, url)
     try {
       const B = pages()
-      const { renderPage, renderArchive, answerGate, dismissGate, langFromRequest } = B
+      const { renderPage, renderArchive, answerGate, dismissGate } = B
       const fresh = () => B.invalidate()
-      // The language is picked per request: ?lang= in the address, else the
-      // `dash-lang` cookie the page sets, else English (tools/dashboard-strings.cjs).
-      const { lang, explicit } = langFromRequest(full.split('?')[1] || '', req.headers.cookie)
-      const langCookie = explicit ? { 'Set-Cookie': 'dash-lang=' + lang + '; Path=/; Max-Age=31536000; SameSite=Strict' } : {}
+      // English only: ?lang= and the old `dash-lang` cookie are not read (tools/dashboard-strings.cjs)
+      const lang = 'en'
       if (url === '/api/answer' || url === '/api/dismiss') {
         if (req.method !== 'POST') return sendJson(res, 405, { error: 'POST only' })
         const act = url === '/api/answer' ? answerGate : dismissGate
@@ -317,7 +314,7 @@ function start(opts = {}) {
           'Content-Type': 'text/html; charset=utf-8',
           'Cache-Control': 'no-store',
           'Content-Security-Policy': csp(nonce, port),
-        }, FRAME, langCookie))
+        }, FRAME))
         res.end(html.replace(/<script>/g, '<script nonce="' + nonce + '">'))
         return
       }

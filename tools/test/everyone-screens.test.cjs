@@ -26,7 +26,7 @@ async function open(t, sb, hash) {
   const page = await browser.launch()
   t.after(async () => { await page.close(); child.kill(); sb.cleanup() })
   await page.goto(keyUrl)
-  await page.goto('http://127.0.0.1:' + port + '/?lang=en' + (hash || ''))
+  await page.goto('http://127.0.0.1:' + port + '/?v=' + Date.now() + (hash || ''))
   return page
 }
 

@@ -45,7 +45,7 @@ test('no key cookie: every page, API read, deliverable and write answers 401; th
     assert.equal(r.headers['x-frame-options'], 'DENY')
     assert.equal(r.headers['content-security-policy'], "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
     assert.match(r.text, /arsenale open/)
-    assert.match(r.text, /\p{Script=Arabic}/u, 'the Persian line is there too')
+    assert.doesNotMatch(r.text, /\p{Script=Arabic}/u, 'English only: no Persian line')
     assert.doesNotMatch(r.text, /<script/)
   }
   for (const url of ['/api/state', '/api/company', '/api/tasks', '/api/team', '/api/notify', '/api/connect', '/api/deliverables']) {

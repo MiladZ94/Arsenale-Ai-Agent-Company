@@ -30,14 +30,16 @@ one. Change the drawing here, run the tests here, then sync.
 
 Every desk shows `characters/default.glb` until a person's own file replaces it:
 
-- drop a `.glb` on that person's podium in the office (remembered in that
+- drop a `.glb` on that person's desk in the office (remembered in that
   browser), or use **Load .glb…** in the details panel;
 - or put `<agent-name>.glb` in the `characters` folder of the data folder
   (`ARSENALE_HOME/characters/`); the page inlines it on the next load.
 
 A replacement file uses the same clip names, matched without regard to case:
-`Idle`, `Typing`, `Thinking`, `Celebrate` (see `CLIP_RX` in `office-world.cjs`
-for the other names that match). glTF 2.0 binary, textures embedded, no Draco
+`Idle`, `Typing`, `Thinking`, `Celebrate`, and `Walk` and `Stand` for the walks
+between the lounge, the supervisor and the desk (see `CLIP_RX` in
+`office-world.cjs` for the other names that match). A file without `Walk` or
+`Stand` moves and waits in its idle pose. glTF 2.0 binary, textures embedded, no Draco
 or meshopt, Y up, metres, facing +Z. A clip name with "sit" in it, or scene
 extras `{"arsenale": {"seated": true}}`, seats the person on the chair; otherwise
 they stand beside the desk.

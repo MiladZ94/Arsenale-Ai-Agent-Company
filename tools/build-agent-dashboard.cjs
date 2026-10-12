@@ -37,7 +37,7 @@ const P = require('./paths.cjs')
 
 const { RUNS, ACTIVE, OUT, OUT_ARCHIVE, GATES, DECISIONS, ANSWERS } = P
 const { renderOffice } = require('./agent-office-page.cjs')
-const { t, langSwitch, langScript, langFromRequest } = require('./dashboard-strings.cjs')
+const { t, langScript, langFromRequest } = require('./dashboard-strings.cjs')
 
 /** Other agents log while the server reads, so a file is never seen half
  *  written: write a temp file next to it, then rename over. */
@@ -633,12 +633,12 @@ function invalidate() { snap = null }
 const STYLE = `
   :root {
     --font-ui: Arial, "Helvetica Neue", Helvetica, sans-serif;
-    --ink: #C6D0DA; --ink-soft: #A6B1BD; --ink-dim: #8A97A6;
-    --ground: #0A0F14; --panel: #10161D; --panel-raised: #141B23; --line: #1E2A36;
-    --accent: #3BE8B0; --accent-soft: rgba(59, 232, 176, 0.1); --accent-line: rgba(59, 232, 176, 0.3);
-    --cyan: #56B6C2; --cyan-soft: rgba(86, 182, 194, 0.1);
-    --ok: #3BE8B0; --ok-bg: rgba(59, 232, 176, 0.1); --warn: #E5A33D; --warn-bg: rgba(229, 163, 61, 0.12);
-    --bad: #FF5F5F; --bad-bg: rgba(255, 95, 95, 0.12); --idle: #8A97A6; --idle-bg: rgba(138, 151, 166, 0.12);
+    --ink: #1F2A36; --ink-soft: #4A5663; --ink-dim: #66727F;
+    --ground: #F3F5F7; --panel: #FFFFFF; --panel-raised: #F6F8FA; --line: #D9DFE5;
+    --accent: #0C8A62; --accent-soft: rgba(12,138,98,0.1); --accent-line: rgba(12,138,98,0.3);
+    --cyan: #1F7A8C; --cyan-soft: rgba(31,122,140,0.1);
+    --ok: #0C8A62; --ok-bg: rgba(12,138,98,0.1); --warn: #B8720F; --warn-bg: rgba(217,140,30,0.12);
+    --bad: #C8372D; --bad-bg: rgba(200,55,45,0.12); --idle: #66727F; --idle-bg: rgba(106,118,131,0.12);
   }
   * { box-sizing: border-box; }
   body {
@@ -650,8 +650,8 @@ const STYLE = `
   /* one restrained ambient touch: a faint scanline field, gone when motion is reduced */
   body::before {
     content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background: repeating-linear-gradient(to bottom, rgba(255,255,255,0.018) 0px, rgba(255,255,255,0.018) 1px, transparent 1px, transparent 3px),
-      radial-gradient(ellipse at 50% 0%, rgba(59,232,176,0.05), transparent 60%);
+    background: repeating-linear-gradient(to bottom, rgba(255,255,255,0) 0px, rgba(255,255,255,0) 1px, transparent 1px, transparent 3px),
+      radial-gradient(ellipse at 50% 0%, rgba(12,138,98,0.05), transparent 60%);
   }
   @media (prefers-reduced-motion: reduce) { body::before { display: none; } }
   .wrap { max-width: 1060px; margin: 0 auto; position: relative; z-index: 1; }
@@ -735,9 +735,9 @@ const STYLE = `
   }
   .win-dots { display: inline-flex; gap: 5px; flex: none; }
   .win-dots i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--line); }
-  .win-dots i:nth-child(1) { background: #FF5F5F; opacity: 0.7; }
-  .win-dots i:nth-child(2) { background: #E5A33D; opacity: 0.7; }
-  .win-dots i:nth-child(3) { background: #3BE8B0; opacity: 0.7; }
+  .win-dots i:nth-child(1) { background: #C8372D; opacity: 0.7; }
+  .win-dots i:nth-child(2) { background: #B8720F; opacity: 0.7; }
+  .win-dots i:nth-child(3) { background: #0C8A62; opacity: 0.7; }
 
   /* the log, read like a terminal */
   .term {
@@ -772,15 +772,11 @@ const STYLE = `
     font-size: 0.74rem; font-weight: 700; padding: 3px 9px; border-radius: 4px;
     border: 1px solid transparent; white-space: nowrap; font-family: var(--font-ui);
   }
-  .agent-chip { background: var(--cyan-soft); color: var(--cyan); border-color: rgba(86,182,194,0.3); direction: ltr; }
-  .langsw { display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; margin-inline-start: auto; }
-  .langsw button { font: 0.74rem var(--font-ui); color: var(--ink-dim); background: var(--panel); border: 0; padding: 3px 9px; cursor: pointer; }
-  .langsw button + button { border-inline-start: 1px solid var(--line); }
-  .langsw button[aria-pressed="true"] { color: var(--ink); background: var(--panel-raised); }
+  .agent-chip { background: var(--cyan-soft); color: var(--cyan); border-color: rgba(31,122,140,0.3); direction: ltr; }
   .live-chip { background: transparent; color: var(--cyan); border: 0; padding: 0; direction: ltr; }
-  .status-ok { background: var(--ok-bg); color: var(--ok); border-color: rgba(59,232,176,0.3); }
-  .status-findings { background: var(--warn-bg); color: var(--warn); border-color: rgba(229,163,61,0.35); }
-  .status-failed { background: var(--bad-bg); color: var(--bad); border-color: rgba(255,95,95,0.35); }
+  .status-ok { background: var(--ok-bg); color: var(--ok); border-color: rgba(12,138,98,0.3); }
+  .status-findings { background: var(--warn-bg); color: var(--warn); border-color: rgba(217,140,30,0.35); }
+  .status-failed { background: var(--bad-bg); color: var(--bad); border-color: rgba(200,55,45,0.35); }
   .status-stopped { background: var(--idle-bg); color: var(--idle); border-color: var(--line); }
 
   .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
@@ -853,19 +849,12 @@ const STATUS_CODE = { ok: T('OK'), findings: T('FINDINGS'), failed: T('FAILED'),
 const el = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const when = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString(LANG === 'fa' ? 'fa-IR' : 'en-GB'); };
-// digits with a thousands separator (155,703 / ۱۵۵٬۷۰۳).
+// digits with a thousands separator (155,703).
 const fmt = (n) => (n || 0).toLocaleString(LANG === 'fa' ? 'fa-IR' : 'en-US');
 
 function took(ms) {
   if (!ms) return '';
   const s = Math.round(ms / 1000);
-  if (LANG === 'fa') {
-    // Persian digits, like every other number on the Persian page
-    if (s < 60) return fmt(s) + ' ثانیه';
-    const m = Math.floor(s / 60);
-    if (m < 60) return fmt(m) + ' دقیقه' + (s % 60 ? ' و ' + fmt(s % 60) + ' ثانیه' : '');
-    return fmt(Math.floor(m / 60)) + ' ساعت و ' + fmt(m % 60) + ' دقیقه';
-  }
   if (s < 60) return s + 's';
   const m = Math.floor(s / 60);
   if (m < 60) return m + 'm' + (s % 60 ? ' ' + (s % 60) + 's' : '');
@@ -880,7 +869,7 @@ function tiles() {
     [T('DONE'), T('Runs done'), DATA.runs.length, ''],
     [T('AGENTS'), T('Agents defined'), DATA.agents.length, ''],
     [T('FINDINGS'), T('Runs with findings'), flagged.length, flagged.length ? 'alert' : ''],
-    [T('TIME'), T('Time spent'), took(time) || (LANG === 'fa' ? '۰' : '0'), ''],
+    [T('TIME'), T('Time spent'), took(time) || '0', ''],
   ];
   el('tiles').innerHTML = items.map(([key, label, value, kind]) =>
     '<div class="tile ' + kind + '"><span class="tile-key">[ ' + key + ' ]</span><b>' + esc(typeof value === 'number' ? fmt(value) : value) + '</b><span class="tile-label">' + esc(label) + '</span></div>').join('');
@@ -1028,7 +1017,7 @@ function tick() {
   const now = Date.now();
   document.querySelectorAll('.elapsed').forEach((s) => {
     const started = new Date(s.dataset.since).getTime();
-    s.textContent = isNaN(started) ? '' : took(Math.max(1000, now - started)) + (LANG === 'fa' ? ' تا اینجا' : ' so far');
+    s.textContent = isNaN(started) ? '' : took(Math.max(1000, now - started)) + ' so far';
   });
 }
 
@@ -1250,9 +1239,10 @@ if (LIVE) {
  *  `live` swaps the self-reloading file for server polling. */
 function renderArchive(state, opts = {}) {
   const live = !!opts.live
-  const lang = opts.lang === 'fa' ? 'fa' : 'en'
+  // English is the only language (dashboard-strings.cjs); opts.lang is not read
+  const lang = 'en'
   const T = (key) => t(lang, key)
-  const dir = lang === 'fa' ? 'rtl' : 'ltr'
+  const dir = 'ltr'
   // "<" escaped, so a task description containing markup can never break out
   // of the script tag.
   const data = JSON.stringify(state).replace(/</g, '\\u003c')
@@ -1275,7 +1265,6 @@ ${refresh}
     ${live ? '<span class="mode" id="mode">' + T('● Live') + '</span>' : ''}
     <span class="built" id="built"></span>
     <a class="chip agent-chip" style="text-decoration:none" href="${live ? './' : 'agent-dashboard.html'}">${T('Today’s office ←')}</a>
-    ${live ? langSwitch(lang) : ''}
   </header>
   <p class="lede">${T('Every task ever given to an agent: what was asked, which model did it, and what came back.')}</p>
 

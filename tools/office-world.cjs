@@ -8,16 +8,20 @@
  * of any one company's names, offices or people: it is public.
  *
  * Three parts:
- *  - campusArt(h): the campus, light isometric white buildings on plinths,
- *    one plot per office, the office's card above its building, zoom and pan.
+ *  - campusArt(h): the campus, light isometric white buildings standing on
+ *    the ground grid, one paved plot per office, the office's card above its
+ *    building, zoom and pan. No shadows anywhere.
  *    It draws what the page hands it; counting work, money and budgets stays
  *    in the page (companyViews).
- *  - office3d(h): the office floor in three.js r184: one floating white
- *    podium per person with a desk, a chair and their character, a portrait
- *    card above it whose frame is the person's state, the handed-in tray, and
- *    a camera that pans, orbits and zooms and survives every redraw. Returns
- *    null when three.js or WebGL is not there, and the page keeps its flat
- *    office.
+ *  - office3d(h): the office floor in three.js r184, a room on the ground:
+ *    a work station per person round the supervisor's station, a lounge
+ *    where idle people rest, a reception, walls with windows and the project
+ *    screens. People walk between them as their state changes (lounge ->
+ *    supervisor -> desk -> supervisor -> lounge). A portrait card above each
+ *    desk shows the person's state; the handed-in tray is on the supervisor's
+ *    desk; the camera pans, orbits and zooms and survives every redraw.
+ *    Returns null when three.js or WebGL is not there, and the page keeps its
+ *    flat office.
  *  - worldScripts(opts), in Node: the pinned three.js files and the
  *    characters, inlined into the page as <script> blocks (the dashboards'
  *    servers serve pages and JSON only, and the pages load nothing from a CDN).
@@ -33,7 +37,7 @@ const path = require('path')
 const FONT = 'Arial, "Helvetica Neue", Helvetica, sans-serif'
 
 const WORLD_STYLE = `
-/* ---------- campus: a light site plan inside the dark board */
+/* ---------- campus: a light site plan on the light board */
 .cwrap{display:flex;height:100%}
 .cmap{flex:1;position:relative;overflow:hidden;background:#ECEFF2;min-width:0;touch-action:none;user-select:none;cursor:grab;outline:none}
 .cmap.panning{cursor:grabbing}
@@ -44,7 +48,7 @@ const WORLD_STYLE = `
 .cmap svg text{font-family:var(--font-ui);font-weight:700}
 .cmap .bld{cursor:pointer;outline:none}
 .cmap .bld:hover .pl,.cmap .bld:focus-visible .pl{stroke:var(--c);stroke-width:3}
-.sign{position:absolute;width:224px;transform:translate(-50%,-100%) scale(var(--bs,1));transform-origin:50% 100%;background:#fff;border:1px solid #D3D9DF;border-top:3px solid var(--c);border-radius:6px;padding:8px 10px 9px;text-align:start;color:#3A4654;box-shadow:0 6px 18px rgba(40,55,70,.13);cursor:default}
+.sign{position:absolute;width:224px;transform:translate(-50%,-100%) scale(var(--bs,1));transform-origin:50% 100%;background:#fff;border:1px solid #D3D9DF;border-top:3px solid var(--c);border-radius:6px;padding:8px 10px 9px;text-align:start;color:#3A4654;cursor:default}
 .sign:after{content:"";position:absolute;left:50%;bottom:-6px;width:10px;height:10px;background:#fff;border-right:1px solid #D3D9DF;border-bottom:1px solid #D3D9DF;transform:translateX(-50%) rotate(45deg)}
 .sign h3{margin:0 0 5px;font-size:14px;color:#17212B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sign .n{display:flex;gap:11px;font-size:12px;font-variant-numeric:tabular-nums;margin-bottom:6px;white-space:nowrap;direction:ltr;justify-content:flex-end}
@@ -70,8 +74,8 @@ const WORLD_STYLE = `
 .czoom output{font:11.5px var(--font-ui);font-variant-numeric:tabular-nums;color:#17212B;min-width:44px;text-align:center}
 .czoom .zh{font:11px var(--font-ui);color:#6A7683;padding:0 6px 0 4px;white-space:nowrap}
 
-/* ---------- the 3D office: a light void with floating podiums */
-.stage.w3on{background:radial-gradient(ellipse 75% 70% at 50% 46%,#FBFBFC 0%,#F1F2F5 48%,#E3E5EA 100%)}
+/* ---------- the 3D office: a room standing on the light ground grid */
+.stage.w3on{background:#ECEFF2}
 .stage.w3on .stage-in{display:none}
 .w3host{position:absolute;inset:0;display:none}
 .stage.w3on .w3host{display:block}
@@ -81,14 +85,15 @@ const WORLD_STYLE = `
 .w3ov [data-anchor],.w3ov [data-anchor] *{pointer-events:auto}
 .w3ov [data-anchor]{will-change:left,top}
 .w3card{position:absolute;transform:translate(-50%,-100%) scale(var(--bs,1));transform-origin:50% 100%;display:flex;flex-direction:column;align-items:center;background:none;border:0;padding:0;cursor:pointer;font:11px var(--font-ui);color:#0F172A;transition:opacity .25s;z-index:1}
-.w3card .fr{width:58px;height:58px;border-radius:14px;padding:3px;background:#fff;border:2px solid var(--sc,#A3AAB5);box-shadow:0 8px 20px rgba(15,23,42,.13),0 1px 2px rgba(15,23,42,.08);display:block}
+.w3card .fr{width:58px;height:58px;border-radius:14px;padding:3px;background:#fff;border:2px solid var(--sc,#A3AAB5);display:block}
 .w3card .fr .in{display:block;width:100%;height:100%;border-radius:10px;overflow:hidden}
 .w3card .fr svg{width:100%;height:100%;display:block}
 .w3card .nm{margin-top:5px;display:flex;gap:5px;align-items:center;font-weight:700;background:rgba(255,255,255,.88);padding:1px 7px;border-radius:6px;white-space:nowrap;max-width:190px}
 .w3card .nm b{overflow:hidden;text-overflow:ellipsis}
 .w3card .nm small{font-weight:400;color:#64748B}
 .w3card .nm i{font-style:normal;color:var(--sc,#64748B)}
-.w3card.sel .fr{box-shadow:0 0 0 3px rgba(37,99,235,.3),0 10px 24px rgba(15,23,42,.16)}
+.w3card.sel .fr{box-shadow:0 0 0 3px rgba(37,99,235,.3)}
+.w3who{position:absolute;transform:translate(-50%,-100%) scale(var(--bs,1));transform-origin:50% 100%;font:700 10.5px/1.2 var(--font-ui);color:#334155;background:rgba(255,255,255,.9);border:1px solid #D7DCE3;border-bottom:2px solid var(--sc,#A3AAB5);border-radius:6px;padding:1px 6px;white-space:nowrap;pointer-events:none!important}
 .w3card.away .fr{border-style:dashed}
 .w3card.absent{opacity:.62}
 .w3card.dim{opacity:.55}
@@ -97,12 +102,12 @@ const WORLD_STYLE = `
 .w3card.tray .fr svg{width:24px;height:24px}
 .w3drop{position:absolute;inset:10px;border:2px dashed rgba(37,99,235,.6);border-radius:18px;display:none;align-items:flex-start;justify-content:center;pointer-events:none;z-index:9}
 .w3drop.on{display:flex}
-.w3drop span,.w3toast{margin-top:64px;background:#2563EB;color:#fff;font:700 12.5px var(--font-ui);padding:8px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,42,.18)}
+.w3drop span,.w3toast{margin-top:64px;background:#2563EB;color:#fff;font:700 12.5px var(--font-ui);padding:8px 14px;border-radius:10px}
 .w3toast{position:absolute;left:50%;top:0;transform:translateX(-50%);opacity:0;transition:opacity .25s;pointer-events:none;z-index:9;white-space:nowrap}
 .w3toast.on{opacity:1}
 .w3toast.bad{background:#B91C1C}
 /* the office's own labels, restyled for the light floor */
-.stage.w3on .bub{background:rgba(255,255,255,.95);color:#0F172A;border:1px solid #fff;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,.14);padding:6px 10px 7px}
+.stage.w3on .bub{background:rgba(255,255,255,.96);color:#0F172A;border:1px solid #D7DCE3;border-radius:12px;box-shadow:none;padding:6px 10px 7px}
 .stage.w3on .bub::after{display:none}
 .stage.w3on .bub[data-at=card]{transform:translate(34px,calc(-100% - 22px)) scale(var(--bs,1));transform-origin:0 100%}
 [dir=rtl] .stage.w3on .bub[data-at=card]{transform:translate(calc(-100% - 34px),calc(-100% - 22px)) scale(var(--bs,1));transform-origin:100% 100%}
@@ -110,17 +115,17 @@ const WORLD_STYLE = `
 .stage.w3on .bub[data-at=card].w3flip{transform:translate(calc(-100% - 34px),calc(-100% - 22px)) scale(var(--bs,1));transform-origin:100% 100%}
 [dir=rtl] .stage.w3on .bub[data-at=card].w3flip{transform:translate(34px,calc(-100% - 22px)) scale(var(--bs,1));transform-origin:0 100%}
 .stage.w3on .bub.stale{background:#FFF7E6;border:1px dashed #D97706}
-.stage.w3on .bub.mini{box-shadow:0 4px 12px rgba(15,23,42,.12);border-radius:9px}
+.stage.w3on .bub.mini{box-shadow:none;border-radius:9px}
 .stage.w3on .bub.sel{outline:2px solid #2563EB}
 .stage.w3on .bub.hand{background:#ECFDF3}
 .stage.w3on .bub.hand.g-failed{background:#FEF2F2}.stage.w3on .bub.hand.g-findings{background:#FFF7E6}
-.stage.w3on .tray-label,.stage.w3on .tag,.stage.w3on .deleg{background:rgba(255,255,255,.95);color:#0F172A;border:1px solid #D7DCE3;border-radius:8px;box-shadow:0 4px 12px rgba(15,23,42,.1);padding:3px 8px}
+.stage.w3on .tray-label,.stage.w3on .tag,.stage.w3on .deleg{background:rgba(255,255,255,.95);color:#0F172A;border:1px solid #D7DCE3;border-radius:8px;box-shadow:none;padding:3px 8px}
 .stage.w3on .tag::after{display:none}
 .stage.w3on .deleg{color:#1D4ED8}
 .stage.w3on .legend{background:rgba(255,255,255,.9);color:#334155;border-color:#D7DCE3}
 .stage.w3on .crumb button{color:#475569}.stage.w3on .crumb button:hover{color:#0F172A}.stage.w3on .crumb b{color:#0F172A}.stage.w3on .crumb .dim{color:#94A3B8}
 .w3proj{position:absolute;inset-inline-end:14px;bottom:44px;display:flex;flex-direction:column;gap:6px;z-index:3;pointer-events:none}
-.w3proj div{background:rgba(255,255,255,.92);border:1px solid #D7DCE3;border-radius:8px;padding:5px 10px;font:11.5px/1.45 var(--font-ui);color:#334155;min-width:170px;box-shadow:0 4px 12px rgba(15,23,42,.08)}
+.w3proj div{background:rgba(255,255,255,.92);border:1px solid #D7DCE3;border-radius:8px;padding:5px 10px;font:11.5px/1.45 var(--font-ui);color:#334155;min-width:170px}
 .w3proj b{display:block;color:#0F172A}
 .w3proj .bad{color:#B91C1C!important}
 .w3box{margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:var(--panel-raised);font-size:12px}
@@ -172,16 +177,14 @@ function campusArt(h) {
    *  top floor down. Returns the svg, its highest point (the card hangs there)
    *  and the door (visitors stand there). */
   function building(I, kind, c, wins) {
-    const { P, poly, flat, box, onL, onR } = I
+    const { P, poly, box, onL, onR } = I
     const FH = 30
-    let s = '', sh = '', n = 0, top = Infinity
+    let s = '', n = 0, top = Infinity
     const pane = (f, side) => { const who = wins[n++]; return who ? (side ? shade(ST_COL[who.s], 0.86) : ST_COL[who.s]) : f }
     const per = (b) => Math.max(1, Math.round(b.w / 0.62)) + Math.max(1, Math.round(b.d / 0.62))
     const floorsFor = (b, min, max) => Math.max(min, Math.min(max, Math.ceil(wins.length / per(b))))
     function block(b) {
       const z = b.z || 0, base = b.base || 0, hgt = base + b.floors * FH + 8
-      // the shadow falls to the side face's side: the light comes from the street-face side
-      if (!z) sh += flat([P(b.x + b.w, b.y), P(b.x + b.w + Math.min(1.5, hgt / 48), b.y), P(b.x + b.w + Math.min(1.5, hgt / 48), b.y + b.d), P(b.x + b.w, b.y + b.d)], 'rgba(60,75,90,.13)', ' filter="url(#cmap-soft)"')
       s += box(b.x, b.y, b.w, b.d, z, hgt, WALL)
       const i = 0.17
       s += poly([P(b.x + i, b.y + i, z + hgt), P(b.x + b.w - i, b.y + i, z + hgt), P(b.x + b.w - i, b.y + b.d - i, z + hgt), P(b.x + i, b.y + b.d - i, z + hgt)], b.roof || ROOF)
@@ -296,7 +299,7 @@ function campusArt(h) {
       unit(m.x + 3.0, m.y + 0.6, rz, 0.7, 0.7, 7, true)
       door = [m.x + 2.3, m.y + m.d + 0.9]
     }
-    return { svg: sh + s, top, door }
+    return { svg: s, top, door }
   }
 
   /** The office's sign: a slab on two posts along the right-hand front edge
@@ -328,9 +331,7 @@ function campusArt(h) {
     const W = MX * 2 + cols * CW, H = MY * 2 + rows * CH
     cv.W = W; cv.H = H
     let s = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true">' +
-      '<defs><filter id="cmap-blur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="11"/></filter>' +
-      '<filter id="cmap-soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.5"/></filter>' +
-      '<pattern id="cmap-grid" width="' + TW + '" height="' + TH + '" patternUnits="userSpaceOnUse"><path d="M0 ' + TH / 2 + 'L' + TW / 2 + ' 0L' + TW + ' ' + TH / 2 + 'L' + TW / 2 + ' ' + TH + 'Z" fill="none" stroke="#E2E6EA" stroke-width="1"/></pattern></defs>' +
+      '<defs><pattern id="cmap-grid" width="' + TW + '" height="' + TH + '" patternUnits="userSpaceOnUse"><path d="M0 ' + TH / 2 + 'L' + TW / 2 + ' 0L' + TW + ' ' + TH / 2 + 'L' + TW / 2 + ' ' + TH + 'Z" fill="none" stroke="#E2E6EA" stroke-width="1"/></pattern></defs>' +
       // the grid runs well past the campus, so zooming out never shows its edge
       '<rect x="' + -2 * W + '" y="' + -2 * H + '" width="' + 5 * W + '" height="' + 5 * H + '" fill="url(#cmap-grid)"/>'
     const signs = []
@@ -346,12 +347,12 @@ function campusArt(h) {
       const I = iso(ox, oy)
       const { P, poly, flat, box } = I
       const c = cell.color || '#8A97A6'
-      s += flat([P(E + 0.4, E + 0.6, -18), P(PL - E + 0.4, E + 0.6, -18), P(PL - E + 0.4, PL - E + 0.6, -18), P(E + 0.4, PL - E + 0.6, -18)], 'rgba(40,55,70,.20)', ' filter="url(#cmap-blur)"')
-      let g = box(E, E, PL - 2 * E, PL - 2 * E, -10, 10, PLINTH)
-      g += poly([P(E, E), P(PL - E, E), P(PL - E, PL - E), P(E, PL - E)], PLINTH[0], ' class="pl"')
+      // the plot is paved flush with the ground, behind a kerb a few centimetres high: no island, no shadow
+      let g = box(E, E, PL - 2 * E, PL - 2 * E, 0, 3, PLINTH)
+      g += poly([P(E, E, 3), P(PL - E, E, 3), P(PL - E, PL - E, 3), P(E, PL - E, 3)], PLINTH[0], ' class="pl"')
       const b = building(I, cell.kind, c, shed ? [] : cell.wins || [])
       // a paved way from the door to the edge of the plot
-      g += flat([P(b.door[0] - 0.45, b.door[1] - 0.6), P(b.door[0] + 0.45, b.door[1] - 0.6), P(b.door[0] + 0.45, PL - E), P(b.door[0] - 0.45, PL - E)], '#ECEFF2')
+      g += flat([P(b.door[0] - 0.45, b.door[1] - 0.6, 3), P(b.door[0] + 0.45, b.door[1] - 0.6, 3), P(b.door[0] + 0.45, PL - E, 3), P(b.door[0] - 0.45, PL - E, 3)], '#E6EAEE')
       g += b.svg
       if (!shed) g += nameSign(I, cell.name, c, PL - E - 0.4, PL - E - 0.45)
       s += '<g class="bld" style="--c:' + esc(c) + '" data-goto="office:' + esc(cell.id) + '" data-office="' + esc(cell.id) + '" role="button" tabindex="0" aria-label="' + esc(cell.label) + '">' + g + '</g>'
@@ -521,7 +522,7 @@ function campusArt(h) {
 }
 
 /* ======================================================================
- * The office floor in 3D (Arsenale spike v2, "podium offices").
+ * The office floor in 3D (Arsenale office v3: a room on the ground, no shadows).
  *
  * h: { esc, fa, calm(), onPick(id), onView(view), characters: { default,
  *      byAgent } (base64 GLB), onLost() }.
@@ -530,10 +531,13 @@ function campusArt(h) {
  * page's 1.5 s poll therefore never moves the view.
  *
  * model: { key, view (saved view or null), selected (podium id),
+ *          title (the office's name, on the reception), supLabel (the
+ *          supervisor's sign), boards: [{ title, lines: [text], bad }] (the
+ *          project screens, at most three),
  *          podiums: [{ id, kind: 'desk'|'lead'|'tray', agent, state, anim,
  *            shirt, hair, skin, name, sub, glyph, attrs, aria, present,
  *            count (tray) }],
- *          links: [[fromId, toId]], fly: { from, key } or null,
+ *          links: [[fromId, toId]],
  *          overlay: html whose elements carry data-anchor="<podium id>" and
  *            data-at="head" | "card" | "tray" | "mid" (with data-anchor2) }
  * ====================================================================== */
@@ -549,25 +553,25 @@ function office3d(h) {
   const { esc } = h
   const FONT_UI = 'Arial, "Helvetica Neue", Helvetica, sans-serif'
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
-  renderer.shadowMap.enabled = true
-  renderer.shadowMap.type = T3.PCFShadowMap // r184: PCF + shadow.radius gives the soft edge
+  // No shadows anywhere (owner, 2026-10-12): everything stands flush on the
+  // floor, and a drop shadow only made the desks look as if they floated.
+  renderer.shadowMap.enabled = false
   renderer.outputColorSpace = T3.SRGBColorSpace
   renderer.toneMapping = T3.NeutralToneMapping
   // A software renderer (no GPU, a remote desktop, a headless test browser)
-  // draws every shadow on the CPU: there the floor goes without shadows, at
-  // one pixel per pixel and fewer frames, so the rest of the page stays quick.
+  // draws at one pixel per pixel and fewer frames, so the rest of the page stays quick.
   let soft = false
   try {
     const gl = renderer.getContext(), dbg = gl.getExtension('WEBGL_debug_renderer_info')
     soft = /swiftshader|basic render|llvmpipe|software|warp/i.test(dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : '')
   } catch (e) { /* unknown: treat it as a GPU */ }
-  if (soft) { renderer.shadowMap.enabled = false; renderer.setPixelRatio(1) }
+  if (soft) renderer.setPixelRatio(1)
   const cvs = renderer.domElement
   cvs.setAttribute('aria-hidden', 'true')
   const host = document.createElement('div'); host.className = 'w3host'
   const ov = document.createElement('div'); ov.className = 'w3ov'
-  const cardsEl = document.createElement('div'), pageEl = document.createElement('div')
-  ov.append(cardsEl, pageEl)
+  const cardsEl = document.createElement('div'), pageEl = document.createElement('div'), whoEl = document.createElement('div')
+  ov.append(whoEl, cardsEl, pageEl)
   const projEl = document.createElement('div'); projEl.className = 'w3proj'
   const dropEl = document.createElement('div'); dropEl.className = 'w3drop'; dropEl.innerHTML = '<span>' + T('Drop the .glb on a desk') + '</span>'
   const toastEl = document.createElement('div'); toastEl.className = 'w3toast'; toastEl.setAttribute('role', 'status')
@@ -576,13 +580,12 @@ function office3d(h) {
   host.appendChild(fileIn)
 
   const scene = new T3.Scene()
-  // soft studio light: cool sky, warm-lilac bounce, ONE shadow-casting key light
-  scene.add(new T3.HemisphereLight('#f4f6ff', '#ddd6e6', 1.7))
-  const sun = new T3.DirectionalLight('#fffaf3', 2.35)
-  sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048)
-  sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03; sun.shadow.radius = 5
+  // soft daylight: cool sky, warm bounce off the floor, a key light from the
+  // windows (back left) and a weak fill from the open front; none casts a shadow
+  scene.add(new T3.HemisphereLight('#f4f6ff', '#e8e2d8', 1.75))
+  const sun = new T3.DirectionalLight('#fffaf3', 2.1)
   scene.add(sun, sun.target)
-  const fill = new T3.DirectionalLight('#e9eeff', 0.3); fill.position.set(12, 4, 6); scene.add(fill)
+  const fill = new T3.DirectionalLight('#e9eeff', 0.45); fill.position.set(12, 6, 10); scene.add(fill)
 
   // ---------- camera: orthographic isometric, with our own pan, orbit and zoom
   const cam = new T3.OrthographicCamera(-1, 1, 1, -1, 0.1, 400)
@@ -679,23 +682,14 @@ function office3d(h) {
     o = o || {}
     const me = new T3.Mesh(g, m)
     me.position.set(x || 0, y || 0, z || 0)
-    me.castShadow = o.cast !== false; me.receiveShadow = o.recv !== false
     if (o.rx) me.rotation.x = o.rx
     if (o.ry) me.rotation.y = o.ry
     if (o.rz) me.rotation.z = o.rz
     if (parent) parent.add(me)
     return me
   }
-  // the podium: a thick white slab with a big soft bevel and a flat top
-  function podiumGeos(S) {
-    return geo('pod' + S, () => {
-      const HH = 0.62, b = 0.13, r = 0.36
-      const body = new T3.ExtrudeGeometry(rrShape(S - 2 * b, S - 2 * b, r), { depth: HH - 2 * b, bevelEnabled: true, bevelThickness: b, bevelSize: b, bevelSegments: 6, curveSegments: 10 })
-      body.rotateX(-Math.PI / 2); body.translate(0, -(HH - b), 0)
-      const top = new T3.ShapeGeometry(rrShape(S - 2 * b, S - 2 * b, r), 10); top.rotateX(-Math.PI / 2); top.translate(0, 0.0006, 0)
-      return { body: X.toCreasedNormals(body, 0.5), top }
-    })
-  }
+  // a flat rounded rectangle lying on the floor (a rug, a zone, a floor tile)
+  const flatGeo = (w, d, r) => geo('flat' + [w, d, r], () => { const g = new T3.ShapeGeometry(rrShape(w, d, r), 6); g.rotateX(-Math.PI / 2); return g })
   // textures are drawn in code: no image is downloaded
   function canvasTex(w, hh, draw) {
     const c = document.createElement('canvas'); c.width = w; c.height = hh
@@ -742,15 +736,30 @@ function office3d(h) {
     })
   }
   const screenMat = new T3.MeshBasicMaterial({ map: screenAtlas })
-  const blobTex = canvasTex(64, 64, (g) => { const gr = g.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(40,36,70,.55)'); gr.addColorStop(0.55, 'rgba(40,36,70,.22)'); gr.addColorStop(1, 'rgba(40,36,70,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64) })
-  const blobMat = new T3.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false, opacity: 0.42, toneMapped: false })
-  // the soft contact shadow of a floating podium on the void
-  const podShadowMat = new T3.MeshBasicMaterial({ map: canvasTex(256, 256, (g) => { g.filter = 'blur(22px)'; g.fillStyle = 'rgba(52,48,84,.62)'; g.beginPath(); g.roundRect(54, 54, 148, 148, 26); g.fill() }), transparent: true, depthWrite: false, opacity: 0.7, toneMapped: false })
-  const boardTex = canvasTex(256, 160, (g) => {
-    g.fillStyle = '#ffffff'; g.fillRect(0, 0, 256, 160)
-    ;[['#2563eb', 150], ['#94a3b8', 190], ['#94a3b8', 120], ['#f59e0b', 90], ['#22c55e', 140]].forEach(([c, ww], i) => { g.fillStyle = c; g.fillRect(16, 24 + i * 22, ww, 8) })
-    g.fillStyle = '#0f172a'; g.font = '700 16px ' + FONT_UI; g.fillText('▶ ✓ ✓ ! ✓', 16, 146)
+  // the ground: the campus's light grid, one tile a metre, in two close tones
+  const groundTex = canvasTex(128, 128, (g) => {
+    g.fillStyle = '#ECEFF2'; g.fillRect(0, 0, 128, 128)
+    g.fillStyle = '#E7EAEE'; g.fillRect(0, 0, 64, 64); g.fillRect(64, 64, 64, 64)
+    g.strokeStyle = '#DCE1E6'; g.lineWidth = 2; g.strokeRect(1, 1, 126, 126); g.beginPath(); g.moveTo(64, 0); g.lineTo(64, 128); g.moveTo(0, 64); g.lineTo(128, 64); g.stroke()
   })
+  groundTex.wrapS = groundTex.wrapT = T3.RepeatWrapping
+  // words written on the floor or on a sign: Arial on a transparent canvas
+  function textTex(lines, o) {
+    o = o || {}
+    const w = o.w || 512, hh = o.h || 128
+    return canvasTex(w, hh, (g) => {
+      if (o.bg) { g.fillStyle = o.bg; g.beginPath(); g.roundRect(0, 0, w, hh, o.r || 0); g.fill() }
+      g.textBaseline = 'middle'; g.textAlign = o.align || 'center'
+      const x = o.align === 'left' ? (o.pad || 24) : w / 2
+      lines.forEach((l, i) => {
+        g.font = (l.bold === false ? '400 ' : '700 ') + (l.size || 44) + 'px ' + FONT_UI
+        g.fillStyle = l.color || o.color || '#55606C'
+        let s = String(l.text || '')
+        while (s.length > 1 && g.measureText(s).width > w - 2 * (o.pad || 24)) s = s.slice(0, -2) + '…'
+        g.fillText(s, x, l.y !== undefined ? l.y : hh / 2)
+      })
+    })
+  }
 
   // ---------- merge the static props into a few vertex-coloured meshes
   const VCM = new Map()
@@ -802,9 +811,9 @@ function office3d(h) {
 
   // ---------- props
   const C = {
-    pod: '#f8f8f9', podSide: '#e7e9ee', desk: '#f6f6f4', leg: '#c9cfd7', wood: '#c79a6b', woodSide: '#a97c51',
+    desk: '#f6f6f4', leg: '#c9cfd7', wood: '#c79a6b', woodSide: '#a97c51',
     chair: '#3c4149', chairD: '#2b2f35', monitor: '#1f232a', key: '#e8ebef', blue: '#2563eb', pot: '#eef0f2', potT: '#d9c6b0',
-    leaf1: '#7fb58e', leaf2: '#5f9d74', leaf3: '#a3cfae', cab: '#eceef1', paper: '#ffffff',
+    leaf1: '#7fb58e', leaf2: '#5f9d74', leaf3: '#a3cfae', cab: '#eceef1', paper: '#ffffff', fabric: '#CBD4DE',
   }
   function chair(x, z, ry, parent, col) {
     const g = new T3.Group(); g.position.set(x, 0, z); g.rotation.y = ry
@@ -863,63 +872,199 @@ function office3d(h) {
     if (o.box) mesh(G.rbox(0.26, 0.14, 0.24, 0.02), mat('#ffffff'), w / 2 - 0.16, hh + 0.07, 0, g)
     return g
   }
-  function bookshelf(parent, x, z, ry) {
-    const g = new T3.Group(); g.position.set(x, 0, z); g.rotation.y = ry; parent.add(g)
-    const w = 0.9, hh = 1.5, d = 0.34
-    for (const sx of [-1, 1]) mesh(G.box(0.035, hh, d), mat(C.cab), sx * (w / 2 - 0.0175), hh / 2, 0, g)
-    mesh(G.box(w, 0.035, d), mat(C.cab), 0, hh, 0, g); mesh(G.box(w, 0.04, d), mat(C.cab), 0, 0.02, 0, g); mesh(G.box(w, hh, 0.02), mat('#e3e6ea'), 0, hh / 2, -d / 2 + 0.01, g)
-    const pal = ['#2563eb', '#93b4f5', '#f0b44c', '#e07f5c', '#64748b', '#cbd5e1', '#7fb58e', '#334155']
-    for (let s = 0; s < 3; s++) {
-      const y = 0.04 + s * 0.48
-      if (s > 0) mesh(G.box(w - 0.07, 0.03, d - 0.02), mat(C.cab), 0, y, 0, g)
-      let x0 = -w / 2 + 0.06
-      for (let i = 0; i < 7 && x0 < w / 2 - 0.12; i++) { const bw = 0.05 + ((i * 7 + s * 3) % 4) * 0.012, bh = 0.28 + ((i * 5 + s) % 3) * 0.04; mesh(G.box(bw, bh, 0.24), mat(pal[(i + s * 3) % pal.length]), x0 + bw / 2, y + 0.015 + bh / 2, 0, g, { rz: (i === 5 && s === 1) ? 0.3 : 0 }); x0 += bw + 0.012 }
-    }
-    return g
-  }
-  const rug = (parent, x, z, w, d, col) => mesh(geo('rug' + [w, d], () => { const g = new T3.ShapeGeometry(rrShape(w, d, 0.18), 6); g.rotateX(-Math.PI / 2); return g }), mat(col, { roughness: 0.95 }), x, 0.004, z, parent, { cast: false })
-  const ao = (parent, x, z, w, d) => { const m = mesh(G.plane(), blobMat, x, 0.008, z, parent, { cast: false, recv: false }); m.scale.set(w, 1, d); return m }
+  const rug = (parent, x, z, w, d, col, y) => mesh(flatGeo(w, d, 0.18), mat(col, { roughness: 0.95 }), x, y || 0.006, z, parent)
   const shadeHex = (hex, k) => { const c = new T3.Color(hex); const w = new T3.Color('#ffffff'); return '#' + (k > 0 ? c.lerp(w, k) : c.multiplyScalar(1 + k)).getHexString() }
   const hash = (s) => { let x = 7; for (const ch of String(s)) x = (x * 31 + ch.charCodeAt(0)) >>> 0; return x }
+  // a low screen between desks: a fabric panel standing on two feet on the floor
+  function partition(parent, x, z, ry, w, hh, col) {
+    const g = new T3.Group(); g.position.set(x, 0, z); g.rotation.y = ry; parent.add(g)
+    mesh(G.rbox(w, hh - 0.05, 0.05, 0.02), mat(col || C.fabric), 0, 0.04 + (hh - 0.05) / 2, 0, g)
+    mesh(G.box(w + 0.01, 0.025, 0.065), mat('#f4f5f7'), 0, hh, 0, g)
+    for (const sx of [-1, 1]) mesh(G.box(0.05, 0.04, 0.32), mat(C.leg), sx * (w / 2 - 0.14), 0.02, 0, g)
+    return g
+  }
+  // a sofa along its own x, facing +z; seats are 0.62 apart
+  function sofa(parent, x, z, ry, seats, col) {
+    const g = new T3.Group(); g.position.set(x, 0, z); g.rotation.y = ry; parent.add(g)
+    const w = seats * 0.62 + 0.3, dk = shadeHex(col, -0.12), lt = shadeHex(col, 0.18)
+    mesh(G.rbox(w, 0.3, 0.84, 0.05), mat(dk), 0, 0.15, 0, g)
+    for (let i = 0; i < seats; i++) mesh(G.rbox(0.6, 0.13, 0.62, 0.05), mat(lt), (i - (seats - 1) / 2) * 0.62, 0.36, 0.08, g)
+    mesh(G.rbox(w, 0.42, 0.2, 0.06), mat(col), 0, 0.5, -0.32, g)
+    for (const sx of [-1, 1]) mesh(G.rbox(0.16, 0.44, 0.84, 0.05), mat(col), sx * (w / 2 - 0.08), 0.22, 0, g)
+    return g
+  }
+  function coffeeTable(parent, x, z, w, d) {
+    mesh(G.rbox(w, 0.04, d, 0.02), mat(C.wood), x, 0.4, z, parent)
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) mesh(G.box(0.04, 0.38, 0.04), mat(C.woodSide), x + sx * (w / 2 - 0.06), 0.19, z + sz * (d / 2 - 0.06), parent)
+    mesh(G.cyl(0.04, 0.036, 0.09, 12), mat('#f4f1ea'), x - w * 0.2, 0.465, z + d * 0.1, parent)
+    mesh(G.box(0.22, 0.012, 0.3), mat(C.paper), x + w * 0.15, 0.426, z - d * 0.1, parent, { ry: 0.3 })
+  }
 
-  // One mini-office per podium. Station frame: desk at the back (-z), the
-  // seated person faces -z. Returns where a person sits and where one stands.
+  // One work station per desk podium, flat on the floor. Station frame: the
+  // desk at the back (-z) behind a low screen, the seated person faces -z,
+  // the open front (+z) leads to the aisle. Returns where a person sits, where
+  // one stands, and the point in front of the chair a walker comes in by.
   const STATION = {
     desk(p, st) {
       const k = hash(p.agent || p.id), wood = k % 2 === 0, mons = 1 + ((k >> 3) % 2)
-      rug(st, 0, 0.2, 1.75, 1.25, shadeHex(p.shirt || '#94a3b8', 0.82))
+      rug(st, 0, 0.05, 2.5, 2.4, shadeHex(p.shirt || '#94a3b8', 0.9))
       desk(0, -0.55, Math.PI, st, { w: 1.5, d: 0.7, top: wood ? C.wood : C.desk, leg: wood ? C.woodSide : C.leg, mons, tile: (k >> 5) % 4, mug: p.shirt || C.blue, papers: true, lamp: mons !== 2 })
-      ao(st, 0, -0.55, 1.9, 1.0)
-      chair(0, 0.24, Math.PI, st); ao(st, 0, 0.24, 0.8, 0.8)
-      cabinet(st, 1.12, -0.35, -Math.PI / 2, { w: 0.8, binders: mons === 2 ? ['#334155', '#64748b', '#cbd5e1', '#2563eb', '#93b4f5'] : ['#2563eb', '#93b4f5', '#cbd5e1', '#64748b', '#f0b44c', '#e2e8f0'], box: mons !== 2 }); ao(st, 1.12, -0.35, 0.7, 1.0)
-      plant(st, -1.12, -1.0, 1.0, mons === 2 ? 1 : 0); ao(st, -1.12, -1.0, 0.6, 0.6)
-      plant(st, 1.1, 1.05, 0.62, 0); ao(st, 1.1, 1.05, 0.4, 0.4)
-      return { sit: { x: 0, z: 0.2, ry: Math.PI }, stand: { x: 0.72, z: 0.62, cam: -0.35 } }
+      chair(0, 0.24, Math.PI, st)
+      cabinet(st, 1.12, -0.35, -Math.PI / 2, { w: 0.8, binders: mons === 2 ? ['#334155', '#64748b', '#cbd5e1', '#2563eb', '#93b4f5'] : ['#2563eb', '#93b4f5', '#cbd5e1', '#64748b', '#f0b44c', '#e2e8f0'], box: mons !== 2 })
+      partition(st, 0, -1.3, 0, 2.5, 1.15)
+      plant(st, -1.12, -0.95, 0.85, mons === 2 ? 1 : 0)
+      return { sit: { x: 0, z: 0.2, ry: Math.PI }, stand: { x: 0.72, z: 0.62, cam: -0.35 }, front: { x: 0, z: 0.95 } }
     },
-    lead(p, st) {
-      rug(st, 0.1, 0.25, 2.1, 1.5, shadeHex(p.shirt || '#94a3b8', 0.84))
-      desk(-0.1, -0.78, Math.PI, st, { w: 2.0, d: 0.78, top: C.wood, leg: C.woodSide, mons: 2, tile: 2, mug: p.shirt || C.blue, papers: true })
-      ao(st, -0.1, -0.78, 2.4, 1.1)
-      chair(-0.1, 0.0, Math.PI, st, '#c7d3f3'); ao(st, -0.1, 0.0, 0.8, 0.8)
-      bookshelf(st, 1.28, -0.95, -Math.PI / 2); ao(st, 1.28, -0.95, 0.7, 1.2)
-      // a small round meeting table
-      mesh(G.cyl(0.36, 0.36, 0.04, 24), mat(C.desk), 0.95, 0.62, 0.95, st); mesh(G.cyl(0.04, 0.06, 0.6, 10), mat(C.leg), 0.95, 0.31, 0.95, st); mesh(G.cyl(0.2, 0.2, 0.02, 16), mat(C.leg), 0.95, 0.01, 0.95, st)
-      mesh(G.box(0.24, 0.006, 0.3), mat(C.paper), 0.9, 0.645, 0.9, st, { ry: 0.4 }); ao(st, 0.95, 0.95, 0.9, 0.9)
-      const wb = new T3.Group(); wb.position.set(-1.2, 0, 0.6); wb.rotation.y = Math.PI / 2; st.add(wb)
-      const b = new T3.Mesh(G.box(1.0, 0.64, 0.03), [mat('#d5dae1'), mat('#d5dae1'), mat('#d5dae1'), mat('#d5dae1'), new T3.MeshStandardMaterial({ map: boardTex, roughness: 0.5 }), mat('#d5dae1')]); b.position.y = 1.2; b.castShadow = true; wb.add(b)
-      for (const sx of [-0.45, 0.45]) mesh(G.box(0.035, 1.5, 0.035), mat('#9aa3ae'), sx, 0.75, -0.03, wb)
-      plant(st, -1.38, -1.22, 1.15, 1); ao(st, -1.38, -1.22, 0.6, 0.6)
-      return { sit: { x: -0.1, z: -0.03, ry: Math.PI }, stand: { x: 0.45, z: 0.18, cam: -0.2 } }
-    },
-    tray(p, st) {
-      rug(st, 0, 0, 1.4, 1.2, '#e6edfb')
-      mesh(G.rbox(0.95, 0.78, 0.6, 0.03), mat('#eceef1'), 0, 0.39, 0, st)
-      mesh(G.rbox(0.62, 0.04, 0.46, 0.015), mat(C.blue), 0, 0.8, 0, st)
-      for (const [dx, dz, w, d] of [[0, 0.22, 0.62, 0.03], [0, -0.22, 0.62, 0.03], [0.3, 0, 0.03, 0.46], [-0.3, 0, 0.03, 0.46]]) mesh(G.box(w, 0.08, d), mat(C.blue), dx, 0.86, dz, st)
-      ao(st, 0, 0, 1.3, 0.9)
-      plant(st, -0.75, -0.7, 0.75, 1); plant(st, 0.78, 0.62, 0.55, 0)
-      return null
-    },
+  }
+
+  // ---------- the supervisor's station: a low lilac platform in the middle of
+  // the floor, a wide desk the supervisor sits behind facing the room, the
+  // in-tray on it, and a tall panel with the sign. Visitors stand in front.
+  const DAIS = 0.06, SUP_S = 3.6
+  const SUP_COL = { top: '#ECE6F7', edge: '#CDBEEC', panel: '#D9CDF2', ink: '#4F3F86', chair: '#8E7DBA' }
+  function supStation(st, label) {
+    mesh(G.rbox(SUP_S, DAIS, SUP_S, 0.028), mat(SUP_COL.edge, { roughness: 0.85 }), 0, DAIS / 2, 0, st)
+    mesh(flatGeo(SUP_S - 0.12, SUP_S - 0.12, 0.2), mat(SUP_COL.top, { roughness: 0.9 }), 0, DAIS + 0.001, 0, st)
+    const top = new T3.Group(); top.position.y = DAIS; st.add(top)
+    desk(0, -0.35, 0, top, { w: 2.1, d: 0.85, top: C.wood, leg: C.woodSide, mons: 0, mug: SUP_COL.chair })
+    // a laptop, low enough that the supervisor's face shows over it
+    const lp = new T3.Group(); lp.position.set(-0.35, 0.74, -0.5); top.add(lp)
+    mesh(G.rbox(0.36, 0.018, 0.25, 0.006), mat('#c9ced4', { metalness: 0.3, roughness: 0.4 }), 0, 0.009, 0, lp)
+    const scr = mesh(G.rbox(0.36, 0.24, 0.012, 0.006), mat('#c9ced4', { metalness: 0.3, roughness: 0.4 }), 0, 0.12, -0.125, lp, { rx: 0.25 })
+    const sc = new T3.Mesh(screenGeo(2, 0.32, 0.2), screenMat); sc.position.set(0, 0, 0.007); scr.add(sc)
+    for (let i = 0; i < 3; i++) mesh(G.box(0.21, 0.006, 0.29), mat(C.paper), 0.1 + i * 0.012, 0.744 + i * 0.006, -0.42, top, { ry: i * 0.14 - 0.1 })
+    // the in-tray, at the desk's front corner
+    mesh(G.rbox(0.5, 0.03, 0.44, 0.012), mat(C.blue), SUP_TRAY.x, 0.755, SUP_TRAY.z, top)
+    for (const [dx, dz, w, d] of [[0, 0.21, 0.5, 0.025], [0, -0.21, 0.5, 0.025], [0.24, 0, 0.025, 0.44], [-0.24, 0, 0.025, 0.44]]) mesh(G.box(w, 0.06, d), mat(C.blue), SUP_TRAY.x + dx, 0.785, SUP_TRAY.z + dz, top)
+    chair(0, -1.02, 0, top, SUP_COL.chair)
+    // the panel behind, with the sign
+    mesh(G.rbox(2.9, 2.0, 0.08, 0.03), mat(SUP_COL.panel), 0, 1.0, -1.55, top)
+    mesh(G.box(2.92, 0.03, 0.1), mat('#f4f5f7'), 0, 2.01, -1.55, top)
+    const sign = new T3.Mesh(geo('supSign', () => new T3.PlaneGeometry(2.2, 0.5)), new T3.MeshBasicMaterial({ map: textTex([{ text: label, size: 104, color: SUP_COL.ink }], { w: 1024, h: 232, bg: '#FFFFFF', r: 24 }), toneMapped: false }))
+    sign.position.set(0, 1.5, -1.505); sign.userData.noMerge = true; top.add(sign)
+    plant(top, -1.45, -1.4, 1.05, 1); plant(top, 1.5, -1.35, 0.8, 0)
+    return {
+      sit: { x: 0, z: -0.98, ry: 0 }, stand: { x: -0.75, z: -0.95, cam: -0.2 },
+      // visitors line up in front of the desk, facing the supervisor
+      visits: [{ x: 0.5, z: 0.62 }, { x: -0.35, z: 0.66 }, { x: 1.3, z: 0.6 }, { x: -1.15, z: 0.7 }],
+    }
+  }
+  const SUP_TRAY = { x: 0.7, z: -0.2 }
+
+  // ---------- the room around the desks: the floor and its zones, two walls
+  // with windows, the project screens and the door, the lounge and the
+  // reception. r: { X0, X1, Z0, Z1, xa, xb, za, zb } (see build).
+  const ZONE = { room: '#F5F4F1', work: '#EEF1F4', lounge: '#EFE6DA', reception: '#E9EDF2', label: '#8C96A1' }
+  function floorText(parent, text, x, z, w, ry) {
+    const t = new T3.Mesh(geo('ft' + w, () => { const g = new T3.PlaneGeometry(w, w / 4); g.rotateX(-Math.PI / 2); return g }), new T3.MeshBasicMaterial({ map: textTex([{ text, size: 72, color: ZONE.label }], { w: 1024, h: 256 }), transparent: true, depthWrite: false, toneMapped: false }))
+    t.position.set(x, 0.012, z); t.rotation.y = ry || 0; t.userData.noMerge = true; parent.add(t)
+    return t
+  }
+  function room(parent, r, title) {
+    const W = r.X1 - r.X0, D = r.Z1 - r.Z0
+    const slab = (x0, x1, z0, z1, col, y) => mesh(G.plane(), mat(col, { roughness: 0.95 }), (x0 + x1) / 2, y, (z0 + z1) / 2, parent).scale.set(x1 - x0, 1, z1 - z0)
+    slab(r.X0, r.X1, r.Z0, r.Z1, ZONE.room, 0.002)
+    slab(r.xa + 0.15, r.xb - 0.15, r.za + 0.15, r.zb - 0.15, ZONE.work, 0.003)
+    slab(r.X0 + 0.15, r.X1 - 0.15, r.Z0 + 0.15, r.za - 0.4, ZONE.lounge, 0.003)
+    slab(r.X0 + 0.15, r.X0 + 5.2, r.zb + 0.45, r.Z1 - 0.15, ZONE.reception, 0.003)
+    // the walls: only the two at the back, so nothing stands between the camera and the floor
+    const wall = mat('#F8F8F6', { roughness: 0.9 }), cap = mat('#E2E5E9'), skirt = mat('#D8DCE1')
+    const WH = 2.7, WT = 0.14
+    mesh(G.box(WT, WH, D + WT), wall, r.X0 - WT / 2, WH / 2, r.Z0 + D / 2 - WT / 2, parent)
+    mesh(G.box(W + WT, WH, WT), wall, r.X0 + W / 2 - WT / 2, WH / 2, r.Z0 - WT / 2, parent)
+    mesh(G.box(WT + 0.02, 0.04, D + WT), cap, r.X0 - WT / 2, WH + 0.02, r.Z0 + D / 2 - WT / 2, parent)
+    mesh(G.box(W + WT, 0.04, WT + 0.02), cap, r.X0 + W / 2 - WT / 2, WH + 0.02, r.Z0 - WT / 2, parent)
+    mesh(G.box(0.02, 0.1, D), skirt, r.X0 + 0.01, 0.05, r.Z0 + D / 2, parent)
+    mesh(G.box(W, 0.1, 0.02), skirt, r.X0 + W / 2, 0.05, r.Z0 + 0.01, parent)
+    // windows: daylight glass in white frames, along the back wall and the lounge end of the side wall
+    const glass = new T3.MeshStandardMaterial({ color: '#CFE0EE', emissive: '#DCEAF6', emissiveIntensity: 0.45, roughness: 0.25 }), frame = mat('#FFFFFF')
+    const winX = (x) => { mesh(G.box(1.3, 1.3, 0.02), glass, x, 1.62, r.Z0 + 0.012, parent); mesh(G.box(1.42, 0.06, 0.05), frame, x, 0.96, r.Z0 + 0.025, parent); mesh(G.box(1.42, 0.06, 0.05), frame, x, 2.28, r.Z0 + 0.025, parent); for (const dx of [-0.68, 0, 0.68]) mesh(G.box(0.05, 1.32, 0.05), frame, x + dx, 1.62, r.Z0 + 0.025, parent) }
+    const winZ = (z) => { mesh(G.box(0.02, 1.3, 1.3), glass, r.X0 + 0.012, 1.62, z, parent); mesh(G.box(0.05, 0.06, 1.42), frame, r.X0 + 0.025, 0.96, z, parent); mesh(G.box(0.05, 0.06, 1.42), frame, r.X0 + 0.025, 2.28, z, parent); for (const dz of [-0.68, 0, 0.68]) mesh(G.box(0.05, 1.32, 0.05), frame, r.X0 + 0.025, 1.62, z + dz, parent) }
+    for (let x = r.X0 + 1.4; x < r.X1 - 0.9; x += 2.1) winX(x)
+    for (let z = r.Z0 + 1.4; z < r.za - 0.6; z += 2.1) winZ(z)
+    // the door: glass doors in the side wall, by the reception, with a mat in front
+    const dz0 = r.zb + 1.95
+    mesh(G.box(0.03, 2.2, 1.7), mat('#8D99A6'), r.X0 + 0.015, 1.1, dz0, parent)
+    for (const s of [-1, 1]) mesh(G.box(0.02, 2.06, 0.76), new T3.MeshStandardMaterial({ color: '#BFD2E2', emissive: '#D7E6F2', emissiveIntensity: 0.35, roughness: 0.2 }), r.X0 + 0.035, 1.08, dz0 + s * 0.4, parent)
+    mesh(G.box(0.05, 0.4, 0.03), mat('#5F6B78'), r.X0 + 0.06, 1.05, dz0 - 0.05, parent); mesh(G.box(0.05, 0.4, 0.03), mat('#5F6B78'), r.X0 + 0.06, 1.05, dz0 + 0.05, parent)
+    rug(parent, r.X0 + 0.75, dz0, 1.1, 1.8, '#9AA5B1')
+    // the reception: a long counter facing the room, the office's name on its front
+    const rx = r.X0 + 2.75, rz = r.zb + 1.65
+    mesh(G.rbox(2.6, 1.02, 0.6, 0.04), mat('#F2F3F5'), rx, 0.51, rz, parent)
+    mesh(G.rbox(2.72, 0.05, 0.72, 0.02), mat(C.wood), rx, 1.045, rz, parent)
+    mesh(G.box(2.62, 0.05, 0.62), mat(C.woodSide), rx, 0.04, rz, parent)
+    const name = new T3.Mesh(geo('recName', () => new T3.PlaneGeometry(2.3, 0.62)), new T3.MeshBasicMaterial({ map: textTex([{ text: title || T('Reception'), size: 62, color: '#34404D', y: 92 }, { text: T('Reception'), size: 38, bold: false, color: '#7A8591', y: 176 }], { w: 1024, h: 276 }), transparent: true, toneMapped: false }))
+    name.position.set(rx, 0.56, rz + 0.305); name.userData.noMerge = true; parent.add(name)
+    chair(rx + 0.4, rz - 0.75, 0, parent, '#5E6B79')
+    const mon = new T3.Group(); mon.position.set(rx + 0.45, 1.07, rz - 0.12); mon.rotation.y = Math.PI; parent.add(mon)
+    mesh(G.box(0.05, 0.16, 0.04), mat(C.monitor), 0, 0.08, 0.02, mon); mesh(G.rbox(0.5, 0.31, 0.03, 0.01), mat(C.monitor), 0, 0.3, 0, mon)
+    plant(parent, rx - 1.75, rz, 1.0, 1); plant(parent, r.X0 + 0.55, r.Z1 - 0.55, 0.9, 0)
+    // plants in the corners, by the windows
+    plant(parent, r.X0 + 0.55, r.Z0 + 0.55, 1.25, 1); plant(parent, r.X1 - 0.6, r.Z0 + 0.6, 1.1, 0)
+    floorText(parent, T('Reception'), rx, r.Z1 - 0.55, 2.4)
+    floorText(parent, T('Work area'), r.xb - 1.6, r.zb - 0.6, 2.4)
+  }
+
+  /** The lounge along the back wall: sofa groups round coffee tables, then a
+   *  coffee bar. Every seat, and the standing places at the bar for anyone
+   *  left over, comes with the way in from the aisle. Walkers use the strip
+   *  zC between the sofas and the low screen; the screen has a gap at every
+   *  aisle. */
+  function lounge(parent, r, need, aisleXs) {
+    const zC = r.za - 0.6, gz = r.za - 2.0
+    const nearAisle = (x) => aisleXs.reduce((a, b) => (Math.abs(b - x) < Math.abs(a - x) ? b : a), aisleXs[0])
+    const seats = []
+    const fit = Math.max(1, Math.floor((r.X1 - r.X0 - 1.6 - 2.8) / 3.6))
+    const groups = Math.max(1, Math.min(fit, Math.ceil(need / 6)))
+    const cols = ['#93A6B8', '#B8A691', '#9DB2A5']
+    let gx = r.X0 + 2.3
+    for (let gi = 0; gi < groups; gi++, gx += 3.6) {
+      rug(parent, gx, gz, 3.3, 2.5, gi % 2 ? '#E6DCCE' : '#E3E6E1', 0.006)
+      coffeeTable(parent, gx, gz, 0.52, 1.3)
+      for (const side of [-1, 1]) {
+        // two sofas facing each other across the table, along z
+        sofa(parent, gx + side * 1.17, gz, side < 0 ? Math.PI / 2 : -Math.PI / 2, 3, cols[(gi + (side > 0 ? 1 : 0)) % cols.length])
+        const fx = gx + side * 0.5, ax = nearAisle(fx)
+        for (const dz of [-0.62, 0, 0.62]) {
+          seats.push({
+            sit: { x: gx + side * 1.12, z: gz + dz, rot: side < 0 ? Math.PI / 2 : -Math.PI / 2 },
+            front: { x: fx, z: gz + dz, rot: side < 0 ? Math.PI / 2 : -Math.PI / 2 },
+            inward: [{ x: ax, z: zC }, { x: fx, z: zC }, { x: fx, z: gz + dz }],
+            exit: { x: ax, z: r.za, net: true }, sofa: true,
+          })
+        }
+      }
+    }
+    // the coffee bar against the back wall, after the last group
+    const bx = gx - 3.6 + 2.9
+    mesh(G.rbox(2.2, 0.9, 0.6, 0.03), mat('#F2F3F5'), bx + 0.9, 0.45, r.Z0 + 0.35, parent)
+    mesh(G.rbox(2.3, 0.04, 0.66, 0.015), mat(C.wood), bx + 0.9, 0.92, r.Z0 + 0.36, parent)
+    const cm = new T3.Group(); cm.position.set(bx + 0.35, 0.94, r.Z0 + 0.32); parent.add(cm)
+    mesh(G.rbox(0.36, 0.46, 0.38, 0.03), mat('#2F343B'), 0, 0.23, 0, cm)
+    mesh(G.rbox(0.3, 0.1, 0.06, 0.01), mat('#C9CED4', { metalness: 0.4, roughness: 0.35 }), 0, 0.38, 0.2, cm)
+    mesh(G.box(0.16, 0.02, 0.12), mat('#C9CED4', { metalness: 0.4, roughness: 0.35 }), 0, 0.05, 0.16, cm)
+    mesh(G.cyl(0.035, 0.03, 0.08, 12), mat('#f4f1ea'), 0, 0.1, 0.17, cm)
+    for (let i = 0; i < 4; i++) mesh(G.cyl(0.035, 0.03, 0.08, 12), mat(['#f4f1ea', '#93A6B8', '#f4f1ea', '#B8A691'][i]), bx + 0.85 + i * 0.12, 0.98, r.Z0 + 0.4, parent)
+    mesh(G.rbox(0.62, 1.7, 0.6, 0.03), mat('#E4E7EB'), bx + 2.35, 0.85, r.Z0 + 0.35, parent) // a fridge
+    plant(parent, bx + 3.05, r.Z0 + 0.45, 0.95, 0)
+    // standing places at the bar for whoever finds no seat
+    for (let i = 0; seats.length < need; i++) {
+      const sx = bx + 0.3 + (i % 4) * 0.62, sz = r.Z0 + 1.15 + Math.floor(i / 4) * 0.62
+      if (sz > zC - 0.4) break
+      const ax = nearAisle(sx)
+      seats.push({ sit: null, front: { x: sx, z: sz, rot: Math.PI }, inward: [{ x: ax, z: zC }, { x: sx, z: zC }, { x: sx, z: sz }], exit: { x: ax, z: r.za, net: true }, sofa: false })
+    }
+    // the low screen between the lounge and the desks, open at every aisle
+    const pz = r.za - 0.24
+    const gaps = aisleXs.slice().sort((a, b) => a - b)
+    let x0 = r.X0 + 0.2
+    for (const gxp of gaps.concat([r.X1 + 0.65])) {
+      const x1 = Math.min(gxp - 0.65, r.X1 - 0.2)
+      if (x1 - x0 > 0.5) partition(parent, (x0 + x1) / 2, pz, 0, x1 - x0, 0.95, '#C9D6CF')
+      x0 = gxp + 0.65
+    }
+    floorText(parent, T('Lounge'), r.X0 + 2.3, zC + 0.02, 2.2)
+    return { seats, zC, taken: new Map() }
   }
 
   // ---------- characters: one GLB template, cloned and baked per person
@@ -929,6 +1074,11 @@ function office3d(h) {
     typing: [/typing/i, /working/i, /\bwork/i, /type/i, /write/i, /keyboard/i],
     thinking: [/think/i, /ponder/i, /look/i],
     celebrate: [/celebrat/i, /cheer/i, /victory/i, /dance/i, /jump/i, /wave/i],
+    // walking between the lounge, the supervisor and the desk; a file without
+    // a walk clip glides in its idle pose, and one without a standing clip
+    // waits at the supervisor in its idle pose
+    walk: [/walk/i, /run/i, /stroll/i],
+    stand: [/^stand/i, /standing/i, /wait/i],
   }
   const SEATED_RX = /sit|seated/i
   const loader = new X.GLTFLoader()
@@ -938,7 +1088,8 @@ function office3d(h) {
   function clipFor(clips, state, seated) {
     const pick = (rxs) => { for (const rx of rxs) { const c = clips.find((x) => rx.test(x.name)); if (c) return c } return null }
     if (seated && state === 'idle') { const c = clips.find((x) => SEATED_RX.test(x.name) && /idle/i.test(x.name)); if (c) return c }
-    return pick(CLIP_RX[state]) || (state !== 'idle' ? clipFor(clips, 'idle', seated) : (clips[0] || null))
+    // a seated file's own idle stands in for its missing standing pose only when it is not a seated idle
+    return pick(CLIP_RX[state]) || (state !== 'idle' ? clipFor(clips, 'idle', seated && state !== 'walk' && state !== 'stand') : (clips[0] || null))
   }
   async function addTemplate(agent, buf, name, source) {
     const gltf = await parse(buf)
@@ -985,7 +1136,7 @@ function office3d(h) {
     const g = new T3.BufferGeometry()
     g.setAttribute('position', new T3.BufferAttribute(P, 3)); g.setAttribute('normal', new T3.BufferAttribute(N, 3)); g.setAttribute('color', new T3.BufferAttribute(Cc, 3))
     g.setAttribute('skinIndex', new T3.Uint16BufferAttribute(SI, 4)); g.setAttribute('skinWeight', new T3.BufferAttribute(SW, 4))
-    const sm = new T3.SkinnedMesh(g, charMat); sm.castShadow = true; sm.receiveShadow = true; sm.frustumCulled = false
+    const sm = new T3.SkinnedMesh(g, charMat); sm.frustumCulled = false
     model.add(sm); model.updateMatrixWorld(true); sm.bind(new T3.Skeleton(joints), sm.matrixWorld)
     for (const j of joints) j.layers.disableAll()
     return sm
@@ -993,7 +1144,7 @@ function office3d(h) {
   function makeCharacter(p, tpl) {
     const model = X.clone(tpl.gltf.scene)
     let tris = 0
-    model.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; if (o.isSkinnedMesh) o.frustumCulled = false; const g = o.geometry; tris += (g.index ? g.index.count : g.attributes.position.count) / 3 } })
+    model.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; if (o.isSkinnedMesh) o.frustumCulled = false; const g = o.geometry; tris += (g.index ? g.index.count : g.attributes.position.count) / 3 } })
     const holder = new T3.Group(); holder.add(model)
     model.updateMatrixWorld(true)
     const box = new T3.Box3().setFromObject(model, true), size = box.getSize(new T3.Vector3())
@@ -1002,13 +1153,15 @@ function office3d(h) {
     model.scale.multiplyScalar(s)
     model.updateMatrixWorld(true); box.setFromObject(model, true)
     const c = box.getCenter(new T3.Vector3())
-    model.position.y -= box.min.y // the feet on the podium
+    model.position.y -= box.min.y // the feet on the floor
     if (Math.hypot(c.x, c.z) > 0.25 * TARGET_H) { model.position.x -= c.x; model.position.z -= c.z } // a badly placed origin
     bake(model, tpl.isDefault ? { skin: p.skin, hair: p.hair, shirt: p.shirt } : null)
     const clips = tpl.gltf.animations || []
     const mixer = new T3.AnimationMixer(model), map = {}
     for (const k of Object.keys(CLIP_RX)) { const cl = clipFor(clips, k, tpl.seated); map[k] = cl ? cl.name : null }
-    return { holder, model, mixer, clips, map, tpl, tris: Math.round(tris), actions: {}, cur: null, height: size.y * s }
+    // the default sits in its rest pose; standing up adds the thighs' length (0.36 m)
+    const height = size.y * s
+    return { holder, model, mixer, clips, map, tpl, tris: Math.round(tris), actions: {}, cur: null, height, standH: tpl.seated && map.walk ? height + 0.36 : height }
   }
   function playState(ch, state, now) {
     if (!ch || (ch.cur === state && !now)) return
@@ -1032,9 +1185,9 @@ function office3d(h) {
   const idbDel = (k) => { try { if (idb) idb.transaction('glb', 'readwrite').objectStore('glb').delete(k) } catch (e) { /* nothing to forget */ } }
   const idbAll = () => new Promise((res) => { try { if (!idb) return res([]); const out = [], rq = idb.transaction('glb', 'readonly').objectStore('glb').openCursor(); rq.onsuccess = () => { const c = rq.result; if (c) { out.push([c.key, c.value]); c.continue() } else res(out) }; rq.onerror = () => res([]) } catch (e) { res([]) } })
 
-  // ---------- the office: a cluster of podiums
+  // ---------- the office: work stations round the supervisor's station, in a room
   const PITCH = 4.75
-  let O = null // { key, group, merged, byId, pick, sig, bounds }
+  let O = null // { key, group, dyn, merged, byId, pick, bounds, r, sup, lounge, boards, boardSig }
   const cells = new Map() // office key -> Map(podium id -> [i, j])
   const ringGeo = new Map()
   function podRing(S, w) {
@@ -1046,17 +1199,20 @@ function office3d(h) {
   const hovRing = new T3.Mesh(podRing(3, 0.05), new T3.MeshBasicMaterial({ color: '#94a3b8', transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false }))
   selRing.visible = hovRing.visible = false; selRing.renderOrder = hovRing.renderOrder = 2
   scene.add(selRing, hovRing)
+  // the ground every office stands on: wide enough that zooming out never shows its edge
+  const ground = new T3.Mesh(G.plane(), new T3.MeshStandardMaterial({ map: groundTex, roughness: 1 }))
+  ground.scale.set(480, 1, 480); groundTex.repeat.set(240, 240); scene.add(ground)
   const TRAY_MAX = 14
   const trayPapers = new T3.InstancedMesh(G.box(0.3, 0.012, 0.4), mat('#ffffff'), TRAY_MAX)
-  trayPapers.castShadow = trayPapers.receiveShadow = true; trayPapers.count = 0
+  trayPapers.count = 0
   scene.add(trayPapers)
-  const flyPaper = mesh(G.box(0.22, 0.012, 0.3), mat('#ffffff'), 0, 0, 0, scene, { recv: false }); flyPaper.visible = false
-  let fly = null, flownKey = ''
+  const flyPaper = mesh(G.box(0.22, 0.012, 0.3), mat('#ffffff'), 0, 0, 0, scene); flyPaper.visible = false
+  let fly = null
   const linkMat = new T3.LineDashedMaterial({ color: '#2B6CB0', dashSize: 0.18, gapSize: 0.12, transparent: true, opacity: 0.9 })
   let links = null, linkSig = ''
   const STATE_COL = { working: '#2563eb', quiet: '#f59e0b', waiting: '#f59e0b', findings: '#f59e0b', failed: '#ef4444', done: '#22c55e', idle: '#a3aab5', away: '#a3aab5', none: '#a3aab5' }
 
-  // cells around the centre, nearest first: the lead's at the centre, the tray next to it
+  // cells around the centre, nearest first: the supervisor's station is the centre
   function cellOrder(n) {
     const out = []
     for (let r = 1; out.length < n + 8; r++) {
@@ -1067,26 +1223,27 @@ function office3d(h) {
     }
     return out
   }
-  // A podium keeps its cell while it is on the floor: someone starting work
-  // never makes the others move.
+  // A desk keeps its cell while it is on the floor: someone starting work
+  // never makes the others move. The tray has no cell: it is on the
+  // supervisor's desk.
   function layout(key, pods) {
     let map = cells.get(key)
     if (!map) { map = new Map(); cells.set(key, map) }
-    const ids = new Set(pods.map((p) => p.id))
+    const ids = new Set(pods.filter((p) => p.kind !== 'tray').map((p) => p.id))
     for (const id of [...map.keys()]) if (!ids.has(id)) map.delete(id)
     const used = new Set([...map.values()].map((c) => c.join(',')))
-    const lead = pods.find((p) => p.kind === 'lead'), tray = pods.find((p) => p.kind === 'tray')
-    if (lead && !map.has(lead.id)) { map.set(lead.id, [0, 0]); used.add('0,0') }
-    if (tray && !map.has(tray.id)) { map.set(tray.id, [-1, -1]); used.add('-1,-1') }
-    used.add('0,0'); used.add('-1,-1')
+    const lead = pods.find((p) => p.kind === 'lead')
+    if (lead && !map.has(lead.id)) map.set(lead.id, [0, 0])
+    used.add('0,0')
     const free = cellOrder(pods.length).filter((c) => !used.has(c.join(',')))
-    for (const p of pods) if (!map.has(p.id)) map.set(p.id, free.shift())
+    for (const p of pods) if (p.kind !== 'tray' && !map.has(p.id)) map.set(p.id, free.shift())
     return map
   }
   function disposeOffice() {
     if (!O) return
     scene.remove(O.group)
     O.merged.children.forEach((m) => m.geometry.dispose())
+    O.group.traverse((o) => { if (o.userData.noMerge && o.material && o.material.map) { o.material.map.dispose(); o.material.dispose() } })
     for (const p of O.byId.values()) if (p.ch) p.ch.mixer.stopAllAction()
     O = null
   }
@@ -1097,58 +1254,80 @@ function office3d(h) {
     const map = layout(model.key, model.podiums)
     const group = new T3.Group(), decor = new T3.Group(), dyn = new T3.Group(), pick = []
     const byId = new Map()
-    let minX = 1e9, maxX = -1e9, minZ = 1e9, maxZ = -1e9
+    let imin = 0, imax = 0, jmin = 0, jmax = 0
+    for (const [i, j] of map.values()) { imin = Math.min(imin, i); imax = Math.max(imax, i); jmin = Math.min(jmin, j); jmax = Math.max(jmax, j) }
+    // the aisles run between the cells: x = (k + 0.5) * PITCH and z = (l + 0.5) * PITCH
+    const r = { xa: (imin - 0.5) * PITCH, xb: (imax + 0.5) * PITCH, za: (jmin - 0.5) * PITCH, zb: (jmax + 0.5) * PITCH }
+    r.X0 = r.xa - 1.1; r.X1 = r.xb + 0.9; r.Z0 = r.za - 4.1; r.Z1 = r.zb + 3.1
+    const aisleXs = []
+    for (let k = imin - 1; k <= imax; k++) aisleXs.push((k + 0.5) * PITCH)
+    const W3 = (st, s, y) => { const v = new T3.Vector3(s.x, 0, s.z); st.localToWorld(v); return { x: v.x, z: v.z, y: y || 0, rot: s.rot !== undefined ? s.rot : s.cam !== undefined ? VIEW0.azim + s.cam : st.rotation.y + (s.ry || 0) } }
+    const lead = model.podiums.find((p) => p.kind === 'lead')
+    // the supervisor's station is always there, whether or not someone sits at it
+    const sg = new T3.Group(); decor.add(sg)
+    const ss = supStation(sg, model.supLabel || T('Supervisor'))
+    decor.updateMatrixWorld(true)
+    const sup = {
+      x: 0, z: 0, exit: { x: PITCH / 2, z: PITCH / 2, net: true }, taken: new Map(),
+      sit: W3(sg, ss.sit, DAIS), stand: W3(sg, ss.stand, DAIS), visits: ss.visits.map((v) => W3(sg, Object.assign({ rot: Math.PI }, v), DAIS)),
+      trayAt: new T3.Vector3(SUP_TRAY.x, DAIS + 0.775, SUP_TRAY.z), hand: new T3.Vector3(0.1, DAIS + 0.77, -0.42),
+    }
+    const addPick = (id, x, y, z, w, hh, d) => { const pr = new T3.Mesh(G.box(w, hh, d), new T3.MeshBasicMaterial()); pr.visible = false; pr.position.set(x, y, z); pr.userData.id = id; group.add(pr); pick.push(pr) }
+    const addDiamond = (p) => {
+      p.pb = new T3.Mesh(geo('pbOct', () => new T3.OctahedronGeometry(0.11, 0)), new T3.MeshStandardMaterial({ color: '#a3aab5', emissive: '#a3aab5', emissiveIntensity: 0.45, roughness: 0.25, flatShading: true }))
+      p.pb.scale.set(1, 1.75, 1)
+      dyn.add(p.pb)
+    }
+    let desks = 0
     for (const src of model.podiums) {
-      const S = src.kind === 'lead' ? 3.5 : src.kind === 'tray' ? 2.5 : 3.0
-      const [i, j] = map.get(src.id)
-      const x = i * PITCH, z = j * PITCH, hs = S / 2
-      minX = Math.min(minX, x - hs); maxX = Math.max(maxX, x + hs); minZ = Math.min(minZ, z - hs); maxZ = Math.max(maxZ, z + hs)
+      if (src.kind === 'tray') {
+        const p = { id: src.id, kind: 'tray', x: SUP_TRAY.x, z: SUP_TRAY.z, S: 0.9, ringY: DAIS + 0.012, src, trayAt: sup.trayAt }
+        addPick(src.id, p.x, DAIS + 0.95, p.z, 0.8, 0.5, 0.7)
+        byId.set(src.id, p)
+        continue
+      }
+      if (src.kind === 'lead') {
+        const p = { id: src.id, kind: 'lead', x: 0, z: 0, S: SUP_S, ringY: DAIS + 0.012, src, sit: sup.sit, stand: sup.stand }
+        addPick(src.id, 0, 1.3, -0.6, SUP_S, 2.6, 2.2)
+        addDiamond(p)
+        byId.set(src.id, p)
+        continue
+      }
+      desks++
+      const S = 3.0, [i, j] = map.get(src.id), x = i * PITCH, z = j * PITCH
       const pg = new T3.Group(); pg.position.set(x, 0, z); decor.add(pg)
-      const pgeo = podiumGeos(S)
-      mesh(pgeo.body, mat(C.podSide, { roughness: 0.55 }), 0, 0, 0, pg); mesh(pgeo.top, mat(C.pod, { roughness: 0.7 }), 0, 0, 0, pg, { cast: false })
-      // the contact shadow on the void, a little toward the viewer (the key light is back-left)
-      const sh = mesh(G.plane(), podShadowMat, 0.22, -1.55, 0.26, pg, { cast: false, recv: false }); sh.scale.set(S * 1.8, 1, S * 1.8)
-      const p = { id: src.id, kind: src.kind, x, z, S, src }
-      const st = new T3.Group(); st.rotation.y = src.kind === 'desk' && hash(src.id) % 3 === 1 ? Math.PI / 2 : 0; pg.add(st)
-      const spots = STATION[src.kind] ? STATION[src.kind](src, st) : null
+      const st = new T3.Group(); st.rotation.y = hash(src.id) % 3 === 1 ? Math.PI / 2 : 0; pg.add(st)
+      const spots = STATION.desk(src, st)
       decor.updateMatrixWorld(true)
-      if (spots) {
-        const Wp = (s) => { const v = new T3.Vector3(s.x, 0, s.z); st.localToWorld(v); return { x: v.x, z: v.z, rot: s.cam !== undefined ? VIEW0.azim + s.cam : st.rotation.y + (s.ry || 0) } }
-        p.sit = Wp(spots.sit); p.stand = Wp(spots.stand)
-      }
-      if (src.kind === 'tray') p.trayAt = new T3.Vector3(x, 0.83, z)
-      // the pick proxy covers the podium and its person
-      const pr = new T3.Mesh(G.box(S, 2.6, S), new T3.MeshBasicMaterial()); pr.visible = false; pr.position.set(x, 0.8, z); pr.userData.id = src.id
-      group.add(pr); pick.push(pr)
-      // the state diamond over the head
-      if (src.kind !== 'tray') {
-        p.pb = new T3.Mesh(geo('pbOct', () => new T3.OctahedronGeometry(0.11, 0)), new T3.MeshStandardMaterial({ color: '#a3aab5', emissive: '#a3aab5', emissiveIntensity: 0.45, roughness: 0.25, flatShading: true }))
-        p.pb.scale.set(1, 1.75, 1); p.pb.castShadow = false
-        dyn.add(p.pb)
-      }
+      // the station's open front faces +z or +x, so the corner of the aisles at (+, +) is always its way out
+      const p = { id: src.id, kind: 'desk', x, z, S, ringY: 0.012, src, sit: W3(st, spots.sit), stand: W3(st, spots.stand), front: W3(st, spots.front), exit: { x: x + PITCH / 2, z: z + PITCH / 2, net: true } }
+      addPick(src.id, x, 0.8, z, S, 2.6, S)
+      addDiamond(p)
       byId.set(src.id, p)
     }
+    room(decor, r, model.title)
+    const lg = lounge(decor, r, Math.max(1, desks), aisleXs)
     const merged = mergeStatic(decor)
     group.add(merged, decor, dyn)
     scene.add(group)
-    // the shadow camera tight around this cluster
-    const span = Math.max(maxX - minX, maxZ - minZ) / 2 + 1.2
-    const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2
+    const cx = (r.X0 + r.X1) / 2, cz = (r.Z0 + r.Z1) / 2
     sun.position.set(cx - 9, 16, cz - 4); sun.target.position.set(cx, 0, cz)
-    Object.assign(sun.shadow.camera, { left: -span * 1.1, right: span * 1.1, top: span * 1.1, bottom: -span * 1.1, near: 2, far: 60 }); sun.shadow.camera.updateProjectionMatrix()
-    O = { key: model.key, group, dyn, merged, byId, pick, bounds: { minX, maxX, minZ, maxZ } }
+    O = { key: model.key, group, dyn, merged, byId, pick, bounds: { minX: r.X0, maxX: r.X1, minZ: r.Z0, maxZ: r.Z1 }, r, sup, lounge: lg, boards: null, boardSig: '' }
     computeOverview()
+    // the people keep where they were and where they were going; their seats are handed out again
+    if (walkersKey !== model.key) { walkers.clear(); walkersKey = model.key }
+    for (const w of walkers.values()) { w.seat = -1; w.visit = -1; w.rebuilt = true }
     for (const p of byId.values()) placeCharacter(p, prevChars)
     // characters nobody took back: free their baked geometry
     for (const ch of prevChars.values()) ch.model.traverse((o) => { if (o.isSkinnedMesh) o.geometry.dispose() })
   }
-  // the overview: the whole cluster in the stage
+  // the overview: the whole room in the stage
   function computeOverview() {
     if (!O) return
     const b = O.bounds, tgt = new T3.Vector3((b.minX + b.maxX) / 2, 0.45, (b.minZ + b.maxZ) / 2)
     const pad = h.pad || { top: 0, bottom: 0 }
-    const oz = clamp(zoomFor(boxPts(b.minX, b.maxX, b.minZ, b.maxZ, -0.7, 2.6), tgt, Math.max(200, W - 40), Math.max(160, H - 60 - pad.top - pad.bottom)), 0.12, 2.4)
-    // the cluster's middle sits in the middle of the free band, not of the stage
+    const oz = clamp(zoomFor(boxPts(b.minX, b.maxX, b.minZ, b.maxZ, 0, 2.7), tgt, Math.max(200, W - 40), Math.max(160, H - 60 - pad.top - pad.bottom)), 0.12, 2.4)
+    // the room's middle sits in the middle of the free band, not of the stage
     const shift = (pad.top - pad.bottom) / 2 * (FR / oz) / H
     tgt.addScaledVector(new T3.Vector3(-Math.sin(VIEW0.azim), 0, -Math.cos(VIEW0.azim)), shift / Math.sin(VIEW0.elev))
     overview = { tx: tgt.x, ty: tgt.y, tz: tgt.z, azim: VIEW0.azim, elev: VIEW0.elev, zoom: oz }
@@ -1164,13 +1343,162 @@ function office3d(h) {
     let ch = reuse && reuse.get(p.id + '|' + p.charSig)
     if (ch) reuse.delete(p.id + '|' + p.charSig)
     else { ch = makeCharacter(src, tpl); ch.cur = null }
+    // the lead stays at the supervisor's desk; everyone else is placed by their walker every frame
     const sp = tpl.seated ? p.sit : p.stand
-    ch.holder.position.set(sp.x, 0, sp.z); ch.holder.rotation.y = sp.rot
+    ch.holder.position.set(sp.x, sp.y || 0, sp.z); ch.holder.rotation.y = sp.rot
     p.ch = ch
     O.dyn.add(ch.holder)
-    playState(ch, src.anim || 'idle', true)
+    if (p.kind === 'lead') playState(ch, src.anim || 'idle', true)
+    else ch.cur = null
   }
-  const layoutSig = (model) => model.key + '|' + model.podiums.map((p) => p.id + ':' + p.kind).join(',')
+  const layoutSig = (model) => model.key + '|' + (model.title || '') + '|' + (model.supLabel || '') + '|' + model.podiums.map((p) => p.id + ':' + p.kind).join(',')
+
+  // ---------- people on the move. Starting a task: from the lounge to the
+  // supervisor (the task is handed over), then to the desk. Finishing: to the
+  // supervisor (the report goes in the tray), then back to the lounge. The
+  // page only says each person's state; the walks come from its changes, so
+  // a redraw never restarts a walk, and a change halfway is taken from where
+  // the person is. People walk the aisles between the stations: every route
+  // runs from a station's corner of the aisles ("net" points) along one aisle
+  // and then another.
+  const SPEED = 1.5, PAUSE = { receive: 1.5, handin: 1.8 }
+  let pace = 1
+  const walkers = new Map() // podium id -> walker; kept through a rebuild, dropped with a change of office
+  let walkersKey = ''
+  const BUSY = new Set(['working', 'quiet'])
+  // waiting: the run asked the owner something, so its person waits at the desk for the answer
+  const restOf = (state) => (BUSY.has(state) || state === 'waiting' ? 'desk' : 'lounge')
+  const floorY = (x, z) => (Math.abs(x) < SUP_S / 2 && Math.abs(z) < SUP_S / 2 ? DAIS : 0)
+  const seatedTpl = (p) => { const t = templates.get(p.src.agent) || templates.get(''); return !t || !!t.seated }
+  const near = (a, b) => Math.abs(a.x - b.x) < 1e-3 && Math.abs(a.z - b.z) < 1e-3
+  const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a))
+  function claim(list, taken, w, key) {
+    if (w[key] >= 0 && taken.get(w[key]) === w.id) return w[key]
+    const pref = w[key + 'Pref']
+    let i = pref >= 0 && pref < list.length && !taken.has(pref) ? pref : list.findIndex((s, k) => !taken.has(k))
+    if (i < 0) i = hash(w.id) % list.length // every place taken: two share one
+    taken.set(i, w.id); w[key] = i; w[key + 'Pref'] = i
+    return i
+  }
+  function release(w) {
+    if (!O) return
+    if (w.seat >= 0 && O.lounge.taken.get(w.seat) === w.id) O.lounge.taken.delete(w.seat)
+    if (w.visit >= 0 && O.sup.taken.get(w.visit) === w.id) O.sup.taken.delete(w.visit)
+    w.seat = -1; w.visit = -1
+  }
+  /** Where `loc` is for this walker: the corner of the aisles it is reached
+   *  from, the way in from there, and the place itself (with the way to face). */
+  function spot(w, loc) {
+    const p = O.byId.get(w.id), seated = seatedTpl(p)
+    if (loc === 'desk') return { exit: p.exit, inward: [p.front], final: seated ? p.sit : p.stand }
+    if (loc === 'sup') return { exit: O.sup.exit, inward: [], final: O.sup.visits[claim(O.sup.visits, O.sup.taken, w, 'visit')] }
+    const s = O.lounge.seats[claim(O.lounge.seats, O.lounge.taken, w, 'seat')]
+    return { exit: s.exit, inward: s.inward, final: s.sofa && seated ? s.sit : s.front }
+  }
+  // from one corner of the aisles to another: along the first one's aisle, then along the other's
+  function route(a, b) {
+    if (near(a, b)) return []
+    const bend = { x: b.x, z: a.z, net: true }
+    return near(bend, a) || near(bend, b) ? [b] : [bend, b]
+  }
+  // the first corner of the aisles to make for when the plan changes halfway
+  function headBack(w) {
+    const ahead = w.path, k = ahead.findIndex((q) => q.net)
+    if (w.lastNet && w.since.length) return w.since.slice().reverse().concat([w.lastNet]) // inside a station: back the way we came
+    if (w.lastNet && k === 0) return [Math.hypot(w.pos.x - w.lastNet.x, w.pos.z - w.lastNet.z) < Math.hypot(w.pos.x - ahead[0].x, w.pos.z - ahead[0].z) ? w.lastNet : ahead[0]]
+    if (w.lastNet) return [w.lastNet]
+    if (k >= 0) return ahead.slice(0, k + 1) // still leaving a place: carry on to its corner
+    const P2 = PITCH / 2
+    return [{ x: Math.round((w.pos.x - P2) / PITCH) * PITCH + P2, z: Math.round((w.pos.z - P2) / PITCH) * PITCH + P2, net: true }]
+  }
+  function plan(w, loc) {
+    let path
+    if (w.path.length) path = headBack(w)
+    else {
+      // leaving a place the walker rests at: back out the way in
+      const from = spot(w, w.loc)
+      path = from.inward.slice().reverse().concat([from.exit])
+      w.lastNet = null; w.since = []
+    }
+    release(w)
+    const to = spot(w, loc)
+    path = path.concat(route(path[path.length - 1], to.exit), to.inward, [to.final])
+    // no point twice in a row, and none where the walker already stands
+    w.path = path.filter((q, i) => !(i ? near(q, path[i - 1]) : near(q, w.pos)))
+    if (!w.path.length) w.path = [to.final]
+    w.goal = loc
+    note(w, 'walk')
+  }
+  function note(w, what) { if (w.trail[w.trail.length - 1] !== what) { w.trail.push(what); if (w.trail.length > 24) w.trail.shift() } }
+  function snap(w, loc) {
+    release(w)
+    w.loc = loc; w.goal = loc
+    const f = spot(w, loc).final
+    w.pos = { x: f.x, z: f.z }; w.rot = f.rot; w.head = f.rot
+    w.path = []; w.queue = []; w.pause = 0; w.act = null; w.since = []; w.lastNet = null
+    note(w, loc)
+  }
+  function go(w) {
+    const g = w.queue[0]
+    if (!g) return
+    if (!w.path.length && w.pause <= 0 && w.loc === g.loc) arrived(w)
+    else plan(w, g.loc)
+  }
+  function arrived(w) {
+    const g = w.queue[0]
+    if (!g || g.loc !== w.loc) return
+    if (g.act && !w.act) { w.act = g.act; w.pause = PAUSE[g.act]; note(w, g.act); paperFly(w, g.act); return }
+    w.act = null; w.queue.shift()
+    if (w.queue.length) go(w)
+  }
+  function setQueue(w, goals) { w.queue = goals; w.pause = 0; w.act = null; go(w) }
+  function newWalker(id) { return { id, pos: { x: 0, z: 0 }, rot: 0, head: 0, loc: '', goal: '', path: [], queue: [], pause: 0, act: null, since: [], lastNet: null, seat: -1, visit: -1, seatPref: -1, visitPref: -1, trail: [], h: 1.2, rebuilt: false } }
+  function syncWalker(p, src) {
+    let w = walkers.get(p.id)
+    if (!src.present) { if (w) { release(w); walkers.delete(p.id) } p.w = null; return }
+    if (!w) { w = newWalker(p.id); walkers.set(p.id, w); w.state = src.state; snap(w, restOf(src.state)) }
+    p.w = w
+    if (w.rebuilt) {
+      // the room was built again: a walker on the way plans again from where it is, one at rest takes its (new) place
+      w.rebuilt = false
+      if (w.path.length) plan(w, w.goal)
+      else { const f = spot(w, w.loc).final; w.pos = { x: f.x, z: f.z }; w.rot = f.rot }
+    }
+    if (src.state === w.state) return
+    const was = w.state
+    w.state = src.state
+    if (h.calm && h.calm()) { snap(w, restOf(src.state)); return }
+    if (BUSY.has(src.state) && !BUSY.has(was)) setQueue(w, [{ loc: 'sup', act: 'receive' }, { loc: 'desk' }])
+    else if (!BUSY.has(src.state) && BUSY.has(was)) setQueue(w, [{ loc: 'sup', act: 'handin' }, { loc: restOf(src.state) }])
+    else if (!w.queue.length ? w.loc !== restOf(src.state) : w.queue[w.queue.length - 1].loc !== restOf(src.state)) setQueue(w, [{ loc: restOf(src.state) }])
+  }
+  // the sheet that changes hands at the supervisor's desk
+  function paperFly(w, act) {
+    if (h.calm && h.calm()) return
+    const f = w.rot || 0, hand = new T3.Vector3(w.pos.x + Math.sin(f) * 0.32, DAIS + 1.0, w.pos.z + Math.cos(f) * 0.32)
+    const tray = O.byId.get([...O.byId.keys()].find((id) => O.byId.get(id).kind === 'tray') || '')
+    const into = O.sup.trayAt.clone().add(new T3.Vector3(0, 0.05 + Math.min((tray && tray.src.count) || 0, TRAY_MAX) * 0.016, 0))
+    fly = act === 'handin' ? { from: hand, to: into, t: 0, d: 1.2 } : { from: O.sup.hand.clone(), to: hand, t: 0, d: 1.0 }
+  }
+  function stepWalker(w, dt) {
+    if (w.pause > 0) {
+      w.pause -= dt * pace
+      if (w.pause <= 0) { w.pause = 0; arrived(w) }
+      return false
+    }
+    if (!w.path.length) return false
+    let d = SPEED * pace * dt
+    while (d > 0 && w.path.length) {
+      const q = w.path[0], dx = q.x - w.pos.x, dz = q.z - w.pos.z, L = Math.hypot(dx, dz)
+      if (L > 1e-4) w.head = Math.atan2(dx, dz)
+      if (L <= d) {
+        w.pos.x = q.x; w.pos.z = q.z; d -= L; w.path.shift()
+        if (q.net) { w.lastNet = q; w.since = [] } else w.since.push(q)
+        if (!w.path.length) { w.loc = w.goal; w.rot = q.rot !== undefined ? q.rot : w.head; note(w, w.loc); arrived(w) }
+      } else { w.pos.x += dx / L * d; w.pos.z += dz / L * d; d = 0 }
+    }
+    return true
+  }
 
   // ---------- the portrait cards (html over the canvas)
   const LOOKS = ['bun', 'spiky', 'long', 'bald', 'pony', 'curly', 'short']
@@ -1239,6 +1567,47 @@ function office3d(h) {
     for (const [id, c] of cards) if (!seen.has(id)) { c.el.remove(); cards.delete(id) }
   }
 
+  // a small name over each person away from their desk (in the lounge, at the
+  // supervisor, on the way), so the people there are not strangers
+  const whoTags = new Map()
+  function whoTag(p, src) {
+    let t = whoTags.get(p.id)
+    if (!p.w) { if (t) { t.remove(); whoTags.delete(p.id) } return }
+    if (!t) {
+      t = document.createElement('span'); t.className = 'w3who off'; t.dataset.anchor = p.id; t.dataset.at = 'who'; t.setAttribute('aria-hidden', 'true')
+      whoEl.appendChild(t); whoTags.set(p.id, t)
+    }
+    const name = src.name || src.agent || ''
+    if (t.textContent !== name) t.textContent = name
+    t.style.setProperty('--sc', STATE_COL[src.state] || STATE_COL.none)
+  }
+
+  // ---------- the project screens on the side wall: the projects that had
+  // work today, as the page lists them ({ title, lines: [text], bad })
+  function syncBoards(list) {
+    const sig = JSON.stringify(list || [])
+    if (!O || sig === O.boardSig) return
+    O.boardSig = sig
+    if (O.boards) { O.group.remove(O.boards); O.boards.traverse((o) => { if (o.material && o.material.map) { o.material.map.dispose(); o.material.dispose() } }) }
+    const g = new T3.Group(), r = O.r
+    const items = list && list.length ? list.slice(0, 3) : [{ title: T('No project work today'), lines: [], quiet: true }]
+    const z0 = r.za + 0.6, z1 = r.zb - 0.4, step = (z1 - z0) / items.length
+    items.forEach((b, i) => {
+      const z = z0 + step * (i + 0.5), x = r.X0
+      mesh(G.rbox(0.05, 1.42, 2.46, 0.02), mat('#2F343B'), x + 0.03, 1.6, z, g)
+      const lines = [{ text: b.title || '', size: 104, color: b.quiet ? '#7A8591' : '#17212B', y: b.lines && b.lines.length ? 140 : 288 }]
+      ;(b.lines || []).slice(0, 2).forEach((l, k) => lines.push({ text: l, size: 72, bold: false, color: k === 1 && b.bad ? '#B91C1C' : '#4A5663', y: 300 + k * 110 }))
+      const tex = textTex(lines, { w: 1024, h: 576, bg: '#FFFFFF', align: 'left', pad: 56 })
+      const sc = new T3.Mesh(geo('board', () => new T3.PlaneGeometry(2.34, 1.32)), new T3.MeshBasicMaterial({ map: tex, toneMapped: false }))
+      sc.position.set(x + 0.06, 1.6, z); sc.rotation.y = Math.PI / 2
+      g.add(sc)
+      // the screen's own colour bar along the top
+      mesh(G.box(0.01, 0.06, 2.34), mat(b.bad ? '#E07F5C' : b.quiet ? '#C3CCD5' : '#7FB58E'), x + 0.065, 2.24, z, g)
+    })
+    O.boards = g
+    O.group.add(g)
+  }
+
   // ---------- placing the html labels over the 3D points
   const _v = new T3.Vector3()
   let ovDirty = true, declutterT = 0
@@ -1246,8 +1615,10 @@ function office3d(h) {
     const p = O && O.byId.get(el.dataset.anchor)
     if (!p) return null
     const at = el.dataset.at
-    if (at === 'card') return _v.set(p.x - p.S * 0.14, p.kind === 'tray' ? 1.55 : 1.95 + (p.S > 3.2 ? 0.12 : 0), p.z - p.S * 0.14)
-    if (at === 'tray') return _v.set(p.x, 1.05, p.z)
+    if (at === 'card') return p.kind === 'tray' ? _v.set(p.x + 0.35, 1.75, p.z + 0.35) : p.kind === 'lead' ? _v.set(p.x - 0.55, 2.6, p.z - 1.0) : _v.set(p.x - p.S * 0.14, 1.95, p.z - p.S * 0.14)
+    if (at === 'tray') return _v.set(p.x, 1.25, p.z)
+    // 'who': the person, wherever they are now
+    if (at === 'who') { if (!p.ch) return null; const hp = p.ch.holder.position; return _v.set(hp.x, hp.y + (p.w ? p.w.h : p.ch.height) + 0.4, hp.z) }
     if (at === 'mid') {
       const q = O.byId.get(el.dataset.anchor2)
       if (!q) return null
@@ -1266,7 +1637,7 @@ function office3d(h) {
       if (!pt) { el.style.display = 'none'; continue }
       pt.project(cam)
       const x = (pt.x + 1) / 2 * W, y = (1 - pt.y) / 2 * H
-      el.style.display = pt.z > 1 || x < -200 || x > W + 200 || y < -200 || y > H + 300 ? 'none' : ''
+      el.style.display = pt.z > 1 || x < -200 || x > W + 200 || y < -200 || y > H + 300 || el.classList.contains('off') ? 'none' : ''
       el.style.left = x.toFixed(1) + 'px'; el.style.top = y.toFixed(1) + 'px'
       el.classList.toggle('dim', !!focusId && el.dataset.anchor !== focusId && el.classList.contains('w3card'))
     }
@@ -1308,7 +1679,7 @@ function office3d(h) {
   }
   function showHover(p, col) {
     if (!p) { hovRing.visible = false; return }
-    hovRing.visible = true; hovRing.geometry = podRing(p.S, 0.05); hovRing.position.set(p.x, 0.011, p.z); hovRing.material.color.set(col || '#94a3b8')
+    hovRing.visible = true; hovRing.geometry = podRing(p.S, 0.05); hovRing.position.set(p.x, p.ringY - 0.001, p.z); hovRing.material.color.set(col || '#94a3b8')
   }
   function panBy(dx, dy) {
     const upp = (FR / view.zoom) / H
@@ -1438,22 +1809,27 @@ function office3d(h) {
       const p = O.byId.get(src.id)
       p.src = src
       if ((!!p.ch) !== (!!src.present) || (p.ch && p.charSig !== charSigOf(src))) placeCharacter(p)
-      if (p.ch) playState(p.ch, src.anim || 'idle')
+      if (p.kind === 'desk') syncWalker(p, src)
+      else if (p.ch) playState(p.ch, src.anim || 'idle')
       if (p.pb) {
         const col = STATE_COL[src.state] || STATE_COL.none
         p.pb.material.color.set(col); p.pb.material.emissive.set(col)
         p.pb.visible = !!p.ch
       }
+      if (p.kind === 'desk') whoTag(p, src)
       if (p.trayAt) {
         const n = Math.min(src.count || 0, TRAY_MAX), m4 = new T3.Matrix4(), q = new T3.Quaternion(), e = new T3.Euler()
         for (let i = 0; i < n; i++) { e.set(0, (i % 3 - 1) * 0.07, 0); q.setFromEuler(e); m4.compose(new T3.Vector3(p.trayAt.x + (i % 2 ? 0.012 : -0.01), p.trayAt.y + i * 0.016, p.trayAt.z + (i % 3 - 1) * 0.01), q, new T3.Vector3(1, 1, 1)); trayPapers.setMatrixAt(i, m4) }
         trayPapers.count = n; trayPapers.instanceMatrix.needsUpdate = true
       }
     }
+    for (const id of [...walkers.keys()]) if (!O.byId.has(id)) { release(walkers.get(id)); walkers.delete(id) }
+    for (const [id, t] of whoTags) if (!O.byId.has(id) || !O.byId.get(id).w) { t.remove(); whoTags.delete(id) }
     trayPapers.visible = model.podiums.some((p) => p.kind === 'tray')
     const sel = model.selected && O.byId.get(model.selected)
     selRing.visible = !!sel
-    if (sel) { selRing.geometry = podRing(sel.S, 0.05); selRing.position.set(sel.x, 0.012, sel.z) }
+    if (sel) { selRing.geometry = podRing(sel.S, 0.05); selRing.position.set(sel.x, sel.ringY, sel.z) }
+    syncBoards(model.boards)
     // delegation: a dashed arc from the one who handed the work over to the one doing it
     const ls = (model.links || []).filter(([a, b]) => O.byId.has(a) && O.byId.has(b)).map((l) => l.join('>')).join(',') + '|' + sig
     if (ls !== linkSig) {
@@ -1469,12 +1845,7 @@ function office3d(h) {
       }
       scene.add(links)
     }
-    // a report handed in: the sheet flies from the desk to the tray
-    if (model.fly && model.fly.key !== flownKey && !(h.calm && h.calm())) {
-      flownKey = model.fly.key
-      const p = O.byId.get(model.fly.from), tr = [...O.byId.values()].find((x) => x.trayAt)
-      if (p && tr) fly = { from: new T3.Vector3(p.sit ? p.sit.x : p.x, 1.2, p.sit ? p.sit.z : p.z), to: tr.trayAt.clone().add(new T3.Vector3(0, 0.05 + Math.min(tr.src.count || 0, TRAY_MAX) * 0.016, 0)), t: 0 }
-    }
+    // a report handed in: the sheet flies when its person reaches the supervisor (paperFly), so model.fly is not used
     syncCards(model)
     pageEl.innerHTML = model.overlay || ''
     projEl.innerHTML = model.projects || ''
@@ -1490,7 +1861,7 @@ function office3d(h) {
     requestAnimationFrame(frame)
     if (document.hidden || !mounted || !mounted.offsetParent) { last = now; return }
     if (now - lastDraw < (document.hasFocus() ? 30 : 120) * (soft ? 3 : 1) && !tween && !drag) return
-    const dt = Math.min(0.05, (now - last) / 1000)
+    const rdt = (now - last) / 1000, dt = Math.min(0.05, rdt)
     last = now; lastDraw = now
     if (tween) {
       tween.t += dt / tween.d
@@ -1501,17 +1872,33 @@ function office3d(h) {
     }
     const calm = h.calm && h.calm()
     if (O) {
+      // the walkers move by the real time that passed, not by the capped animation step
+      const wdt = Math.min(0.5, rdt)
       for (const p of O.byId.values()) {
+        const w = p.w
+        if (p.ch && w) {
+          if (stepWalker(w, wdt)) ovDirty = true
+          const clip = w.path.length ? 'walk' : w.pause > 0 || w.loc === 'sup' ? 'stand' : w.loc === 'desk' ? (p.src.anim || 'idle') : 'idle'
+          playState(p.ch, clip)
+          const hp = p.ch.holder
+          hp.position.set(w.pos.x, floorY(w.pos.x, w.pos.z), w.pos.z)
+          const want = w.path.length ? w.head : w.rot
+          hp.rotation.y = calm ? want : hp.rotation.y + wrapA(want - hp.rotation.y) * Math.min(1, wdt * 9)
+          w.h = clip === 'walk' || clip === 'stand' || !p.ch.tpl.seated ? p.ch.standH : p.ch.height
+          const tag = whoTags.get(p.id)
+          // in the lounge only the selected person's name shows: a dozen names on the sofas would be a blur
+          if (tag) tag.classList.toggle('off', !w.path.length && (w.loc === 'desk' || (w.loc === 'lounge' && lastModel && lastModel.selected !== p.id)))
+        }
         if (p.ch && !calm) p.ch.mixer.update(dt)
         if (p.pb) {
-          const sp = p.sit || { x: p.x, z: p.z }
-          p.pb.position.set(sp.x, (p.ch ? p.ch.height : 1.4) + 0.3 + (calm ? 0 : Math.sin(now / 450 + hash(p.id) % 7) * 0.03), sp.z)
+          const hp = p.ch ? p.ch.holder.position : { x: p.x, y: 0, z: p.z }
+          p.pb.position.set(hp.x, hp.y + (p.w ? p.w.h : p.ch ? p.ch.height : 1.4) + 0.3 + (calm ? 0 : Math.sin(now / 450 + hash(p.id) % 7) * 0.03), hp.z)
           if (!calm) p.pb.rotation.y += dt * 1.1
         }
       }
     }
     if (fly) {
-      fly.t += dt / 1.5
+      fly.t += dt / (fly.d || 1.5)
       const t = Math.min(1, fly.t), e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2
       flyPaper.visible = true
       flyPaper.position.lerpVectors(fly.from, fly.to, e); flyPaper.position.y += Math.sin(t * Math.PI) * 2.2
@@ -1556,13 +1943,30 @@ function office3d(h) {
 
   return {
     mount, sync, fit: () => fit(true), focus, zoomBy, panBy, characterBox, resize, ready: boot,
+    /** Walk faster (tests, a demo): k times the speed, the pauses k times shorter. */
+    pace: (k) => { pace = Math.max(0.1, Math.min(50, Number(k) || 1)) },
+    /** Fly the camera to a point of the floor, k times the overview's zoom. */
+    aim: (x, z, k) => { if (!overview) return; startTween({ tx: x, ty: 0.6, tz: z, azim: VIEW0.azim, elev: VIEW0.elev, zoom: overview.zoom * (k || 2) }, 0.01); view.auto = false; viewChanged(false) },
     zoomPct: () => Math.round(view.zoom / (overview ? overview.zoom : 1) * 100),
     view: () => Object.assign(viewOf(), { auto: view.auto }),
     /** What is on the floor, for tests and for the curious. */
     info: () => ({
       key: O ? O.key : '', calls: renderer.info.render.calls, soft,
-      podiums: O ? [...O.byId.values()].map((p) => ({ id: p.id, kind: p.kind, agent: p.src.agent || '', state: p.src.state, character: !!p.ch, clip: p.ch ? p.ch.cur : null, cell: [p.x / PITCH, p.z / PITCH] })) : [],
+      podiums: O ? [...O.byId.values()].map((p) => ({
+        id: p.id, kind: p.kind, agent: p.src.agent || '', state: p.src.state, character: !!p.ch, clip: p.ch ? p.ch.cur : null, cell: [p.x / PITCH, p.z / PITCH],
+        // where the person is: 'desk', 'lounge', 'sup' (at the supervisor) or 'walk'; the lead is always at the supervisor's desk
+        loc: p.w ? (p.w.path.length ? 'walk' : p.w.loc) : p.kind === 'lead' && p.ch ? 'sup' : null,
+        act: p.w ? p.w.act : null, trail: p.w ? p.w.trail.slice() : [],
+        // the clip that really plays: a file without a walk or standing clip falls back to its idle
+        clipName: p.ch && p.ch.cur ? p.ch.map[p.ch.cur] || p.ch.map.idle : null,
+        pos: p.ch ? [p.ch.holder.position.x, p.ch.holder.position.y, p.ch.holder.position.z] : null,
+      })) : [],
       cards: cards.size,
+      // the fixed places of the floor
+      spots: O ? { supervisor: { x: O.sup.x, z: O.sup.z, visits: O.sup.visits.length, tray: [O.sup.trayAt.x, O.sup.trayAt.z] }, lounge: { seats: O.lounge.seats.filter((s) => s.sofa).length, standing: O.lounge.seats.filter((s) => !s.sofa).length }, room: O.r } : null,
+      // nothing casts or takes a shadow, and nothing hangs below the floor
+      shadows: { map: renderer.shadowMap.enabled, casters: (() => { let n = 0; scene.traverse((o) => { if (o.castShadow || o.receiveShadow) n++ }); return n })() },
+      floorMinY: O ? new T3.Box3().setFromObject(O.merged).min.y : null,
     }),
   }
 }

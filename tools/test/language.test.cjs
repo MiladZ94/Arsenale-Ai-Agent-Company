@@ -1,6 +1,7 @@
-/* One language per screen. On the English page nothing a person reads may be
- * in Arabic script, and on the Persian page no English UI text may remain,
- * in any view of the dashboard.
+/* English only (owner, 2026-10-12: Persian is out for now). Nothing a person
+ * reads may be in Arabic script, in any view of the dashboard; there is no
+ * language switch, and neither ?lang=fa nor an old dash-lang=fa cookie
+ * brings Persian back.
  *
  * "Data" is allowed to be in either language: agent ids, model names, project
  * names and codes, file names and flags, numbers, and what a person typed
@@ -85,26 +86,12 @@ function dataWords(sb) {
   return words
 }
 
-/** What stays English by nature: file names, paths, flags, code. */
-const TECHNICAL = /(?:(?<![\w-])--?[A-Za-z][\w-]*|[\w./-]*\.(?:json|jsonl|md|cjs|glb)\b|[\w.-]*\/[\w./-]*|\.claude\/agents|ARSENALE_[A-Z_]+|[\w-]+(?:\.[\w-]+)*\.(?:org|net|sh|com)\b)/g
 // product names, which are not translated (and the plan names they sell)
 const BRANDS = ['claude', 'desktop', 'code', 'cursor', 'gemini', 'codex', 'cli', 'chatgpt', 'mcp', 'http', 'https', 'ntfy', 'telegram', 'pushover', 'botfather', 'api', 'pro', 'plus', 'arsenale', 'board', 'url',
   // the MCP tool names the instructions mention: identifiers, never translated
   // file type codes on the finished-work cards, which stay as written like a file name
   'txt', 'csv', 'png', 'jpg', 'gif', 'webp', 'pdf',
   'hello', 'get_inbox', 'start_job', 'log_step', 'finish_job', 'ask_you', 'get_answers', 'check_action', 'add_deliverable']
-
-/** Latin words of 3+ letters left on a Persian page that are neither data nor technical. */
-function englishLeft(text, words) {
-  const left = new Set()
-  for (const w of text.replace(TECHNICAL, ' ').match(/[A-Za-z][A-Za-z0-9_]*(?:-[A-Za-z0-9_]+)*/g) || []) {
-    if (w.length < 3) continue
-    // text a person typed is cut short with an ellipsis (a gate label keeps 12 characters)
-    const lw = w.toLowerCase()
-    if (!words.has(lw) && !(lw.length >= 4 && [...words].some((d) => d.startsWith(lw)))) left.add(w)
-  }
-  return [...left]
-}
 
 const stripData = (text) => DATA_FA.reduce((t, d) => t.split(d).join(' '), text)
 
@@ -147,9 +134,9 @@ const VIEWS = (offices) => [
 
 const WAIT_DEF = "window.WAIT = (sel, f) => { const n = Date.now(); const t = setInterval(() => { const e = document.querySelector(sel); if (e) { clearInterval(t); f(e) } else if (Date.now() - n > 8000) clearInterval(t) }, 100) }; "
 
-async function readViews(page, lang, offices, port) {
+async function readViews(page, offices, port) {
   const out = {}
-  await page.goto('http://127.0.0.1:' + port + '/?lang=' + lang + '#/campus')
+  await page.goto('http://127.0.0.1:' + port + '/?v=1#/campus')
   for (const [name, action] of VIEWS(offices)) {
     await page.eval(WAIT_DEF + action + '; 1')
     await sleep(500)
@@ -157,7 +144,7 @@ async function readViews(page, lang, offices, port) {
     // leave a dialog or menu so it does not cover the next screen
     await page.eval("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); 1")
   }
-  await page.goto('http://127.0.0.1:' + port + '/archive?lang=' + lang)
+  await page.goto('http://127.0.0.1:' + port + '/archive')
   out.archive = await page.readable()
   return out
 }
@@ -188,7 +175,7 @@ test.after(async () => {
 
 test('English: no Arabic script on any screen, and the typed Persian text is shown as written', { skip: SKIP || false }, async (t) => {
   const w = await world()
-  const views = await readViews(w.page, 'en', w.offices, w.port)
+  const views = await readViews(w.page, w.offices, w.port)
   for (const [name, text] of Object.entries(views)) {
     const left = stripData(text).split('\n').filter((l) => ARABIC.test(l))
     assert.deepEqual(left, [], 'English "' + name + '" shows Persian: ' + left.slice(0, 3).join(' | '))
@@ -202,62 +189,29 @@ test('English: no Arabic script on any screen, and the typed Persian text is sho
   for (const [name, text] of Object.entries(drawn)) assert.ok(views[name].includes(text), name + ' shows "' + text + '"')
 })
 
-test('Persian: no English interface text on any screen; an office with no Persian name keeps its English one', { skip: SKIP || false }, async (t) => {
-  const w = await world()
-  const views = await readViews(w.page, 'fa', w.offices, w.port)
-  for (const [name, text] of Object.entries(views)) {
-    assert.deepEqual(englishLeft(text, w.words), [], 'Persian "' + name + '" has English UI text')
-  }
-  assert.ok(views.campus.includes('مهندسی'), 'Persian office name')
-  assert.ok(!views.campus.includes('Engineering') && !/\bStudio\b/.test(views.campus), 'no English office name beside the Persian one')
-  assert.ok(views.campus.includes('Operations'), 'no Persian name: the English one is the fallback')
-  assert.ok(!/\bUSD\b|\bn\/a\b|\btok\b/.test(views.campus), 'units and "n/a" are in Persian')
-  assert.ok(!/Studio lead|Eng lead/.test(views.org), 'a title made up from the id is English, so not shown here')
-  assert.ok(views.decisions.includes(EN_DECISION), 'typed English text stays as written')
-})
-
-test('Persian: numbers are Persian digits (clock times and typed text keep theirs)', { skip: SKIP || false }, async (t) => {
-  const w = await world()
-  const { page, port } = w
-  await page.goto('http://127.0.0.1:' + port + '/?lang=fa#/campus')
-  const digits = (sel) => page.eval("[...document.querySelectorAll(" + JSON.stringify(sel) + ")].map((e) => e.textContent).join(' ')")
-  for (const sel of ['.ckpi b', '.sign .n', '.orow .ct', '.cside .cnote bdi']) {
-    const t1 = await digits(sel)
-    assert.ok(t1.length > 0, sel + ' is drawn')
-    assert.ok(!/[0-9]/.test(t1), sel + ' has Latin digits: ' + t1.slice(0, 80))
-  }
-  await page.eval("location.hash = '#/org'; 1"); await page.readable()
-  assert.ok(!/[0-9]/.test(await digits('.ochip, .ocolh')), 'org counts')
-  await page.eval("location.hash = '#/office/engineering'; 1"); await page.readable()
-  assert.ok(!/[0-9]/.test(await digits('.ostats b')), 'office stat tiles')
-  await page.goto('http://127.0.0.1:' + port + '/archive?lang=fa')
-  assert.ok(!/[0-9]/.test(await digits('.tile b')), 'archive tiles, with their durations')
-})
-
 test('English: the same numbers keep Latin digits and the dot', { skip: SKIP || false }, async (t) => {
   const w = await world()
-  await w.page.goto('http://127.0.0.1:' + w.port + '/?lang=en#/campus')
+  await w.page.goto('http://127.0.0.1:' + w.port + '/?v=2#/campus')
   const t1 = await w.page.eval("document.querySelector('.ckpis').textContent")
   assert.match(t1, /[0-9]/)
   assert.doesNotMatch(t1, /[۰-۹٫]/)
 })
 
-test('budget dialog: a refused save shows its reason in the page language', { skip: SKIP || false }, async (t) => {
+test('budget dialog: a refused save shows its reason, in English', { skip: SKIP || false }, async (t) => {
   const w = await world()
-  for (const lang of ['en', 'fa']) {
-    await w.page.goto('http://127.0.0.1:' + w.port + '/?lang=' + lang + '#/campus')
+  {
+    await w.page.goto('http://127.0.0.1:' + w.port + '/?v=3#/campus')
     await w.page.eval("document.querySelector('[data-budget]').click(); 1")
     await w.page.waitFor("document.querySelector('form[data-bform]')")
     await w.page.eval("const f = document.querySelector('form[data-bform]'); f.elements.monthlyTokens.value = 'abc'; f.requestSubmit(); 1")
     await w.page.waitFor("document.getElementById('cdlg-msg').className.includes('err')")
     const msg = await w.page.eval("document.getElementById('cdlg-msg').textContent")
     assert.ok(msg.length > 10, 'a reason is shown')
-    if (lang === 'en') assert.ok(!ARABIC.test(msg), msg)
-    else assert.deepEqual(englishLeft(msg, w.words), [], 'Persian reason: ' + msg)
+    assert.ok(!ARABIC.test(msg), msg)
   }
 })
 
-test('no company: the single-office page and the archive follow the language too', { skip: SKIP || false }, async (t) => {
+test('no company: the single-office page and the archive are English', { skip: SKIP || false }, async (t) => {
   const sb = makeSandbox()
   const { port, child, url: keyUrl } = await startServer(sb)
   t.after(() => { child.kill(); sb.cleanup() })
@@ -266,20 +220,18 @@ test('no company: the single-office page and the archive follow the language too
   const page = await browser.launch()
   t.after(() => page.close())
   await page.goto(keyUrl)
-  for (const lang of ['en', 'fa']) {
-    await page.goto('http://127.0.0.1:' + port + '/?lang=' + lang)
+  {
+    await page.goto('http://127.0.0.1:' + port + '/')
     const texts = [await page.readable()]
     for (const h of ['#/campus', '#/decisions', '#/usage', '#/activity', '#/office']) { await page.eval("location.hash = '" + h + "'; 1"); await sleep(400); texts.push(await page.readable()) }
-    await page.goto('http://127.0.0.1:' + port + '/archive?lang=' + lang)
+    await page.goto('http://127.0.0.1:' + port + '/archive')
     texts.push(await page.readable())
-    for (const text of texts) {
-      if (lang === 'en') assert.ok(!ARABIC.test(text), 'English page shows Persian')
-      else assert.deepEqual(englishLeft(text, words), [])
-    }
+    for (const text of texts) assert.ok(!ARABIC.test(text), 'the page shows Persian')
+    assert.ok(words.size > 0)
   }
 })
 
-test('the campus set-up note, the newer-data banner and a broken file are in the page language', { skip: SKIP || false }, async (t) => {
+test('the campus set-up note, the newer-data banner and a broken file are in English', { skip: SKIP || false }, async (t) => {
   const sb = makeSandbox()
   assert.equal(sb.cli('--company-init', '--seed', sb.seed(SEED)).code, 0)
   const c = sb.read('company/company.json')
@@ -292,19 +244,15 @@ test('the campus set-up note, the newer-data banner and a broken file are in the
   const page = await browser.launch()
   t.after(() => page.close())
   await page.goto(keyUrl)
-  await page.goto('http://127.0.0.1:' + port + '/?lang=en#/campus')
+  await page.goto('http://127.0.0.1:' + port + '/?v=4#/campus')
   const en = await page.readable()
   assert.match(en, /newer dashboard/)
   assert.match(en, /projects\.json is not a list/)
   assert.ok(!ARABIC.test(en))
-  await page.goto('http://127.0.0.1:' + port + '/?lang=fa#/campus')
-  const fa = await page.readable()
-  assert.doesNotMatch(fa, /newer dashboard|is not a list/)
-  assert.match(fa, /projects\.json/)
-  assert.deepEqual(englishLeft(fa, words), [])
+
 })
 
-test('the first-start wizard: every one of its four steps is in the page language', { skip: SKIP || false }, async (t) => {
+test('the first-start wizard: every one of its four steps is English, with no language choice', { skip: SKIP || false }, async (t) => {
   const sb = makeSandbox({ packs: true })
   const { port, child, url: keyUrl } = await startServer(sb)
   t.after(() => { child.kill(); sb.cleanup() })
@@ -316,9 +264,10 @@ test('the first-start wizard: every one of its four steps is in the page languag
   for (const p of (await getJson(port, '/api/packs')).packs) for (const m of p.members) for (const w of m.id.split('-').concat([m.id])) words.add(w)
   for (const w of ['lumen', 'atelier', 'print', 'studio', 'english', 'demo']) words.add(w) // and the command "arsenale demo"
   for (const c of (await getJson(port, '/api/connect')).cards) for (const w of String((c.command || '') + ' ' + (c.snippet || '') + ' ' + (c.file || '')).match(/[A-Za-z][A-Za-z0-9_]*/g) || []) words.add(w.toLowerCase())
-  for (const lang of ['en', 'fa']) {
-    await page.goto('http://127.0.0.1:' + port + '/?lang=' + lang)
+  {
+    await page.goto('http://127.0.0.1:' + port + '/')
     await page.waitFor("!!document.querySelector('.wz input[name=name]')")
+    assert.equal(await page.eval("document.querySelectorAll('[data-lang]').length"), 0, 'no language buttons in the wizard')
     const texts = [await page.readable()]
     await page.eval("const f = document.querySelector('.wz form'); f.elements.name.value = 'Lumen Atelier'; f.elements.mission.value = 'A print studio'; f.requestSubmit(); 1")
     for (const sel of ['.wz input[name=pack]', '.wz .step', '.wz pre']) {
@@ -326,12 +275,27 @@ test('the first-start wizard: every one of its four steps is in the page languag
       texts.push(await page.readable())
       if (sel !== '.wz pre') await page.eval("document.querySelector('.wz form').requestSubmit(); 1")
     }
-    for (const text of texts) {
-      // the language switch names each language in its own script, as the mockup does
-      if (lang === 'en') assert.ok(!ARABIC.test(text.replace('فارسی', '')), 'English wizard shows Persian')
-      // the review lists this machine's data folder: a path, data
-      else assert.deepEqual(englishLeft(text.replace(/[A-Za-z]:\\\S*|\/\S*arsenale-home\S*/g, ' '), words), [], 'Persian wizard has English UI text')
-    }
+    for (const text of texts) assert.ok(!ARABIC.test(text), 'the wizard shows Persian')
     assert.equal(fs.existsSync(sb.company), false, 'reading the steps writes nothing')
   }
+})
+
+test('English only: no EN/FA switch, and ?lang=fa or an old dash-lang=fa cookie still gives English', { skip: SKIP || false }, async (t) => {
+  const w = await world()
+  for (const url of ['/?lang=fa#/campus', '/archive?lang=fa']) {
+    await w.page.goto('http://127.0.0.1:' + w.port + url)
+    const got = await w.page.eval("({ lang: document.documentElement.lang, dir: document.documentElement.dir, sw: document.querySelectorAll('.langsw, [data-lang]').length, LANG: typeof LANG === 'string' ? LANG : '' })")
+    got.fa = stripData(await w.page.readable()).split('\n').some((l) => ARABIC.test(l))
+    assert.equal(got.lang, 'en', url)
+    assert.equal(got.dir, 'ltr', url)
+    assert.equal(got.sw, 0, 'no language switch on ' + url)
+    if (!url.startsWith('/archive')) assert.equal(got.LANG, 'en')
+    assert.equal(got.fa, false, 'no Persian interface on ' + url)
+  }
+  // a cookie an older dashboard set is ignored: the server answers in English and sets no cookie
+  const res = await new Promise((resolve, reject) => {
+    http.get({ host: '127.0.0.1', port: w.port, path: '/?lang=fa', agent: false, headers: { Cookie: 'dash-lang=fa; ' + (cookies[w.port] || '') } }, (r) => { let b = ''; r.on('data', (c) => { b += c }); r.on('end', () => resolve({ headers: r.headers, body: b })) }).on('error', reject)
+  })
+  assert.match(res.body, /<html lang="en" dir="ltr">/)
+  assert.ok(!res.headers['set-cookie'] || !String(res.headers['set-cookie']).includes('dash-lang'), 'no language cookie is set')
 })

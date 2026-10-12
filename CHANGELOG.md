@@ -5,6 +5,21 @@ All notable changes are listed here. Versions follow
 
 ## Unreleased
 
+- **Office v3: a room on the ground, and people who walk.** No shadows and
+  nothing floating: the desks, the supervisor's station and the campus plots
+  stand on the light ground grid. Each office has a work area with low
+  screens, the supervisor's station in the middle (lilac platform, the in-tray
+  on its desk, a sign), a lounge with sofas and a coffee bar, a reception by
+  the door, windows, and wall screens with today's projects. People walk from
+  the lounge to the supervisor and their desk when they start, and back by the
+  supervisor (the report into the tray) to the lounge when they finish, driven
+  by the states the page already has; a change halfway is taken from where
+  they are. The default character has new `Walk` and `Stand` clips; a file
+  without them moves in its idle pose.
+- **One light theme everywhere**: the header, the panels, the waiting rail,
+  the org chart, activity, archive, dialogs and the 1.0 screens.
+- **English only, for now.** The EN/FA switch, the Persian strings and the
+  `?lang=` and `dash-lang` cookie handling are gone; every page is English.
 - **The office in 3D.** One floating podium per person with a desk, a chair
   and their character, a portrait card framed by their state, the handed-in
   tray, and a camera that pans, orbits, zooms and survives every redraw. The

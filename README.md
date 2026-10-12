@@ -178,7 +178,6 @@ The 1.0 screens, from the shop demo (`arsenale demo --shop`; everything invented
 | ![Team](docs/screenshots/team-profile-en.png) **Team**: each office as a room, with a desk, a name and a status bubble for every member; the profile opens at the side (right now, this month, good at, asks you first before). | ![New desk](docs/screenshots/team-hire-en.png) **New desk**: hire in plain words (name, job title, what they should do, good at, a look, what they ask first), then check the file before it is written; edits keep a backup. |
 | ![Settings](docs/screenshots/settings-safety-en.png) **Settings**: Assistants (connect in three steps), Phone alerts (with what your phone shows), Safety rules in plain words, Office packs, Privacy. | ![Wizard](docs/screenshots/wizard-offices-en.png) **First start**: four steps (welcome, offices, connect, review) while your campus builds itself on the left; nothing is saved before the last one. |
 
-Persian: [approvals](docs/screenshots/approvals-fa.png), [tasks](docs/screenshots/tasks-fa.png), [team](docs/screenshots/team-profile-fa.png), [wizard](docs/screenshots/wizard-offices-fa.png).
 
 The screens from before 1.0:
 
@@ -188,8 +187,7 @@ The screens from before 1.0:
 | ![Campus](docs/screenshots/campus-en.png) **Campus**: one building per office, budgets and questions on the right. | ![Tools and usage](docs/screenshots/usage-en.png) **Tools & usage**: tokens by agent, tools allowed against tools used, today's runs. |
 
 Also: **Decisions & gates** (a timeline of who decided what), an **archive** of
-every run, and an optional **Persian (FA)** interface
-([screenshot](docs/screenshots/office-product-fa.png)).
+every run. The interface is English only.
 
 ### Desks
 
@@ -200,27 +198,40 @@ A floor has 18 desks; more agents than that take a guest desk while they work.
 
 ### The 3D office and the characters
 
-The office floor is drawn in 3D: one floating white podium per person, with a
-desk, a chair and their character, and a portrait card above it whose frame
-is their state (blue working, amber waiting or quiet, red failed, green done,
-grey idle). Drag to pan, right-drag to orbit, wheel to zoom, click a podium to
-fly to it, **Fit** (or Esc) for the whole office; the camera stays where you
-left it through every redraw. The campus is light isometric white buildings on
-plinths, one plot per office, with the office's card above its building.
-Without WebGL, and in the built file, the office stays the flat isometric one.
+The office floor is drawn in 3D, as a room on the light ground grid: a work
+area with a desk and a low screen per person, the supervisor's station in the
+middle (a lilac platform, a wide desk with the in-tray, and a sign), a lounge
+along the windows with sofas, coffee tables and a coffee bar, a reception by
+the door, and screens on the wall with the projects that had work today.
+Nothing casts a shadow and everything stands on the floor. Above each desk is a
+portrait card whose frame is the person's state (blue working, amber waiting
+or quiet, red failed, green done, grey idle).
+
+The people move with their state: someone who starts a task walks from the
+lounge to the supervisor (the task is handed over), then to their desk and
+works; when they finish they walk back to the supervisor, hand in the report
+(the sheet lands in the tray), and go back to the lounge. Someone whose run
+asked you a question waits at the desk. A change halfway through a walk is
+taken from where the person is. Drag to pan, right-drag to orbit, wheel to
+zoom, click a desk to fly to it, **Fit** (or Esc) for the whole office; the
+camera stays where you left it through every redraw. The campus is light
+isometric white buildings on paved plots flush with the ground, one plot per
+office, with the office's card above its building. Without WebGL, and in the
+built file, the office stays the flat isometric one.
 
 - **three.js r184**, pinned and served from the page itself, never a CDN:
   `tools/vendor/three/` (MIT, see `three-LICENSE.txt` and the `README.md`
   there).
 - **The default character** is `tools/characters/default.glb`: a low-poly
-  seated person made from three.js primitives by
+  person (seated at rest, with walking and standing clips) made from three.js primitives by
   `tools/characters/make-default-character.cjs`, our own work, released as
   **CC0 1.0** (`tools/characters/LICENSE.txt`). No model was downloaded. Each
   person's copy gets their own skin, hair and role colour.
-- **Your own characters**, one per person: drop a `.glb` on their podium (kept
+- **Your own characters**, one per person: drop a `.glb` on their desk (kept
   in that browser), use **Load .glb…** in the details panel, or put
   `<agent-name>.glb` in `ARSENALE_HOME/characters/`. Name the clips `Idle`,
-  `Typing`, `Thinking` and `Celebrate`; the rest of the file conventions are in
+  `Typing`, `Thinking`, `Celebrate`, `Walk` and `Stand` (a file without `Walk`
+  or `Stand` moves in its idle pose); the rest of the file conventions are in
   [`tools/OFFICE-WORLD-NOTE.md`](tools/OFFICE-WORLD-NOTE.md).
 
 ## Office packs
@@ -341,7 +352,6 @@ said ask.
 | Transcript folders that may be read | `transcriptRoots`, or `ARSENALE_TRANSCRIPT_ROOTS` | none |
 | Heavy-tier model names | `heavyModels` | `["Opus"]` |
 | Prices | `<data>/model-prices.json` | empty |
-| Interface language | the EN / FA switch on the page | English |
 | Folders deliverables may be copied from | `deliverableRoots` | `<data>/workspace` |
 | Model per strength for hired members (Claude Code) | `tierModels` | `{"light":"haiku","standard":"sonnet","heavy":"opus"}` |
 | MCP over HTTP | `ARSENALE_MCP_TOKEN` (environment only) | off |

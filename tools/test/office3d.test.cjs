@@ -1,5 +1,6 @@
 /* The office floor in 3D (office3d in office-world.cjs): one podium per
- * person with a card and a character, a camera that survives the page's
+ * person with a card and a character, the lounge, the supervisor station and
+ * the walks between them, no shadows, a camera that survives the page's
  * redraw, the flat office when there is no WebGL, and a built file that stays
  * flat and carries no three.js.
  *
@@ -42,7 +43,7 @@ const pageErrors = (log) => log.filter((m) => m.method === 'Runtime.exceptionThr
 
 test('office 3D: every person of the office has a podium, a card and a character; the tray is there', { skip: SKIP || false }, async () => {
   const { page, base, log } = await world()
-  await page.goto(base + '/?lang=en#/office/engineering')
+  await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
   await page.waitFor(READY, 15000)
   await sleep(300)
   const got = await page.eval(`(() => {
@@ -82,7 +83,7 @@ test('office 3D: every person of the office has a podium, a card and a character
 
 test('office 3D: the 1.5 s redraw keeps the camera, the canvas and the cards', { skip: SKIP || false }, async () => {
   const { page, base, sb } = await world()
-  await page.goto(base + '/?lang=en#/office/engineering')
+  await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
   await page.waitFor(READY, 15000)
   await page.eval("window.__office3d.zoomBy(1.7); window.__office3d.panBy(90, -40); document.querySelector('#stage canvas').dataset.mark = 'same'; document.querySelector('.w3card').dataset.mark = 'same'; 1")
   await sleep(600)
@@ -97,7 +98,7 @@ test('office 3D: the 1.5 s redraw keeps the camera, the canvas and the cards', {
   for (const k of ['tx', 'ty', 'tz', 'azim', 'elev', 'zoom']) assert.ok(Math.abs(after.view[k] - before[k]) < 1e-6, k + ' kept: ' + before[k] + ' -> ' + after.view[k])
   assert.equal(after.canvas, 'same', 'the canvas is the same element')
   assert.equal(after.card, 'same', 'the cards are kept, not drawn anew')
-  await page.goto(base + '/?lang=en#/office/engineering')
+  await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
   await page.waitFor(READY, 15000)
   const back = await page.eval('window.__office3d.view()')
   for (const k of ['tx', 'tz', 'zoom']) assert.ok(Math.abs(back[k] - before[k]) < 1e-3, k + ' restored after a reload')
@@ -112,7 +113,7 @@ test('office 3D: with no WebGL the flat office is drawn, and works', { skip: SKI
     HTMLCanvasElement.prototype.getContext = function (kind, o) { return /webgl/i.test(kind) ? null : get.call(this, kind, o) }
   })()`)
   await page.goto(s.url.replace('localhost', '127.0.0.1'))
-  await page.goto(base + '/?lang=en#/office/engineering')
+  await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
   await sleep(800)
   const got = await page.eval(`({
     w3: !!window.__office3d,
@@ -124,6 +125,145 @@ test('office 3D: with no WebGL the flat office is drawn, and works', { skip: SKI
   assert.equal(got.on, false)
   assert.equal(got.svg, 1, 'the flat office is drawn')
   assert.equal(got.canvas, 0, 'and no canvas left behind')
+})
+
+// ---------- office v3 (2026-10-12): no shadows, a room on the ground, the lounge, the supervisor, the walks
+
+const info = (page) => page.eval('window.__office3d.info()')
+const pod = (i, id) => i.podiums.find((p) => p.id === id)
+/** `want` appears in `trail` in this order (other steps may sit between). */
+const inOrder = (trail, want) => { let k = 0; for (const t of trail) if (t === want[k]) k++; return k === want.length }
+// a copy of the default character without its walking and standing clips: a file of someone's own made before office v3
+function withoutWalk(buf) {
+  const len = buf.readUInt32LE(12), json = JSON.parse(buf.subarray(20, 20 + len).toString('utf8'))
+  json.animations = json.animations.filter((a) => !/walk|stand/i.test(a.name))
+  let js = Buffer.from(JSON.stringify(json), 'utf8')
+  if (js.length % 4) js = Buffer.concat([js, Buffer.alloc(4 - (js.length % 4), 0x20)])
+  const rest = buf.subarray(20 + len)
+  const head = Buffer.alloc(20)
+  head.writeUInt32LE(0x46546C67, 0); head.writeUInt32LE(2, 4); head.writeUInt32LE(20 + js.length + rest.length, 8)
+  head.writeUInt32LE(js.length, 12); head.writeUInt32LE(0x4E4F534A, 16)
+  return Buffer.concat([head, js, rest])
+}
+
+/** walker-agent: a finished run today in Engineering, so it rests in the lounge there (once per world) */
+let warmed = false
+function warmUp(sb) {
+  if (warmed) return
+  warmed = true
+  assert.equal(sb.cli(JSON.stringify({ agent: 'walker-agent', task: 'warm-up', project: 'democalc', model: 'sonnet', status: 'ok', summary: 'warm-up done' })).code, 0)
+}
+
+test('office 3D: no shadows, and everything stands on the floor; the campus has no shadows either', { skip: SKIP || false }, async () => {
+  const { page, base } = await world()
+  await page.goto(base + '/?v=s1#/office/engineering')
+  await page.waitFor(READY, 15000)
+  const i = await info(page)
+  assert.equal(i.shadows.map, false, 'the renderer draws no shadows')
+  assert.equal(i.shadows.casters, 0, 'and nothing casts or takes one')
+  assert.ok(i.floorMinY > -0.01, 'nothing hangs below the floor: ' + i.floorMinY)
+  assert.ok(i.floorMinY < 0.01, 'and the room starts on it: ' + i.floorMinY)
+  for (const p of i.podiums.filter((x) => x.pos)) assert.ok(p.pos[1] >= 0 && p.pos[1] < 0.1, p.id + ' stands on the floor (or the low platform): ' + p.pos[1])
+  await page.goto(base + '/?v=s2#/campus')
+  await page.waitFor("document.querySelector('#cmap svg')", 10000)
+  const c = await page.eval(`({
+    blur: document.querySelectorAll('#cmap feGaussianBlur, #cmap filter, #cmap [filter]').length,
+    shadowCss: [...document.querySelectorAll('#cmap .sign')].filter((e) => getComputedStyle(e).boxShadow !== 'none').length,
+    plots: document.querySelectorAll('#cmap .bld .pl').length,
+  })`)
+  assert.equal(c.blur, 0, 'no blurred shadow on the campus')
+  assert.equal(c.shadowCss, 0, 'the office cards cast no drop shadow')
+  assert.ok(c.plots > 0, 'the plots are drawn')
+})
+
+test('office 3D: the lounge and the supervisor station; idle people rest in the lounge, workers sit at their desks', { skip: SKIP || false }, async () => {
+  const { page, base, sb } = await world()
+  warmUp(sb)
+  await page.goto(base + '/?v=s3#/office/engineering')
+  await page.waitFor(READY, 15000)
+  await sleep(800)
+  const i = await info(page)
+  assert.ok(i.spots && i.spots.supervisor && i.spots.supervisor.visits >= 1, 'the supervisor station has places to stand')
+  const desks = i.podiums.filter((p) => p.kind === 'desk')
+  assert.ok(i.spots.lounge.seats + i.spots.lounge.standing >= desks.length, 'everyone fits in the lounge')
+  const lead = i.podiums.find((p) => p.kind === 'lead')
+  if (lead) assert.equal(lead.loc, 'sup', 'the lead sits at the supervisor station')
+  assert.ok(i.podiums.some((p) => p.kind === 'tray'), 'the tray is on the supervisor desk')
+  let resting = 0
+  for (const p of desks.filter((x) => x.character)) {
+    if (p.loc === 'walk') continue
+    const want = ['working', 'quiet', 'waiting'].includes(p.state) ? 'desk' : 'lounge'
+    assert.equal(p.loc, want, p.id + ' (' + p.state + ') is at the ' + want)
+    if (want === 'lounge') resting++
+  }
+  assert.ok(resting > 0, 'the fixture has someone resting in the lounge')
+  const signs = await page.eval("[...document.querySelectorAll('.w3card')].length")
+  assert.equal(signs, i.podiums.length, 'every desk keeps its card')
+})
+
+test('office 3D: starting work walks from the lounge to the supervisor and the desk; finishing walks back by the supervisor to the lounge', { skip: SKIP || false }, async () => {
+  const { page, base, sb, log } = await world()
+  warmUp(sb)
+  await page.goto(base + '/?v=s4#/office/engineering')
+  await page.waitFor(READY, 15000)
+  await page.eval('window.__office3d.pace(8); 1')
+  await page.waitFor("(() => { const p = window.__office3d.info().podiums.find((x) => x.id === 'walker-agent'); return p && p.loc === 'lounge' })()", 10000)
+  const id = sb.cli('--start', JSON.stringify({ agent: 'walker-agent', task: 'walk check', project: 'democalc', model: 'sonnet' })).out.trim()
+  assert.ok(id, 'the run started')
+  await page.waitFor("(() => { const p = window.__office3d.info().podiums.find((x) => x.id === 'walker-agent'); return p.loc === 'desk' && p.state === 'working' })()", 30000)
+  let p = pod(await info(page), 'walker-agent')
+  assert.ok(inOrder(p.trail, ['lounge', 'walk', 'sup', 'receive', 'walk', 'desk']), 'lounge, the supervisor (the task handed over), the desk: ' + p.trail.join(' > '))
+  assert.equal(p.clip, 'typing', 'and works at the desk')
+  const before = p.trail.length
+  assert.equal(sb.cli(JSON.stringify({ id, agent: 'walker-agent', task: 'walk check', status: 'ok', summary: 'walk check done' })).code, 0)
+  await page.waitFor("(() => { const p = window.__office3d.info().podiums.find((x) => x.id === 'walker-agent'); return p.loc === 'lounge' })()", 30000)
+  p = pod(await info(page), 'walker-agent')
+  assert.ok(inOrder(p.trail.slice(before - 1), ['desk', 'walk', 'sup', 'handin', 'walk', 'lounge']), 'the desk, the supervisor (the report handed in), the lounge: ' + p.trail.join(' > '))
+  assert.deepEqual(pageErrors(log), [], 'no page errors')
+})
+
+test('office 3D: a state that changes halfway through a walk is taken from where the person is', { skip: SKIP || false }, async () => {
+  const { page, base, sb, log } = await world()
+  warmUp(sb)
+  await page.goto(base + '/?v=s5#/office/engineering')
+  await page.waitFor(READY, 15000)
+  await page.eval('window.__office3d.pace(1); 1')
+  await page.waitFor("(() => { const p = window.__office3d.info().podiums.find((x) => x.id === 'walker-agent'); return p && p.loc === 'lounge' })()", 10000)
+  const id = sb.cli('--start', JSON.stringify({ agent: 'walker-agent', task: 'walk check two', project: 'democalc', model: 'sonnet' })).out.trim()
+  await page.waitFor("window.__office3d.info().podiums.find((x) => x.id === 'walker-agent').loc === 'walk'", 15000)
+  await sleep(700)
+  const mid = pod(await info(page), 'walker-agent')
+  assert.equal(mid.loc, 'walk', 'still on the way')
+  // done before reaching the desk: the person turns round where they are
+  assert.equal(sb.cli(JSON.stringify({ id, agent: 'walker-agent', task: 'walk check two', status: 'ok', summary: 'done early' })).code, 0)
+  await page.eval('window.__office3d.pace(8); 1')
+  await page.waitFor("(() => { const p = window.__office3d.info().podiums.find((x) => x.id === 'walker-agent'); return p.loc === 'lounge' && p.state !== 'working' })()", 30000)
+  const end = pod(await info(page), 'walker-agent')
+  const tail = end.trail.slice(end.trail.lastIndexOf('lounge', end.trail.length - 2))
+  assert.ok(tail.includes('handin'), 'the report still goes to the supervisor: ' + end.trail.join(' > '))
+  assert.equal(end.trail[end.trail.length - 1], 'lounge', 'and the walk ends in the lounge')
+  assert.ok(end.pos[1] >= 0, 'on the floor')
+  assert.deepEqual(pageErrors(log), [], 'no page errors')
+})
+
+test('office 3D: a character file without a walk clip still walks, in its idle pose', { skip: SKIP || false }, async () => {
+  const { page, base, sb, log } = await world()
+  fs.writeFileSync(path.join(sb.root, 'characters', 'walker-agent.glb'), withoutWalk(fs.readFileSync(path.join(sb.tools, 'characters', 'default.glb'))))
+  warmUp(sb)
+  await page.goto(base + '/?v=s6#/office/engineering')
+  await page.waitFor("window.__office3d && window.__office3d.info().podiums.some((p) => p.id === 'walker-agent' && p.character)", 15000)
+  await page.waitFor("!!document.querySelector('.w3card.glb[data-anchor=\"walker-agent\"]')", 10000)
+  await page.eval('window.__office3d.pace(1); 1')
+  const id = sb.cli('--start', JSON.stringify({ agent: 'walker-agent', task: 'walk check three', project: 'democalc', model: 'sonnet' })).out.trim()
+  await page.waitFor("(() => { const p = window.__office3d.info().podiums.find((x) => x.id === 'walker-agent'); return p.loc === 'walk' && p.clip === 'walk' })()", 15000)
+  const p = pod(await info(page), 'walker-agent')
+  assert.equal(p.clip, 'walk', 'it is walking')
+  assert.equal(p.clipName, 'Idle', 'with its idle clip, as it has no walk')
+  await page.eval('window.__office3d.pace(8); 1')
+  await page.waitFor("window.__office3d.info().podiums.find((x) => x.id === 'walker-agent').loc === 'desk'", 30000)
+  sb.cli(JSON.stringify({ id, agent: 'walker-agent', task: 'walk check three', status: 'ok', summary: 'done' }))
+  fs.rmSync(path.join(sb.root, 'characters', 'walker-agent.glb'), { force: true })
+  assert.deepEqual(pageErrors(log), [], 'no page errors')
 })
 
 test('office 3D: the built file keeps the flat office and carries no three.js; the live page carries r184 and the character', () => {
@@ -140,12 +280,12 @@ test('office 3D: the built file keeps the flat office and carries no three.js; t
   } finally { sb.cleanup() }
 })
 
-test('the default character: CC0, made by our own script, with the four clip names', () => {
+test('the default character: CC0, made by our own script, with its six clip names (walking and standing too)', () => {
   const dir = path.join(__dirname, '..', 'characters')
   const b = fs.readFileSync(path.join(dir, 'default.glb'))
   assert.equal(b.readUInt32LE(0), 0x46546C67, 'a glTF binary')
   const json = JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString('utf8'))
-  assert.deepEqual(json.animations.map((a) => a.name), ['Idle', 'Typing', 'Thinking', 'Celebrate'])
+  assert.deepEqual(json.animations.map((a) => a.name), ['Idle', 'Typing', 'Thinking', 'Celebrate', 'Walk', 'Stand'])
   assert.equal(json.scenes[0].extras.arsenale.seated, true)
   assert.ok(!json.images && !json.textures, 'no textures in it')
   assert.match(fs.readFileSync(path.join(dir, 'LICENSE.txt'), 'utf8'), /CC0 1\.0/)

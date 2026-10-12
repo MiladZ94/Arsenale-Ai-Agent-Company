@@ -74,10 +74,10 @@ function everyoneArt() {
   function thumb(kind, c) {
     const W = 260, H = 150
     let s = ''
-    if (kind === 'doc') s = '<rect x="70" y="14" width="120" height="122" rx="3" fill="#E9EFF5"/><rect x="82" y="28" width="60" height="8" fill="#10161D"/><rect x="82" y="46" width="96" height="4" fill="#9AA7B5"/><rect x="82" y="56" width="90" height="4" fill="#9AA7B5"/><rect x="82" y="66" width="96" height="4" fill="#9AA7B5"/><rect x="82" y="82" width="40" height="22" fill="' + c + '"/><rect x="128" y="82" width="50" height="4" fill="#9AA7B5"/><rect x="128" y="92" width="44" height="4" fill="#9AA7B5"/><rect x="82" y="112" width="96" height="4" fill="#9AA7B5"/>'
-    else if (kind === 'sheet') { for (let r = 0; r < 6; r++) for (let q = 0; q < 5; q++) s += '<rect x="' + (22 + q * 44) + '" y="' + (18 + r * 20) + '" width="42" height="18" fill="' + (r === 0 ? c : (r + q) % 2 ? '#1B2530' : '#222E3B') + '"/>' }
-    else if (kind === 'link') s = '<rect x="22" y="22" width="216" height="106" rx="6" fill="#141B23" stroke="#2B3A49"/><rect x="36" y="38" width="22" height="22" rx="4" fill="' + c + '"/><rect x="68" y="40" width="110" height="7" fill="#C6D0DA"/><rect x="68" y="54" width="70" height="5" fill="#8A97A6"/><rect x="36" y="78" width="188" height="5" fill="#3A4856"/><rect x="36" y="90" width="160" height="5" fill="#3A4856"/><rect x="36" y="102" width="120" height="5" fill="#3A4856"/>'
-    else s = '<rect x="30" y="20" width="200" height="110" rx="4" fill="#0D1319" stroke="#2B3A49"/><rect x="44" y="36" width="12" height="5" fill="' + c + '"/><rect x="62" y="36" width="90" height="5" fill="#A6B1BD"/><rect x="44" y="52" width="150" height="5" fill="#6A7785"/><rect x="44" y="66" width="170" height="5" fill="#6A7785"/><rect x="44" y="80" width="130" height="5" fill="#6A7785"/><rect x="44" y="94" width="160" height="5" fill="#6A7785"/>'
+    if (kind === 'doc') s = '<rect x="70" y="14" width="120" height="122" rx="3" fill="#1F2A36"/><rect x="82" y="28" width="60" height="8" fill="#10161D"/><rect x="82" y="46" width="96" height="4" fill="#9AA7B5"/><rect x="82" y="56" width="90" height="4" fill="#9AA7B5"/><rect x="82" y="66" width="96" height="4" fill="#9AA7B5"/><rect x="82" y="82" width="40" height="22" fill="' + c + '"/><rect x="128" y="82" width="50" height="4" fill="#9AA7B5"/><rect x="128" y="92" width="44" height="4" fill="#9AA7B5"/><rect x="82" y="112" width="96" height="4" fill="#9AA7B5"/>'
+    else if (kind === 'sheet') { for (let r = 0; r < 6; r++) for (let q = 0; q < 5; q++) s += '<rect x="' + (22 + q * 44) + '" y="' + (18 + r * 20) + '" width="42" height="18" fill="' + (r === 0 ? c : (r + q) % 2 ? '#1B2530' : '#E3E8ED') + '"/>' }
+    else if (kind === 'link') s = '<rect x="22" y="22" width="216" height="106" rx="6" fill="#F6F8FA" stroke="#B8C3CE"/><rect x="36" y="38" width="22" height="22" rx="4" fill="' + c + '"/><rect x="68" y="40" width="110" height="7" fill="#C6D0DA"/><rect x="68" y="54" width="70" height="5" fill="#8A97A6"/><rect x="36" y="78" width="188" height="5" fill="#B8C3CE"/><rect x="36" y="90" width="160" height="5" fill="#B8C3CE"/><rect x="36" y="102" width="120" height="5" fill="#B8C3CE"/>'
+    else s = '<rect x="30" y="20" width="200" height="110" rx="4" fill="#F1F4F7" stroke="#B8C3CE"/><rect x="44" y="36" width="12" height="5" fill="' + c + '"/><rect x="62" y="36" width="90" height="5" fill="#A6B1BD"/><rect x="44" y="52" width="150" height="5" fill="#6A7785"/><rect x="44" y="66" width="170" height="5" fill="#6A7785"/><rect x="44" y="80" width="130" height="5" fill="#6A7785"/><rect x="44" y="94" width="160" height="5" fill="#6A7785"/>'
     return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges" aria-hidden="true">' + s + '</svg>'
   }
 
@@ -93,18 +93,18 @@ function everyoneArt() {
     }
     return { P, poly, box }
   }
-  const text = (x, y, s, o) => { o = o || {}; return '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="middle" style="font:' + (o.w || 600) + ' ' + (o.size || 12) + 'px ' + (o.mono ? 'var(--font-ui)' : 'var(--font-ui)') + ';fill:' + (o.fill || '#C6D0DA') + '">' + s + '</text>' }
+  const text = (x, y, s, o) => { o = o || {}; return '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="middle" style="font:' + (o.w || 700) + ' ' + (o.size || 12) + 'px ' + (o.mono ? 'var(--font-ui)' : 'var(--font-ui)') + ';fill:' + (o.fill || '#C6D0DA') + '">' + s + '</text>' }
   // `s` is already escaped by the caller; its length only sizes the label
   const tag = (x, y, s, o) => {
     o = o || {}
     const plain = String(s).replace(/&[a-z#0-9]+;/g, 'x')
     const w = Math.max(36, plain.length * 7 + 18)
-    return '<g class="tagg"><rect x="' + (x - w / 2).toFixed(1) + '" y="' + (y - 12).toFixed(1) + '" width="' + w + '" height="22" rx="4" fill="' + (o.bg || '#0A0F14') + '" stroke="' + (o.stroke || '#2B3A49') + '"/>' + text(x, y + 4, s, { size: 12, fill: o.fill || '#E9EFF5' }) + '</g>'
+    return '<g class="tagg"><rect x="' + (x - w / 2).toFixed(1) + '" y="' + (y - 12).toFixed(1) + '" width="' + w + '" height="22" rx="4" fill="' + (o.bg || '#FFFFFF') + '" stroke="' + (o.stroke || '#B8C3CE') + '"/>' + text(x, y + 4, s, { size: 12, fill: o.fill || '#1F2A36' }) + '</g>'
   }
-  const BUBBLE = { working: ['#3BE8B0', '...'], waiting: ['#E5A33D', '!'], done: ['#56B6C2', 'ok'], idle: ['#8A97A6', 'zz'], paused: ['#8A97A6', '||'] }
+  const BUBBLE = { working: ['#0C8A62', '...'], waiting: ['#B8720F', '!'], done: ['#1F7A8C', 'ok'], idle: ['#8A97A6', 'zz'], paused: ['#8A97A6', '||'] }
   const bubble = (x, y, kind) => {
     const c = BUBBLE[kind] || BUBBLE.idle
-    return '<g><rect x="' + (x - 17).toFixed(1) + '" y="' + (y - 20).toFixed(1) + '" width="34" height="20" rx="4" fill="#0A0F14" stroke="' + c[0] + '" stroke-width="1.5"/><polygon points="' + (x - 4).toFixed(1) + ',' + y.toFixed(1) + ' ' + (x + 4).toFixed(1) + ',' + y.toFixed(1) + ' ' + x.toFixed(1) + ',' + (y + 6).toFixed(1) + '" fill="' + c[0] + '"/>' + text(x, y - 6, c[1], { size: 12, fill: c[0], w: 800, mono: true }) + '</g>'
+    return '<g><rect x="' + (x - 17).toFixed(1) + '" y="' + (y - 20).toFixed(1) + '" width="34" height="20" rx="4" fill="#FFFFFF" stroke="' + c[0] + '" stroke-width="1.5"/><polygon points="' + (x - 4).toFixed(1) + ',' + y.toFixed(1) + ' ' + (x + 4).toFixed(1) + ',' + y.toFixed(1) + ' ' + x.toFixed(1) + ',' + (y + 6).toFixed(1) + '" fill="' + c[0] + '"/>' + text(x, y - 6, c[1], { size: 12, fill: c[0], w: 700, mono: true }) + '</g>'
   }
 
   /** The campus: up to six buildings on a grass slab. plots: [{ color, label,
@@ -113,23 +113,23 @@ function everyoneArt() {
     const SPOTS = [[1, 1], [5, 1], [1, 5], [5, 5], [3, 0.2], [3, 6.2]]
     const I = iso(450, 110, 100, 50), P = I.P, poly = I.poly, box = I.box
     const size = 8, mid = size / 2
-    let s = poly([P(0, 0), P(size, 0), P(size, size), P(0, size)], '#10241B', '#1B3A2B')
-    for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) if ((i + j) % 2) s += poly([P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], '#0F2219')
-    s += poly([P(mid - 0.3, 0), P(mid + 0.3, 0), P(mid + 0.3, size), P(mid - 0.3, size)], '#1A222B') + poly([P(0, mid - 0.3), P(size, mid - 0.3), P(size, mid + 0.3), P(0, mid + 0.3)], '#1A222B')
-    s += poly([P(0, size), P(size, size), P(size, size, -14), P(0, size, -14)], '#0B1812') + poly([P(size, 0), P(size, size), P(size, size, -14), P(size, 0, -14)], '#08130E')
+    let s = poly([P(0, 0), P(size, 0), P(size, size), P(0, size)], '#E6EEE8', '#D3DED6')
+    for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) if ((i + j) % 2) s += poly([P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], '#DEE7E1')
+    s += poly([P(mid - 0.3, 0), P(mid + 0.3, 0), P(mid + 0.3, size), P(mid - 0.3, size)], '#D5DBE1') + poly([P(0, mid - 0.3), P(size, mid - 0.3), P(size, mid + 0.3), P(0, mid + 0.3)], '#D5DBE1')
+    s += poly([P(0, size), P(size, size), P(size, size, -14), P(0, size, -14)], '#C6D1C9') + poly([P(size, 0), P(size, size), P(size, size, -14), P(size, 0, -14)], '#B9C5BD')
     const placed = plots.slice(0, SPOTS.length).map((p, i) => Object.assign({ x: SPOTS[i][0], y: SPOTS[i][1] }, p))
     const labels = []
     for (const p of placed.slice().sort((a, b) => (a.x + a.y) - (b.x + b.y))) {
       const w = 2, d = 2
       if (!p.built) {
-        s += poly([P(p.x, p.y), P(p.x + w, p.y), P(p.x + w, p.y + d), P(p.x, p.y + d)], 'rgba(255,255,255,.025)', '#3A4856', ' stroke-dasharray="6 5"')
+        s += poly([P(p.x, p.y), P(p.x + w, p.y), P(p.x + w, p.y + d), P(p.x, p.y + d)], 'rgba(255,255,255,.025)', '#B8C3CE', ' stroke-dasharray="6 5"')
         const c = P(p.x + w / 2, p.y + d / 2)
-        s += text(c[0], c[1] + 8, '+', { size: 26, fill: '#6A7785', w: 300 })
+        s += text(c[0], c[1] + 8, '+', { size: 26, fill: '#6A7785', w: 400 })
         continue
       }
       const h = p.h || 90, col = p.color
-      s += poly([P(p.x - 0.15, p.y - 0.15), P(p.x + w + 0.15, p.y - 0.15), P(p.x + w + 0.15, p.y + d + 0.15), P(p.x - 0.15, p.y + d + 0.15)], '#1B2430')
-      s += box(p.x, p.y, w, d, h, shade(col, 0.55), '#1F2C3A', '#18232F')
+      s += poly([P(p.x - 0.15, p.y - 0.15), P(p.x + w + 0.15, p.y - 0.15), P(p.x + w + 0.15, p.y + d + 0.15), P(p.x - 0.15, p.y + d + 0.15)], '#E3E8ED')
+      s += box(p.x, p.y, w, d, h, shade(col, 0.55), '#F2F4F6', '#E2E6EA')
       s += box(p.x - 0.05, p.y - 0.05, w + 0.1, d + 0.1, 10, col, shade(col, 0.75), shade(col, 0.6), h)
       const rows = Math.floor((h - 20) / 26), cols = Math.round(w * 2.2)
       for (let r = 0; r < rows; r++) {
@@ -153,9 +153,9 @@ function everyoneArt() {
     const I = iso(660, 215, 100, 50), P = I.P, box = I.box
     const sp = P(1.2, 0.14, 70)
     let wire = ''
-    for (let i = 0; i < 8; i++) wire += '<rect x="' + (540 + i * 22) + '" y="' + (430 - i * 11) + '" width="8" height="8" fill="' + (linked || i < 4 ? '#3BE8B0' : '#3A4856') + '"/>'
-    return wire + box(0, 0, 2.4, 1.6, 10, '#C6D0DA', '#8A97A6', '#6A7785') + box(0, 0, 2.4, 0.14, 100, '#222E3B', linked ? '#0E3A2C' : '#0E2B3A', '#18232F', 10) +
-      '<g transform="translate(' + sp[0].toFixed(1) + ',' + sp[1].toFixed(1) + ') matrix(1,.5,0,1,0,0)">' + text(0, 0, label, { size: 17, fill: linked ? '#3BE8B0' : '#56B6C2' }) + text(0, 22, sub, { size: 13, fill: '#8A97A6', w: 400 }) + '</g>'
+    for (let i = 0; i < 8; i++) wire += '<rect x="' + (540 + i * 22) + '" y="' + (430 - i * 11) + '" width="8" height="8" fill="' + (linked || i < 4 ? '#0C8A62' : '#B8C3CE') + '"/>'
+    return wire + box(0, 0, 2.4, 1.6, 10, '#C6D0DA', '#8A97A6', '#6A7785') + box(0, 0, 2.4, 0.14, 100, '#E3E8ED', linked ? '#CDEBDD' : '#CFE0EE', '#E2E6EA', 10) +
+      '<g transform="translate(' + sp[0].toFixed(1) + ',' + sp[1].toFixed(1) + ') matrix(1,.5,0,1,0,0)">' + text(0, 0, label, { size: 17, fill: linked ? '#0C8A62' : '#1F7A8C' }) + text(0, 22, sub, { size: 13, fill: '#8A97A6', w: 400 }) + '</g>'
   }
 
   /** One office room with up to six desks. members: [{ seed, label (escaped),
@@ -165,14 +165,16 @@ function everyoneArt() {
     opts = opts || {}
     const SEATS = [[0.5, 1.1], [2.2, 1.1], [3.9, 1.1], [1.3, 3.2], [3.0, 3.2], [4.7, 3.2]]
     const I = iso(420, 210, 120, 60), P = I.P, poly = I.poly, box = I.box
-    const H = 150, FA_ = '#17212B', FB = '#141D26'
-    let s = poly([P(0, 0), P(6, 0), P(6, 5), P(0, 5)], FB, '#1E2A36')
-    for (let i = 0; i < 6; i++) for (let j = 0; j < 5; j++) s += poly([P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], (i + j) % 2 ? FA_ : FB, '#1B2631')
-    s += poly([P(1.2, 2.3), P(4.8, 2.3), P(4.8, 4.9), P(1.2, 4.9)], shade(color, 0.22), shade(color, 0.4), ' stroke-width="1.5"')
-    s += poly([P(0, 5), P(6, 5), P(6, 5, -16), P(0, 5, -16)], '#0B1117') + poly([P(6, 0), P(6, 5), P(6, 5, -16), P(6, 0, -16)], '#080D12')
-    s += poly([P(0, 0, 0), P(6, 0, 0), P(6, 0, H), P(0, 0, H)], '#1B2633', '#0E151C') + poly([P(0, 0, 0), P(0, 5, 0), P(0, 5, H), P(0, 0, H)], '#162029', '#0E151C')
+    const H = 150, FA_ = '#EEF1F4', FB = '#E7EBEF'
+    let s = poly([P(0, 0), P(6, 0), P(6, 5), P(0, 5)], FB, '#D9DFE5')
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 5; j++) s += poly([P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], (i + j) % 2 ? FA_ : FB, '#DDE2E7')
+    // the rug: a light tint of the office colour (the room is on the light page)
+    const tint = (hex, k) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(String(hex).substr(i, 2), 16) * (1 - k) + 255 * k).toString(16).padStart(2, '0')).join('')
+    s += poly([P(1.2, 2.3), P(4.8, 2.3), P(4.8, 4.9), P(1.2, 4.9)], tint(color, 0.84), tint(color, 0.55), ' stroke-width="1.5"')
+    s += poly([P(0, 5), P(6, 5), P(6, 5, -16), P(0, 5, -16)], '#C9D0D7') + poly([P(6, 0), P(6, 5), P(6, 5, -16), P(6, 0, -16)], '#BCC4CC')
+    s += poly([P(0, 0, 0), P(6, 0, 0), P(6, 0, H), P(0, 0, H)], '#F4F5F7', '#C9D1D9') + poly([P(0, 0, 0), P(0, 5, 0), P(0, 5, H), P(0, 0, H)], '#E9ECEF', '#C9D1D9')
     s += poly([P(0, 0, H - 14), P(6, 0, H - 14), P(6, 0, H), P(0, 0, H)], color) + poly([P(0, 0, H - 14), P(0, 5, H - 14), P(0, 5, H), P(0, 0, H)], shade(color, 0.75))
-    for (const u of [0.5, 1.9, 3.3]) s += poly([P(u, 0, 60), P(u + 1.1, 0, 60), P(u + 1.1, 0, 118), P(u, 0, 118)], '#0E2B3A', '#2B3A49') + poly([P(u + 0.05, 0, 64), P(u + 0.55, 0, 64), P(u + 0.55, 0, 114), P(u + 0.05, 0, 114)], 'rgba(86,182,194,.18)')
+    for (const u of [0.5, 1.9, 3.3]) s += poly([P(u, 0, 60), P(u + 1.1, 0, 60), P(u + 1.1, 0, 118), P(u, 0, 118)], '#CFE0EE', '#B8C3CE') + poly([P(u + 0.05, 0, 64), P(u + 0.55, 0, 64), P(u + 0.55, 0, 114), P(u + 0.05, 0, 114)], 'rgba(86,182,194,.18)')
     s += poly([P(0, 0.6, 52), P(0, 2.4, 52), P(0, 2.4, 118), P(0, 0.6, 118)], '#E3E9EF', '#7A8794')
     for (let i = 0; i < 4; i++) s += poly([P(0, 0.8, 64 + i * 13), P(0, 1.2 + i * 0.25, 64 + i * 13), P(0, 1.2 + i * 0.25, 68 + i * 13), P(0, 0.8, 68 + i * 13)], i === 0 ? color : '#9AA7B5')
     const tags = []
@@ -184,25 +186,25 @@ function everyoneArt() {
       const ap = P(x + 0.75, y - 0.3, 20)
       const bx = ap[0] - 30, by = ap[1] - 58
       s += personG(m.seed, color, bx, by, 5)
-      s += box(x, y, 1.5, 0.8, 38, '#2A3947', '#1D2A36', '#16212B') + box(x, y, 1.5, 0.8, 5, shade(color, 0.8), shade(color, 0.5), shade(color, 0.4), 38)
+      s += box(x, y, 1.5, 0.8, 38, '#F1EEE7', '#DCD5C8', '#CFC7B8') + box(x, y, 1.5, 0.8, 5, shade(color, 0.8), shade(color, 0.5), shade(color, 0.4), 38)
       const lit = m.status === 'working' ? '#1F6F58' : m.status === 'waiting' ? '#7A5A1C' : '#1B2530'
-      s += box(x + 1.0, y + 0.12, 0.42, 0.07, 26, '#0E151C', lit, '#0A0F14', 43) + box(x + 1.15, y + 0.14, 0.12, 0.1, 4, '#0E151C', '#0E151C', '#0A0F14', 43)
-      if (m.hot) s += poly([P(x - 0.25, y - 0.8), P(x + 1.75, y - 0.8), P(x + 1.75, y + 1.15), P(x - 0.25, y + 1.15)], 'rgba(59,232,176,.07)', '#3BE8B0', ' stroke-width="2" stroke-dasharray="7 5"')
+      s += box(x + 1.0, y + 0.12, 0.42, 0.07, 26, '#C9D1D9', lit, '#FFFFFF', 43) + box(x + 1.15, y + 0.14, 0.12, 0.1, 4, '#C9D1D9', '#C9D1D9', '#FFFFFF', 43)
+      if (m.hot) s += poly([P(x - 0.25, y - 0.8), P(x + 1.75, y - 0.8), P(x + 1.75, y + 1.15), P(x - 0.25, y + 1.15)], 'rgba(12,138,98,.07)', '#0C8A62', ' stroke-width="2" stroke-dasharray="7 5"')
       s += bubble(ap[0], by - 6, m.status) + '</g>'
-      tags.push(tag(ap[0], by - 34, m.label, { stroke: m.hot ? '#3BE8B0' : '#2B3A49', fill: m.hot ? '#3BE8B0' : '#E9EFF5', bg: m.hot ? '#0E2B22' : '#0A0F14' }))
+      tags.push(tag(ap[0], by - 34, m.label, { stroke: m.hot ? '#0C8A62' : '#B8C3CE', fill: m.hot ? '#0C8A62' : '#1F2A36', bg: m.hot ? '#E6F4EE' : '#FFFFFF' }))
     }
     s += tags.join('')
     if (opts.ghost !== undefined && opts.ghost < SEATS.length) {
       const gx = SEATS[opts.ghost][0], gy = SEATS[opts.ghost][1]
-      s += poly([P(gx - 0.25, gy - 0.8), P(gx + 1.75, gy - 0.8), P(gx + 1.75, gy + 1.15), P(gx - 0.25, gy + 1.15)], 'rgba(59,232,176,.08)', '#3BE8B0', ' stroke-width="2" stroke-dasharray="7 5"')
-      s += poly([P(gx, gy), P(gx + 1.5, gy), P(gx + 1.5, gy + 0.8), P(gx, gy + 0.8)], 'rgba(59,232,176,.14)', '#3BE8B0', ' stroke-width="1.5" stroke-dasharray="4 4"')
+      s += poly([P(gx - 0.25, gy - 0.8), P(gx + 1.75, gy - 0.8), P(gx + 1.75, gy + 1.15), P(gx - 0.25, gy + 1.15)], 'rgba(12,138,98,.08)', '#0C8A62', ' stroke-width="2" stroke-dasharray="7 5"')
+      s += poly([P(gx, gy), P(gx + 1.5, gy), P(gx + 1.5, gy + 0.8), P(gx, gy + 0.8)], 'rgba(12,138,98,.14)', '#0C8A62', ' stroke-width="1.5" stroke-dasharray="4 4"')
       const t = P(gx + 0.75, gy + 0.4, 40), b = P(gx + 0.75, gy + 0.8, 0)
-      s += text(t[0], t[1] + 6, '+', { size: 34, fill: '#3BE8B0', w: 300 }) + tag(b[0], b[1] + 18, opts.ghostLabel || '', { stroke: '#3BE8B0', fill: '#3BE8B0' })
+      s += text(t[0], t[1] + 6, '+', { size: 34, fill: '#0C8A62', w: 400 }) + tag(b[0], b[1] + 18, opts.ghostLabel || '', { stroke: '#0C8A62', fill: '#0C8A62' })
     }
-    const plant = (x, y) => box(x, y, 0.5, 0.5, 22, '#4A3A2E', '#35291F', '#2A2018') + box(x + 0.1, y + 0.1, 0.3, 0.3, 44, '#2F8F66', '#236B4E', '#1C5640', 22) + box(x + 0.18, y + 0.18, 0.14, 0.14, 66, '#3BE8B0', '#2F8F66', '#236B4E', 22)
+    const plant = (x, y) => box(x, y, 0.5, 0.5, 22, '#4A3A2E', '#35291F', '#2A2018') + box(x + 0.1, y + 0.1, 0.3, 0.3, 44, '#2F8F66', '#236B4E', '#1C5640', 22) + box(x + 0.18, y + 0.18, 0.14, 0.14, 66, '#0C8A62', '#2F8F66', '#236B4E', 22)
     s += plant(5.2, 0.3) + plant(0.2, 4.2)
     const sp = P(3.2, 0, 132)
-    if (opts.sign) s += '<g transform="translate(' + sp[0].toFixed(1) + ',' + sp[1].toFixed(1) + ') matrix(1,.5,0,1,0,0)">' + text(0, 0, opts.sign, { size: 13, fill: '#0A0F14', w: 800 }) + '</g>'
+    if (opts.sign) s += '<g transform="translate(' + sp[0].toFixed(1) + ',' + sp[1].toFixed(1) + ') matrix(1,.5,0,1,0,0)">' + text(0, 0, opts.sign, { size: 13, fill: '#FFFFFF', w: 700 }) + '</g>'
     return s
   }
 
