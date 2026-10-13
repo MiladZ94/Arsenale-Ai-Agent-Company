@@ -30,10 +30,8 @@
 const { t, langScript } = require('./dashboard-strings.cjs')
 const { COMPANY_STYLE, companyViews } = require('./agent-company-page.cjs')
 const path = require('path')
-// The campus art and the 3D office are shared with Arsenale (office-world.cjs,
-// synced from there, see OFFICE-WORLD-NOTE.md). Loaded fresh with this file:
-// the server reloads only its own page files, and sync-office-world.cjs
-// touches this one after a copy.
+// The campus art and the 3D office (office-world.cjs, see OFFICE-WORLD-NOTE.md).
+// Loaded fresh with this file, so a changed drawing shows on the next reload.
 delete require.cache[require.resolve('./office-world.cjs')]
 const { WORLD_STYLE, campusArt, office3d, worldScripts } = require('./office-world.cjs')
 const { ACTIVITY_STYLE, activityView } = require('./activity-page.cjs')
@@ -49,9 +47,13 @@ const { everyoneArt } = require('./everyone-art.cjs')
  *  agent has no home desk and takes a guest desk while it works. Leads have no
  *  desk: an office's head sits at the round table.
  *
+ *  `pinned` ({name: [zone, slot]}, config.json "desks") is placed first, so a
+ *  layout someone is used to keeps its desks; a pin to a desk that does not
+ *  exist or is already taken is ignored and that agent is placed as usual.
+ *
  *  Shared with agent-company.cjs (an employee's default zone) and written into
  *  the page for officeClient, so it must stay a pure function. */
-function homeDesks(agents) {
+function homeDesks(agents, pinned) {
   const CAP = { build: 4, review: 6, docs: 4, design: 4 }
   const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k)
   const zoneOf = (a) => {
@@ -65,19 +67,32 @@ function homeDesks(agents) {
     return 'build'
   }
   const seats = {}, zones = {}
+  const taken = { build: [], review: [], docs: [], design: [] }
   const used = { build: 0, review: 0, docs: 0, design: 0 }
+  const take = (name, z, i) => { seats[name] = [z, i]; taken[z][i] = true; used[z]++ }
+  const firstFree = (z) => { for (let i = 0; i < CAP[z]; i++) if (!taken[z][i]) return i; return -1 }
   const spill = []
   const list = (agents || []).filter((a) => a && a.name).slice().sort((a, b) => String(a.name).localeCompare(String(b.name)))
+  const pins = pinned && typeof pinned === 'object' ? pinned : {}
   for (const a of list) {
+    const p = has(pins, a.name) ? pins[a.name] : null
+    if (!Array.isArray(p) || !has(CAP, p[0]) || !Number.isInteger(p[1]) || p[1] < 0 || p[1] >= CAP[p[0]] || taken[p[0]][p[1]]) continue
+    zones[a.name] = p[0]
+    take(a.name, p[0], p[1])
+  }
+  for (const a of list) {
+    if (has(seats, a.name)) continue
     const z = zoneOf(a)
     zones[a.name] = z
     if (z === 'lead') continue
-    if (used[z] < CAP[z]) seats[a.name] = [z, used[z]++]
+    const i = firstFree(z)
+    if (i >= 0) take(a.name, z, i)
     else spill.push(a.name)
   }
   for (const name of spill) {
     const z = Object.keys(CAP).sort((x, y) => (CAP[y] - used[y]) - (CAP[x] - used[x]))[0]
-    if (used[z] < CAP[z]) seats[name] = [z, used[z]++]
+    const i = firstFree(z)
+    if (i >= 0) take(name, z, i)
   }
   return { seats, zones }
 }
@@ -1094,7 +1109,7 @@ function officeClient() {
     docs: { fa: T('Docs'), slots: [[16, 2], [19, 2], [16, 5], [19, 5]] },
     design: { fa: T('Design & spec'), slots: [[1, 9], [4.5, 9], [1, 12], [4.5, 12]] },
   }
-  let HOME = homeDesks(DATA.agents).seats
+  let HOME = homeDesks(DATA.agents, DATA.desks).seats
   // Guest desks for built-in or unknown agents (Explore, general-purpose, …),
   // only drawn while someone sits at one.
   const GUEST = [[12.6, 8.3], [12.7, 12.3]]
@@ -1334,7 +1349,7 @@ function officeClient() {
 
   function deskMap(S) {
     // the agents can change while the page is open (a definition added)
-    HOME = homeDesks(DATA.agents).seats
+    HOME = homeDesks(DATA.agents, DATA.desks).seats
     if (CO) return CO.desks(S, officeId, { DEPTS, HOME, GUEST })
     const desks = new Map()
     for (const [name, [dept, i]] of Object.entries(HOME)) desks.set(name, DEPTS[dept].slots[i])

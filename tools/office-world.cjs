@@ -1,11 +1,8 @@
-/* The look of the company's world, shared by two dashboards: Arsenale and a
- * private copy of it that its author runs at home. Both draw the campus and
- * the office floor with this file, so the two always look and behave alike.
+/* The look of the company's world: the campus and the office floor.
  *
- * SOURCE OF TRUTH: Arsenale, tools/office-world.cjs (with tools/vendor/three/
- * and tools/characters/default.glb). Other copies are synced from there and
- * never edited in place; see tools/OFFICE-WORLD-NOTE.md. Keep this file free
- * of any one company's names, offices or people: it is public.
+ * One copy, here (with tools/vendor/three/ and tools/characters/default.glb);
+ * see tools/OFFICE-WORLD-NOTE.md. Keep this file free of any one company's
+ * names, offices or people: it is public.
  *
  * Three parts:
  *  - campusArt(h): the campus, light isometric white buildings standing on

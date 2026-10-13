@@ -40,8 +40,9 @@ Runs
   --start <json>      {"agent","task", optional "model","effort","project","parent",
                       "projectId","officeId","session","issue","doing"}
                       prints the new run id
-  --progress <json>   {"id","doing"}: one line of what the agent is doing now
-  <json>              finish (no mode): {"id","agent","task","status": ok|findings|
+  --progress <json>   {"id","doing", optional "pct": 0-100}: one line of what the agent
+                      is doing now, and how far it is
+  [--finish] <json>   finish: {"id","agent","task","status": ok|findings|
                       failed|stopped, optional "summary","findings":[...],"files":[...],
                       "usage":{"tokens","toolUses","durationMs","model"},"transcript"}
                       prints the path of the run record
@@ -238,10 +239,13 @@ if (args[0] === '--company-status') {
 }
 
 const MODES = ['--start', '--progress', '--budget-check', '--budget', '--employee', '--decision', '--gate', '--task', '--comment', '--deliverable', '--check-action']
-// no mode: the JSON (inline, --stdin, --file or @file) is a finish
+// no mode: the JSON (inline, --stdin, --file or @file) is a finish. "--finish"
+// says so outright; older run logs took it (as any unknown mode) for a finish,
+// and supervisors' notes still use it.
+const finishFlag = args[0] === '--finish'
 const mode = MODES.includes(args[0]) ? args[0] : ''
-if (!mode && /^--[a-z]/.test(args[0]) && args[0] !== '--stdin' && args[0] !== '--file') die(new Error('unknown mode ' + args[0] + ' (see --help)'))
-const input = jsonAt(mode ? 1 : 0)
+if (!mode && !finishFlag && /^--[a-z]/.test(args[0]) && args[0] !== '--stdin' && args[0] !== '--file') die(new Error('unknown mode ' + args[0] + ' (see --help)'))
+const input = jsonAt(mode || finishFlag ? 1 : 0)
 if (!input || typeof input !== 'object' || Array.isArray(input)) die(new Error((mode || 'finish') + ' needs a JSON object (see --help)'))
 
 // Every write goes through runlog.cjs, the library the MCP server and the

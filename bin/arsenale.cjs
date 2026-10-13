@@ -178,5 +178,5 @@ else if (cmd === 'build') {
   console.log(B.OUT + ': ' + n.runs + ' runs, ' + n.active + ' running, ' + n.agents + ' agents')
 } else if (cmd === 'paths') {
   const P = require(path.join(TOOLS, 'paths.cjs'))
-  console.log(JSON.stringify({ home: P.HOME, agentDirs: P.AGENT_DIRS, transcriptRoots: P.TRANSCRIPT_ROOTS, prices: fs.existsSync(P.PRICES) ? P.PRICES : P.PRICES_TEMPLATE + ' (empty template)' }, null, 2))
+  console.log(JSON.stringify({ home: P.HOME, runs: P.RUNS, company: P.COMPANY, agentDirs: P.AGENT_DIRS, transcriptRoots: P.TRANSCRIPT_ROOTS, prices: fs.existsSync(P.PRICES) ? P.PRICES : P.PRICES_TEMPLATE + ' (empty template)' }, null, 2))
 } else fail('unknown command "' + cmd + '" (see arsenale --help)')

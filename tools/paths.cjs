@@ -16,7 +16,14 @@
  * config.json (every key optional; "~" is expanded here, by Node, so the same
  * file works from PowerShell, cmd and a POSIX shell):
  *   { "agentDirs": ["~/.claude/agents"],          agent definitions to show
- *     "transcriptRoots": ["~/.claude/projects"] } transcripts that may be read
+ *     "transcriptRoots": ["~/.claude/projects"],  transcripts that may be read
+ *     "runsDir": "…", "companyDir": "…",          the run log and the company
+ *     "pagesDir": "…" }                           and the built pages, elsewhere
+ *
+ * runsDir, companyDir and pagesDir are for a run log that an earlier setup
+ * already keeps in another folder: Arsenale then reads and writes it there,
+ * as it is, instead of a copy that would drift from the original. Everything
+ * else (launch key, policy, packs, deliverables) stays in the data folder.
  *
  * Environment variables win over the file: ARSENALE_AGENT_DIRS and
  * ARSENALE_TRANSCRIPT_ROOTS, each a list split by the platform's path
@@ -58,7 +65,10 @@ function listOf(envName, value, fallback) {
 
 const HOME = home()
 const CONFIG = readConfig(HOME)
-const RUNS = path.join(HOME, 'agent-runs')
+// a folder named in config.json, or the default inside the data folder
+const dirOf = (value, fallback) => (typeof value === 'string' && value.trim() ? path.resolve(HOME, expandHome(value.trim())) : fallback)
+const RUNS = dirOf(CONFIG.runsDir, path.join(HOME, 'agent-runs'))
+const PAGES = dirOf(CONFIG.pagesDir, HOME)
 
 const P = {
   HOME,
@@ -69,9 +79,9 @@ const P = {
   DECISIONS: path.join(RUNS, 'decisions'),
   ANSWERS: path.join(RUNS, 'answers.jsonl'),
   ANSWERS_READ: path.join(RUNS, 'answers.read.json'),
-  COMPANY: path.join(HOME, 'company'),
-  OUT: path.join(HOME, 'agent-dashboard.html'),
-  OUT_ARCHIVE: path.join(HOME, 'agent-dashboard-archive.html'),
+  COMPANY: dirOf(CONFIG.companyDir, path.join(HOME, 'company')),
+  OUT: path.join(PAGES, 'agent-dashboard.html'),
+  OUT_ARCHIVE: path.join(PAGES, 'agent-dashboard-archive.html'),
   PRICES: path.join(HOME, 'model-prices.json'),
   // the empty template in the repo, used until the user has a file of their own
   PRICES_TEMPLATE: path.join(__dirname, 'model-prices.json'),

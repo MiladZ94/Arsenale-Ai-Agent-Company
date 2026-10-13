@@ -114,8 +114,16 @@ function readAgents() {
 function projectKey(text) {
   const s = String(text || '').trim()
   if (!s) return ''
+  for (const [rx, name] of PROJECT_ALIASES) if (rx.test(s)) return name
   return s.replace(/\s*\(.*\)\s*$/, '') || s
 }
+// config.json "projectAliases": [{ "match": "<regular expression>", "project":
+// "<name>" }], tried in order, case-insensitive: for a run log that named one
+// project several ways before a company with project aliases existed. A bad
+// expression is skipped, never fatal.
+const PROJECT_ALIASES = (Array.isArray(P.CONFIG.projectAliases) ? P.CONFIG.projectAliases : []).slice(0, 50).map((a) => {
+  try { return a && typeof a.match === 'string' && a.match && a.project ? [new RegExp(a.match, 'i'), String(a.project).slice(0, 80)] : null } catch { return null }
+}).filter(Boolean)
 
 /** A short, stable model name for grouping and prices. Model ids that carry a
  *  family and a version ("vendor-family-5-5", "family-5.5") become "Family
@@ -128,8 +136,13 @@ function modelKey(text) {
   if (!fam) return /^inherit/i.test(s) ? 'inherit' : s
   const name = fam[1][0].toUpperCase() + fam[1].slice(1).toLowerCase()
   const ver = /(\d+)[-.](\d+)/.exec(s.slice(fam.index))
-  return ver ? name + ' ' + ver[1] + '.' + ver[2] : name
+  const key = ver ? name + ' ' + ver[1] + '.' + ver[2] : name
+  return modelAlias(key)
 }
+// config.json "modelAliases": { "Family": "Family 5.5" } names the version a
+// bare family meant in older records, so they group and price with it
+const MODEL_ALIASES = P.CONFIG.modelAliases && typeof P.CONFIG.modelAliases === 'object' && !Array.isArray(P.CONFIG.modelAliases) ? P.CONFIG.modelAliases : {}
+const modelAlias = (key) => (Object.hasOwn(MODEL_ALIASES, key) && typeof MODEL_ALIASES[key] === 'string' && MODEL_ALIASES[key] ? MODEL_ALIASES[key].slice(0, 60) : key)
 
 // Agents that started another agent used to name it only in the task text.
 const parentFromTask = (task) => (/\(under\s+([\w.:-]+)\)/i.exec(String(task || '')) || [])[1] || ''
@@ -326,7 +339,9 @@ const pricesSet = (prices) => Object.values(prices).some((p) => p && PRICE_FIELD
 function costOf(t, prices) {
   if (!t || !t.found || !t.models) return { usd: null, why: 'nodata' }
   let usd = 0
-  for (const [mk, tok] of Object.entries(t.models)) {
+  for (const [stored, tok] of Object.entries(t.models)) {
+    // a transcript counted before the alias was set keeps the bare family
+    const mk = modelAlias(stored)
     // own keys only: a model named "constructor" must not find Object's
     const p = (Object.hasOwn(prices, mk) && prices[mk]) || (Object.hasOwn(prices, mk.split(' ')[0]) && prices[mk.split(' ')[0]])
     if (!p) return { usd: null, why: 'prices' }
@@ -541,6 +556,16 @@ function saveDecision(input) {
   return d
 }
 
+/** config.json "desks", cleaned: only [zone, slot] pairs of plain names. */
+function pinnedDesks(raw) {
+  const out = {}
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out
+  for (const [name, d] of Object.entries(raw).slice(0, 200)) {
+    if (/^[\w.-]{1,80}$/.test(name) && Array.isArray(d) && typeof d[0] === 'string' && Number.isInteger(d[1])) out[name] = [d[0].slice(0, 20), d[1]]
+  }
+  return out
+}
+
 /** Everything the page shows, read fresh from disk. */
 function collect() {
   const prices = readPrices()
@@ -564,6 +589,8 @@ function collect() {
     decisions: readJsonDir(DECISIONS).map((d) => Object.assign(d, { projectKey: projectKey(d.project) })).sort((a, b) => String(a.at).localeCompare(String(b.at))),
     prices: { file: 'model-prices.json', set: pricesSet(prices) },
     heavy: Array.isArray(P.CONFIG.heavyModels) ? P.CONFIG.heavyModels.map(String).slice(0, 20) : ['Opus'],
+    // config.json "desks": {name: [zone, slot]}, desks kept where an earlier layout had them (homeDesks)
+    desks: pinnedDesks(P.CONFIG.desks),
     builtAt: new Date().toISOString(),
   }
   // which office and project each of today's runs and each gate belongs to,
@@ -1317,7 +1344,7 @@ const renderPage = (state, opts) => renderOffice(state, Object.assign({}, opts |
 
 function build() {
   const state = collect()
-  fs.mkdirSync(P.HOME, { recursive: true })
+  fs.mkdirSync(path.dirname(OUT), { recursive: true })
   fs.writeFileSync(OUT, renderPage(state))
   fs.writeFileSync(OUT_ARCHIVE, renderArchive(state))
   return { runs: state.runs.length, active: state.active.length, agents: state.agents.length }

@@ -169,6 +169,12 @@ h1.co{white-space:nowrap;font-size:17px}
 .opb{flex:1;min-width:0;display:flex;gap:12px;align-items:center;padding:7px 2px;background:none;border:0;cursor:pointer;text-align:start;font:inherit;color:inherit;border-radius:6px}
 .opb:hover:not(:disabled) b{text-decoration:underline dotted}
 .opb:disabled{cursor:default}
+/* what each person costs this month: model, tokens or the budget, its bar */
+.ost{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px;max-width:46%;text-align:end}
+.ost .ostl{display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.ost .num{font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ost .cbar{width:90px}
+.org .ocolh .ocsp{font:400 12px var(--font-ui);color:#F3F5F7;opacity:.9;margin-inline-start:auto;white-space:nowrap;font-variant-numeric:tabular-nums}
 .oav{position:relative;border-radius:8px;padding:5px 7px 0;line-height:0;flex:none}
 .oav i{position:absolute;inset-inline-end:-3px;bottom:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--panel)}
 .otx{min-width:0}
@@ -460,7 +466,13 @@ function companyViews(h) {
     const s = empStatus(S, e.id, '')
     const dot = s === 'working' || s === 'quiet' ? '#0C8A62' : s === 'waiting' ? '#B8720F' : s === 'paused' ? '#C8372D' : ''
     const budget = C().company.budgetsEnabled && e.kind === 'employee' ? editBtn('employee', e.id) : ''
-    return '<li class="opr' + (e.kind === 'retired' ? ' retired' : '') + '"><button type="button" class="opb" data-ev="member-open" data-arg="' + esc(e.id) + '" data-to-team="1"' + (e.kind === 'retired' ? ' disabled' : '') + '><span class="oav" style="background:' + esc(ART.shade(o.color || '#56B6C2', 0.42)) + '">' + ART.person(e.id + (e.look ? ':' + e.look : ''), o.color, 30) + (dot ? '<i style="background:' + dot + '" title="' + esc(T(STATUS_TXT[s])) + '"></i>' : '') + '</span><span class="otx"><b dir="auto">' + esc(pname(e)) + '</b>' + (ptitle(e) || e.kind === 'retired' ? '<span dir="auto">' + esc(e.kind === 'retired' ? T('retired: definition file removed') : ptitle(e)) + '</span>' : '') + '</span></button>' + budget + '</li>'
+    // this month's model, tokens or budget: the board reads what each person costs here
+    const b = e.standing && e.standing.budget
+    const sp = e.standing && e.standing.spend
+    const al = b && b.on ? (b.level === 'stop' ? '<span class="alert h">' + T('HARD STOP') + '</span>' : b.level === 'over' ? '<span class="alert h">' + fa(100) + T('%') + '+</span>' : b.level === 'soft' ? '<span class="alert s">' + fa(b.softAlertPct) + T('%') + '+</span>' : '') : ''
+    const num = b && b.on ? limitTxt(b) : sp && sp.tokens ? k(sp.tokens) + ' ' + T('tok') : ''
+    const stat = e.kind === 'retired' || !(e.model || al || num) ? '' : '<span class="ost"><span class="ostl">' + (e.model ? '<span class="mdlc">' + esc(e.model) + '</span>' : '') + al + '</span>' + (num ? '<span class="num" dir="ltr">' + num + '</span>' : '') + bar(b) + '</span>'
+    return '<li class="opr' + (e.kind === 'retired' ? ' retired' : '') + '"><button type="button" class="opb" data-ev="member-open" data-arg="' + esc(e.id) + '" data-to-team="1"' + (e.kind === 'retired' ? ' disabled' : '') + '><span class="oav" style="background:' + esc(ART.shade(o.color || '#56B6C2', 0.42)) + '">' + ART.person(e.id + (e.look ? ':' + e.look : ''), o.color, 30) + (dot ? '<i style="background:' + dot + '" title="' + esc(T(STATUS_TXT[s])) + '"></i>' : '') + '</span><span class="otx"><b dir="auto">' + esc(pname(e)) + '</b>' + (ptitle(e) || e.kind === 'retired' ? '<span dir="auto">' + esc(e.kind === 'retired' ? T('retired: definition file removed') : ptitle(e)) + '</span>' : '') + '</span></button>' + stat + budget + '</li>'
   }
 
   function org(S) {
@@ -476,7 +488,7 @@ function companyViews(h) {
     let html = '<div class="org"><div class="otools"><div><h2 dir="auto">' + esc(cname || T('Org chart')) + '</h2><p class="osub">' + T('Your AI team: ') + '<span class="ochip">' + fa(staffN) + ' ' + T('team members') + '</span> ' + T('in') + ' <span class="ochip">' + fa(offices.length) + ' ' + T(offices.length === 1 ? 'office' : 'offices') + '</span>. ' + T('They ask you first before anything leaves the computer.') + '</p></div><span class="sp"></span>' +
       '<button type="button" class="cbtn" data-retired="1" aria-pressed="' + st.retired + '">' + (st.retired ? T('Hide retired') : T('Show retired')) + '</button></div>'
     html += '<div class="olvl">'
-    html += '<div class="onode own">' + ART.owner(36) + '<div><b>' + T('You') + '</b><span>' + T('Owner. Gives tasks and says yes or no.') + (waitingAll ? ' <span class="ochip w">' + fa(waitingAll) + ' ' + T('waiting for you') + '</span>' : '') + '</span></div></div>'
+    html += '<div class="onode own">' + ART.owner(36) + '<div><b>' + T('You') + '</b><span>' + T('Owner. Gives tasks and says yes or no.') + (waitingAll ? ' <span class="ochip w">' + fa(waitingAll) + ' ' + T('waiting for you') + '</span>' : '') + (co.company.budgetsEnabled && co.standing && co.standing.budget && co.standing.budget.on ? ' <span class="ochip">' + T('company budget ') + pctTxt(co.standing.budget.pct) + '</span>' : '') + '</span></div></div>'
     html += '<div class="olink"><i></i><span>' + T('gives tasks, answers questions') + '</span></div>'
     html += '<div class="onode asst">' + ART.robot(36) + '<div><b>' + T('Your assistant') + '</b><span>' + (asst.length ? esc(asst.join(T(', '))) + '. ' : '') + T('Takes on each role.') + ' · ' + (hb && hb.lastSeenAt ? (away ? T('last seen ') : T('active, last seen ')) + '<span dir="ltr">' + hhmm(ms(hb.lastSeenAt)) + '</span>' : T('not seen yet')) + '</span></div></div>'
     html += '<div class="olink"><i></i><span>' + T('hands each job to a team member') + '</span></div>'
@@ -486,13 +498,17 @@ function companyViews(h) {
       const staff = people.filter((e) => e.homeOfficeId === o.id && e.id !== 'supervisor')
       const head = o.leadEmployeeId && o.leadEmployeeId !== 'supervisor' ? staff.find((e) => e.id === o.leadEmployeeId) : null
       const rest = staff.filter((e) => !head || e.id !== head.id).sort((a, b) => pname(a).localeCompare(pname(b)))
-      html += '<div class="ocol"><div class="ocolh" style="background:' + esc(o.color) + '"><b dir="auto">' + esc(oname(o)) + '</b><span class="ocnt">' + fa(staff.length) + '</span></div><ul class="ompl">' + (head ? orgRow(S, head, o) : '') + rest.map((e) => orgRow(S, e, o)).join('') + (staff.length ? '' : '<li class="onone">' + T('No one works here yet.') + '</li>') + '</ul></div>'
+      const ob = o.standing && o.standing.budget
+      const otok = ob && ob.on ? limitTxt(ob) : o.standing && o.standing.spend && o.standing.spend.tokens ? k(o.standing.spend.tokens) + ' ' + T('tok') : ''
+      html += '<div class="ocol"><div class="ocolh" style="background:' + esc(o.color) + '"><b dir="auto">' + esc(oname(o)) + '</b>' + (otok ? '<span class="ocsp" dir="ltr">' + otok + '</span>' : '') + '<span class="ocnt">' + fa(staff.length) + '</span></div><ul class="ompl">' + (head ? orgRow(S, head, o) : '') + rest.map((e) => orgRow(S, e, o)).join('') + (staff.length ? '' : '<li class="onone">' + T('No one works here yet.') + '</li>') + '</ul></div>'
     }
     html += '</div></div>'
     // the office packs not installed yet, read once from the server
     if (LIVE && st.packsLeft === undefined) { st.packsLeft = null; fetch('api/packs', { cache: 'no-store' }).then((r) => r.json()).then((d) => { st.packsLeft = (d.packs || []).filter((p) => !p.installed).map((p) => (LANG === 'fa' && p.nameFa ? p.nameFa : p.name)); redraw() }, () => { st.packsLeft = [] }) }
     const cons = co.employees.filter((e) => e.kind === 'contractor')
-    if (cons.length) html += '<div class="ocont"><div class="ch">' + T('Contractors') + ' <span class="dim" style="text-transform:none;letter-spacing:0">' + T('agent names with no definition in the agent folders, this month') + '</span></div><div class="chips">' + cons.map((e) => '<span class="ochip" dir="ltr">' + esc(e.id) + ' ×' + fa(e.runsThisPeriod) + '</span>').join('') + '</div></div>'
+    if (cons.length) html += '<div class="ocont"><div class="ch">' + T('Contractors') + ' <span class="dim" style="text-transform:none;letter-spacing:0">' + T('agent names with no definition in the agent folders, this month') + '</span></div><div class="chips">' + cons.map((e) => '<span class="ochip" dir="ltr">' + esc(e.id) + ' ×' + fa(e.runsThisPeriod) + (e.standing && e.standing.spend && e.standing.spend.tokens ? ' · ' + k(e.standing.spend.tokens) + ' ' + T('tok') : '') + '</span>').join('') + '</div></div>'
+    html += '<div class="oft"><span><i style="background:#0C8A62"></i>' + T('working') + '</span><span><i style="background:#B8720F"></i>' + T('waiting for you') + '</span><span><i style="background:#C8372D"></i>' + T('paused or stopped by budget') + '</span>' +
+      (co.company.budgetsEnabled ? '<span><span class="t"></span>' + T('tick on the bar = alert threshold') + '</span><span style="margin-inline-start:auto">' + T('Bar = this month’s spend against the budget') + '</span>' : '<span style="margin-inline-start:auto">' + T('Budgets are off: tokens this month only') + '</span>') + '</div>'
     if (LIVE && !(st.packsLeft && !st.packsLeft.length)) html += '<div class="oready"><span class="ic">' + ART.ic('box', 18) + '</span><b>' + T('Ready to add') + '</b>' + (st.packsLeft && st.packsLeft.length ? st.packsLeft.map((x) => '<span class="opk" dir="auto">' + esc(x) + '</span>').join('') : '<span class="dim">' + T('Office packs in Settings') + '</span>') + '<button type="button" class="cbtn" data-ev="goto-packs">' + T('Add an office') + '</button></div>'
     return html + '</div>'
   }

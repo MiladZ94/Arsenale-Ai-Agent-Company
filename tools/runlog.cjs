@@ -119,7 +119,8 @@ function startRun(input, actor) {
   return { id, budget, warnings, record }
 }
 
-/** One line of what the agent is doing now, kept as a log (at most 200). */
+/** One line of what the agent is doing now, kept as a log (at most 200),
+ *  and an optional percentage done ("pct"). */
 function progress(input, actor) {
   const file = activeFileFor(input && input.id)
   if (!input || !input.id || !fs.existsSync(file)) throw fail(404, 'no run is active with that id')
@@ -128,6 +129,10 @@ function progress(input, actor) {
   // "text" is accepted too: briefs and agents often use it instead of "doing".
   const text = String(input.doing || input.text || '')
   run.doing = text
+  // Optional rough progress, 0-100, sent only at a few fixed milestones; a
+  // missing or non-numeric value leaves the last one as it was.
+  const pct = Number(input.pct)
+  if (Number.isFinite(pct)) run.pct = Math.max(0, Math.min(100, Math.round(pct)))
   // Kept as a log, not a single line: the dashboard shows it like a terminal,
   // so the reader can see the whole path the agent took, not only where it is.
   run.steps = Array.isArray(run.steps) ? run.steps : []

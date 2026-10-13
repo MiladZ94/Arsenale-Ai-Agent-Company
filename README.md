@@ -351,6 +351,11 @@ said ask.
 | Agent folders shown | `agentDirs` in `config.json`, or `ARSENALE_AGENT_DIRS` | `<data>/agents` (the installer sets your tool's folder) |
 | Transcript folders that may be read | `transcriptRoots`, or `ARSENALE_TRANSCRIPT_ROOTS` | none |
 | Heavy-tier model names | `heavyModels` | `["Opus"]` |
+| Run log, company and built pages kept in another folder (an existing setup) | `runsDir`, `companyDir`, `pagesDir` | `<data>/agent-runs`, `<data>/company`, `<data>` |
+| Project names that mean one project | `projectAliases`: `[{"match": "<regex>", "project": "<name>"}]` | none |
+| The version a bare model family meant in older records | `modelAliases`: `{"Opus": "Opus 5.5"}` | none |
+| A run whose project no project claims | `unmappedRuns`: `"home"` (the member's home office) or `"unassigned"` | `"home"` |
+| Desks kept where you are used to them | `desks`: `{"<agent>": ["build"\|"review"\|"docs"\|"design", <slot>]}` | by name |
 | Prices | `<data>/model-prices.json` | empty |
 | Folders deliverables may be copied from | `deliverableRoots` | `<data>/workspace` |
 | Model per strength for hired members (Claude Code) | `tierModels` | `{"light":"haiku","standard":"sonnet","heavy":"opus"}` |

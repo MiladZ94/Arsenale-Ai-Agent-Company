@@ -1,13 +1,12 @@
 # The shared office world
 
-`office-world.cjs` draws the campus and the 3D office floor. Two dashboards
-use it: Arsenale, and a private dashboard its author runs at home that grew out
-of the same code. So that the two always look and behave the same, they use one
-copy of the drawing code.
+`office-world.cjs` draws the campus and the 3D office floor. Its author's
+private dashboard, which grew out of the same code, used to keep a copy of it
+in step with a sync script; that dashboard now runs Arsenale itself against its
+own data folder (`config.json` `runsDir`, `companyDir`, see `paths.cjs`), so
+there is one copy of the drawing code and nothing to sync.
 
-## Source of truth
-
-Arsenale is the source of truth. These files are edited **only here**:
+## Files
 
 | File | What it is |
 |---|---|
@@ -18,13 +17,6 @@ Arsenale is the source of truth. These files are edited **only here**:
 The pages keep their own data code (who works where, budgets, runs). Only the
 look lives in the shared file, and it must never name a company, an office or
 a person: it is public.
-
-## Keeping the other copy in step
-
-The other dashboard copies the files above with its own `sync-office-world.cjs`,
-which checks the SHA-256 of every file it copies and refuses to overwrite a copy
-that was changed in place. A test there fails when its copy differs from this
-one. Change the drawing here, run the tests here, then sync.
 
 ## Characters
 

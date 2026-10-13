@@ -214,7 +214,10 @@ function resolver(co, agents) {
     if (rec.officeId && offices.has(rec.officeId)) return rec.officeId
     const proj = p === undefined ? project(rec) : p
     if (proj) return proj.officeId
-    // no project and no office: the member's home office, then Unassigned
+    // no project and no office: the member's home office, then Unassigned.
+    // config.json "unmappedRuns": "unassigned" keeps every such run in
+    // Unassigned work, where an unclaimed project name shows up to be claimed
+    if (P.CONFIG.unmappedRuns === 'unassigned') return UNASSIGNED
     const emp = rec.agent ? own(co.employees, employee(rec.agent)) : null
     const home = emp && emp.homeOfficeId
     return home && offices.has(home) && home !== UNASSIGNED ? home : UNASSIGNED
@@ -453,7 +456,7 @@ function companyState(state) {
   if (!co.configured) return { configured: false }
   const st = standings(state, co)
   const agents = definedAgents(state)
-  const zoneGuess = homeDesks(state && Array.isArray(state.agents) ? state.agents : []).zones
+  const zoneGuess = homeDesks(state && Array.isArray(state.agents) ? state.agents : [], state && state.desks).zones
   const ids = new Set([CEO, ...agents.keys(), ...Object.keys(co.employees)])
   const runsBy = new Map()
   for (const e of st.events) if (e.periodKey === st.periodKey) runsBy.set(e.employeeId, (runsBy.get(e.employeeId) || 0) + 1)
