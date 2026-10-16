@@ -67,7 +67,7 @@ const WORLD_STYLE = `
 .o3side ol{list-style:none;margin:0;padding:0}
 .o3row{display:flex;align-items:center;gap:9px;width:100%;text-align:start;background:none;border:0;border-top:1px solid #E7E3D9;padding:7px 4px;cursor:pointer;font:inherit;color:inherit}
 .o3row:hover,.o3row.sel{background:#F1EEE5}
-.o3row.sel{box-shadow:inset 3px 0 0 #2F6BE0}
+.o3row.sel{background:#E3DECF}
 .o3b{flex:none;width:20px;height:20px;display:block}
 .o3row .nm{flex:1;min-width:0;display:flex;flex-direction:column}
 .o3row .nm b{font-size:13px;color:#17212B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

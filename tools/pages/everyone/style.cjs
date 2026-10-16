@@ -93,8 +93,7 @@ button.chip{cursor:pointer}
 .ev .colw{background:rgba(217,140,30,.05);border:1px dashed rgba(217,140,30,.35);border-radius:12px;padding:10px;margin:-10px}
 .ev .tk{padding:14px 16px;text-align:start;cursor:pointer;font:inherit;color:inherit;display:block;width:100%}
 .ev .tk:hover{border-color:var(--line-strong)}
-.ev .tk.wtk{border-color:rgba(217,140,30,.65);background:linear-gradient(0deg,var(--warn-bg),var(--warn-bg)),var(--panel);box-shadow:inset 4px 0 0 var(--warn)}
-[dir=rtl] .ev .tk.wtk{box-shadow:inset -4px 0 0 var(--warn)}
+.ev .tk.wtk{border-color:rgba(217,140,30,.65);background:linear-gradient(0deg,var(--warn-bg),var(--warn-bg)),var(--panel)}
 .ev .tk.dn{opacity:.85}
 .ev .tk .tt{color:var(--ink-hi);font-weight:700;font-size:14.5px;line-height:1.35;overflow-wrap:anywhere}
 .ev .tk .q{color:var(--ink-soft);font-size:13px;margin-top:6px;padding:6px 10px;border-inline-start:3px solid var(--warn);background:rgba(30,40,50,.1);border-radius:0 6px 6px 0}
@@ -111,14 +110,12 @@ button.chip{cursor:pointer}
 .ev .tl time{font:13px var(--font-ui);color:var(--ink-dim);width:46px;flex:none;direction:ltr}
 .ev .cm{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
 .ev .cm .cb{flex:1;background:var(--panel-raised);border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:0}
-.ev .wbox{border-color:rgba(217,140,30,.6);background:linear-gradient(0deg,var(--warn-bg),var(--warn-bg)),var(--panel);box-shadow:inset 4px 0 0 var(--warn)}
-[dir=rtl] .ev .wbox{box-shadow:inset -4px 0 0 var(--warn)}
+.ev .wbox{border-color:rgba(217,140,30,.6);background:linear-gradient(0deg,var(--warn-bg),var(--warn-bg)),var(--panel)}
 /* approvals */
 .ev .appr{display:grid;grid-template-columns:400px 1fr;gap:24px;align-items:start}
 .ev .ai{display:flex;gap:12px;padding:14px 16px;border:0;border-bottom:1px solid var(--line);align-items:flex-start;background:none;width:100%;text-align:start;cursor:pointer;font:inherit;color:inherit}
 .ev .ai:last-child{border-bottom:0}
-.ev .ai[aria-current=true]{background:var(--panel-raised);box-shadow:inset 4px 0 0 var(--warn)}
-[dir=rtl] .ev .ai[aria-current=true]{box-shadow:inset -4px 0 0 var(--warn)}
+.ev .ai[aria-current=true]{background:var(--panel-raised)}
 .ev .letter{padding:26px 30px}
 .ev .prev{margin-top:16px;border:1px solid var(--line-strong);border-radius:10px;background:var(--ground);padding:16px 18px}
 .ev .prev .body{color:var(--ink-hi);font-size:15px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -134,8 +131,7 @@ button.chip{cursor:pointer}
 .ev .setw{display:flex;align-items:flex-start;gap:30px}
 .ev .snav{display:flex;flex-direction:column;gap:4px;width:210px;flex:none}
 .ev .snav button{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:8px;border:0;background:none;color:var(--ink-soft);font:14.5px var(--font-ui);cursor:pointer;text-align:start}
-.ev .snav button[aria-pressed=true]{background:var(--panel-raised);color:var(--ink-hi);font-weight:700;box-shadow:inset 3px 0 0 var(--accent)}
-[dir=rtl] .ev .snav button[aria-pressed=true]{box-shadow:inset -3px 0 0 var(--accent)}
+.ev .snav button[aria-pressed=true]{background:var(--panel-raised);color:var(--ink-hi);font-weight:700}
 .ev .rows>.r{display:flex;align-items:center;gap:12px;padding:13px 18px;border-top:1px solid var(--line)}
 .ev .rows>.r:first-child{border-top:0}
 .ev .rows>.more{padding:4px 18px 16px 60px;border-top:0}
