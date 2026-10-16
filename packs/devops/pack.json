@@ -1,0 +1,82 @@
+{
+  "format": "arsenale-pack",
+  "formatVersion": 1,
+  "id": "devops",
+  "version": "1.0.0",
+  "name": "DevOps",
+  "description": "Explain red builds, find the cause of a build failure and check a working environment. Works from logs given to it.",
+  "minArsenale": "1.0.0",
+  "office": {
+    "id": "devops",
+    "name": "DevOps",
+    "theme": "slate",
+    "profile": "ops",
+    "lead": "devops-lead"
+  },
+  "members": [
+    {
+      "file": "agents/devops-lead.md",
+      "id": "devops-lead",
+      "zone": "lead",
+      "title": "DevOps Lead",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/ci-triager.md",
+      "id": "ci-triager",
+      "zone": "ops",
+      "title": "CI Triager",
+      "tier": "light"
+    },
+    {
+      "file": "agents/build-fixer.md",
+      "id": "build-fixer",
+      "zone": "build",
+      "title": "Build Fixer",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/environment-doctor.md",
+      "id": "environment-doctor",
+      "zone": "ops",
+      "title": "Environment Doctor",
+      "tier": "light"
+    }
+  ],
+  "sampleTasks": [
+    {
+      "title": "Explain an invented failed build",
+      "description": "Read the invented build log I name and say which step failed, why, and quote the proving line.",
+      "assignee": "ci-triager"
+    },
+    {
+      "title": "Compare two invented setups",
+      "description": "Compare the two invented setup listings I name and name the first difference that matters.",
+      "assignee": "environment-doctor"
+    }
+  ],
+  "policy": {
+    "members": {
+      "devops-lead": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "ci-triager": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "build-fixer": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "environment-doctor": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      }
+    }
+  }
+}

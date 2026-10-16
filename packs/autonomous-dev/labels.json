@@ -1,0 +1,30 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs, design, verify, ship, plan, ops, data or legal.",
+  "version-lead": {
+    "dept": "lead"
+  },
+  "phase-runner": {
+    "dept": "ops"
+  },
+  "merge-keeper": {
+    "dept": "ship"
+  },
+  "fix-round-implementer": {
+    "dept": "build"
+  },
+  "budget-watcher": {
+    "dept": "ops"
+  },
+  "resume-agent": {
+    "dept": "ops"
+  },
+  "final-report-writer": {
+    "dept": "docs"
+  },
+  "implementer": {
+    "dept": "build"
+  },
+  "spec-writer": {
+    "dept": "plan"
+  }
+}

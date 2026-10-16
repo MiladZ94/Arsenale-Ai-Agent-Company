@@ -1,0 +1,70 @@
+{
+  "format": "arsenale-pack",
+  "formatVersion": 1,
+  "id": "legal-compliance",
+  "version": "1.0.0",
+  "name": "Legal and compliance",
+  "description": "Check licences of dependencies and assets and keep the record. Drafts only; not legal advice.",
+  "minArsenale": "1.0.0",
+  "office": {
+    "id": "legal-compliance",
+    "name": "Legal and Compliance",
+    "theme": "amber",
+    "profile": "legal",
+    "lead": "legal-lead"
+  },
+  "members": [
+    {
+      "file": "agents/legal-lead.md",
+      "id": "legal-lead",
+      "zone": "lead",
+      "title": "Legal Lead",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/licence-compatibility-checker.md",
+      "id": "licence-compatibility-checker",
+      "zone": "legal",
+      "title": "Licence Compatibility Checker",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/asset-licence-recorder.md",
+      "id": "asset-licence-recorder",
+      "zone": "legal",
+      "title": "Asset Licence Recorder",
+      "tier": "light"
+    }
+  ],
+  "sampleTasks": [
+    {
+      "title": "Record the licences of three invented assets",
+      "description": "For the three invented asset entries I name, write the licence record and mark any missing field.",
+      "assignee": "asset-licence-recorder"
+    },
+    {
+      "title": "Compare invented dependency licences",
+      "description": "Compare the invented licence list I name with the licence the project ships under and list possible conflicts.",
+      "assignee": "licence-compatibility-checker"
+    }
+  ],
+  "policy": {
+    "members": {
+      "legal-lead": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "licence-compatibility-checker": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "asset-licence-recorder": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      }
+    }
+  }
+}

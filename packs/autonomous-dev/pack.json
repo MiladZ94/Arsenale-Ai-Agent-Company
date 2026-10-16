@@ -1,0 +1,132 @@
+{
+  "format": "arsenale-pack",
+  "formatVersion": 1,
+  "id": "autonomous-dev",
+  "version": "1.0.0",
+  "name": "Autonomous development",
+  "description": "Plan a version, run it phase by phase, keep the merges clean, watch the budget and resume after a stop. Drafts and plans; owner gates stay with the owner.",
+  "minArsenale": "1.0.0",
+  "office": {
+    "id": "autonomous-dev",
+    "name": "Autonomous Development",
+    "theme": "teal",
+    "profile": "planning",
+    "lead": "version-lead"
+  },
+  "members": [
+    {
+      "file": "agents/version-lead.md",
+      "id": "version-lead",
+      "zone": "lead",
+      "title": "Version Lead",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/phase-runner.md",
+      "id": "phase-runner",
+      "zone": "ops",
+      "title": "Phase Runner",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/merge-keeper.md",
+      "id": "merge-keeper",
+      "zone": "ship",
+      "title": "Merge Keeper",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/fix-round-implementer.md",
+      "id": "fix-round-implementer",
+      "zone": "build",
+      "title": "Fix Round Implementer",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/budget-watcher.md",
+      "id": "budget-watcher",
+      "zone": "ops",
+      "title": "Budget Watcher",
+      "tier": "light"
+    },
+    {
+      "file": "agents/resume-agent.md",
+      "id": "resume-agent",
+      "zone": "ops",
+      "title": "Resume Agent",
+      "tier": "light"
+    },
+    {
+      "file": "agents/final-report-writer.md",
+      "id": "final-report-writer",
+      "zone": "docs",
+      "title": "Final Report Writer",
+      "tier": "light"
+    },
+    {
+      "id": "implementer",
+      "ref": true,
+      "zone": "build",
+      "title": "Implementer",
+      "tier": "standard"
+    },
+    {
+      "id": "spec-writer",
+      "ref": true,
+      "zone": "plan",
+      "title": "Spec Writer",
+      "tier": "heavy"
+    }
+  ],
+  "sampleTasks": [
+    {
+      "title": "Plan a small version with three requests",
+      "description": "From the invented request list I name, write a phase plan with tiers, dependencies and a token estimate.",
+      "assignee": "version-lead"
+    },
+    {
+      "title": "Write the final report of a finished test run",
+      "description": "Using the invented state file I name, write the final report with delivered work, gates and what was not done.",
+      "assignee": "final-report-writer"
+    }
+  ],
+  "policy": {
+    "members": {
+      "version-lead": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "phase-runner": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "merge-keeper": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "fix-round-implementer": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "budget-watcher": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "resume-agent": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "final-report-writer": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      }
+    }
+  }
+}

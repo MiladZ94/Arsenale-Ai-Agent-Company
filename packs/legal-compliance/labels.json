@@ -1,0 +1,12 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs, design, verify, ship, plan, ops, data or legal.",
+  "legal-lead": {
+    "dept": "lead"
+  },
+  "licence-compatibility-checker": {
+    "dept": "legal"
+  },
+  "asset-licence-recorder": {
+    "dept": "legal"
+  }
+}
