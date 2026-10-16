@@ -122,3 +122,16 @@ test('packs are shipped: package files list packs/ and agents/', () => {
   const files = readJson(REPO, 'package.json').files
   assert.ok(files.includes('packs/') && files.includes('agents/'))
 })
+
+test('pack members get the zone their definition names, the company file knows every zone', (t) => {
+  const sb = makeSandbox({ packs: true })
+  t.after(() => sb.cleanup())
+  const Pk = sb.mod('packs.cjs')
+  const p = Pk.bundledPack('verification')
+  const emps = Pk.employeesOf(p, { rename: {}, kept: [] })
+  const zones = Object.values(emps).map((e) => e.zone)
+  assert.ok(zones.includes('verify'), 'a verify zone is kept, not blanked')
+  assert.ok(zones.every((z) => z !== ''), 'every member has a zone')
+  const C = sb.mod('agent-company.cjs')
+  for (const z of Pk.ZONES) assert.ok(C.ZONES.includes(z), 'the company file knows zone ' + z)
+})

@@ -220,8 +220,7 @@ function employeesOf(p, copied) {
   const lead = idOf(p.office.lead)
   for (const m of p.members) {
     if (m.ref || copied.kept.includes(m.id)) continue
-    // zones the company file does not know yet (verify, ship ...) stay empty: the desk is derived until it learns them
-    out[idOf(m.id)] = { title: m.title, homeOfficeId: p.office.id, zone: m.zone === 'lead' ? 'lead' : ['build', 'review', 'docs', 'design'].includes(m.zone) ? m.zone : '', reportsTo: idOf(m.id) === lead ? 'supervisor' : lead, tier: m.tier, managed: true, createdBy: 'pack:' + p.id }
+    out[idOf(m.id)] = { title: m.title, homeOfficeId: p.office.id, zone: ZONES.includes(m.zone) ? m.zone : '', reportsTo: idOf(m.id) === lead ? 'supervisor' : lead, tier: m.tier, managed: true, createdBy: 'pack:' + p.id }
   }
   return out
 }
