@@ -94,6 +94,8 @@ test('test 25: the shipped autonomous files and skills name no machine path or p
 
 test('test 17: awake holds only through the OS tool, records its PID, releases on stop; Windows is honest', (t) => {
   const sb = makeSandbox({ flat: true }); t.after(() => sb.cleanup())
+  const prevHome = process.env.ARSENALE_HOME
+  t.after(() => { if (prevHome === undefined) delete process.env.ARSENALE_HOME; else process.env.ARSENALE_HOME = prevHome })
   process.env.ARSENALE_HOME = sb.root
   const A = require(path.join(ROOT, 'tools', 'autonomous.cjs'))
   const lines = []
@@ -112,7 +114,17 @@ test('test 17: awake holds only through the OS tool, records its PID, releases o
   assert.equal(A.awake(['start', '--pid', '42'], out, { platform: 'darwin', spawn, alive: () => true }), 0)
   assert.equal(calls.length, 1, 'already holding: no second helper')
   assert.equal(A.awake(['start', '--pid', 'x'], out, { platform: 'darwin', spawn }), 1)
-  assert.equal(A.awake(['stop'], out, { alive: () => false }), 0)
+  // a reused PID (a different command line) is not killed
+  const realKill = process.kill, killed = []
+  process.kill = (pid, sig) => { killed.push(pid) }
+  try {
+    assert.equal(A.awake(['stop'], out, { alive: () => true, inspect: () => 'node unrelated.js' }), 0)
+    assert.deepEqual(killed, [])
+    assert.ok(!fs.existsSync(path.join(sb.root, 'awake.json')))
+    A.awake(['start', '--pid', '42'], out, { platform: 'darwin', spawn, alive: () => false })
+    assert.equal(A.awake(['stop'], out, { alive: () => true, inspect: () => 'caffeinate -i -w 42' }), 0)
+    assert.deepEqual(killed, [99999])
+  } finally { process.kill = realKill }
   assert.ok(!fs.existsSync(path.join(sb.root, 'awake.json')))
 })
 
@@ -130,4 +142,18 @@ test('runlog fixes: temp file removed on a failed rename; empty phase id skipped
   const led = L.versionLedger('app-x-1.2')
   assert.deepEqual(led.phases.map((p) => [p.runs, p.tokens]), [[1, 100]])
   assert.equal(JSON.parse(sb.cli('--version-ledger', '{"id":"app-x-1.2"}').out).tokens, 100)
+})
+
+test('review nits: version names, literal template text, unique backup folder, honest first-commit result', (t) => {
+  const m = machine(t)
+  for (const v of ['..', '.', '-x', '.hidden']) { const r = m.run('autonomous', 'start', v); assert.equal(r.code, 1, v) }
+  assert.ok(!fs.existsSync(path.join(m.repo, 'docs')))
+  fs.writeFileSync(path.join(m.repo, 'package.json'), JSON.stringify({ name: 'a$&b$1' }))
+  m.run('autonomous', 'start', '2.0')
+  assert.ok(fs.readFileSync(path.join(m.repo, 'docs', 'specs', '2.0-list.md'), 'utf8').startsWith('# Version 2.0: a$&b$1'))
+  // a commit that cannot succeed is reported as failed
+  m.git('config', 'commit.gpgsign', 'true'); m.git('config', 'gpg.program', 'arsenale-no-such-signer')
+  const r = m.run('init', '--yes')
+  assert.match(r.out, /first commit failed/)
+  assert.doesNotMatch(r.out, /  empty first commit/)
 })

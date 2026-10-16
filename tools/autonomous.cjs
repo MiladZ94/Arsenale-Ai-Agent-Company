@@ -95,7 +95,7 @@ function init(argv, out) {
   const claudeDir = path.resolve(opt(args, '--claude-dir') || process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'))
   const data = home()
   const ask = makeAsk(yes, out)
-  const o = { dry, force, log: out, backups: path.join(data, 'backups', 'init-' + new Date().toISOString().replace(/\D/g, '').slice(0, 14)) }
+  const o = { dry, force, log: out, backups: path.join(data, 'backups', 'init-' + new Date().toISOString().replace(/\D/g, '').slice(0, 17) + '-' + process.pid) }
   out('Arsenale init' + (dry ? ' (dry run: nothing is changed)' : '') + '\n  project: ' + dir + '\n  agent folder: ' + claudeDir)
   if (!fs.existsSync(dir)) { out('The folder does not exist: ' + dir); return 1 }
 
@@ -123,8 +123,12 @@ function init(argv, out) {
     else out('  not a git repo: autonomous runs need one.')
   } else if (git(dir, ['rev-parse', '--verify', 'HEAD']).status !== 0) {
     if (ask('The repo has no commit yet (worktrees need one). Make an empty first commit?')) {
-      if (!dry) git(dir, ['-c', 'user.name=Arsenale', '-c', 'user.email=arsenale@localhost', 'commit', '--allow-empty', '-m', 'Start'])
-      out('  empty first commit')
+      if (dry) out('  would make an empty first commit')
+      else {
+        const c = git(dir, ['-c', 'user.name=Arsenale', '-c', 'user.email=arsenale@localhost', 'commit', '--allow-empty', '-m', 'Start'])
+        if (c && c.status === 0) out('  empty first commit')
+        else out('  the first commit failed (' + String((c && (c.stderr || c.stdout)) || 'git not run').trim().split('\n')[0] + '): make one yourself before a run.')
+      }
     }
   }
 
@@ -135,7 +139,7 @@ function init(argv, out) {
   const projectMd = path.join(dir, 'PROJECT.md')
   if (!fs.existsSync(projectMd)) {
     if (ask('Create PROJECT.md from the template?')) {
-      let t = tpl.replace('<app name>', name + ' (to confirm)').replace('<YYYY-MM-DD>', new Date().toISOString().slice(0, 10))
+      let t = tpl.replace('<app name>', () => name + ' (to confirm)').replace('<YYYY-MM-DD>', () => new Date().toISOString().slice(0, 10))
       if (pkg.scripts && pkg.scripts.test) t = t.replace('| Full | <e.g. `npm test`> |', '| Full | `npm test` (to confirm) |')
       out('  create   ' + projectMd); if (!dry) atomicWrite(projectMd, t)
     }
@@ -155,7 +159,7 @@ function init(argv, out) {
   const reviewMd = path.join(dir, 'REVIEW.md')
   if (!fs.existsSync(reviewMd) && ask('Create REVIEW.md from the template?')) {
     out('  create   ' + reviewMd)
-    if (!dry) atomicWrite(reviewMd, fs.readFileSync(path.join(ROOT, 'agents', 'REVIEW.template.md'), 'utf8').replace('<app name>', name))
+    if (!dry) atomicWrite(reviewMd, fs.readFileSync(path.join(ROOT, 'agents', 'REVIEW.template.md'), 'utf8').replace('<app name>', () => name))
   }
   const specs = path.join(dir, 'docs', 'specs')
   if (!fs.existsSync(specs)) {
@@ -168,7 +172,7 @@ function init(argv, out) {
 
 /* ------------------------------------------------------- autonomous start */
 
-const VERSION_RE = /^[\w.-]{1,30}$/
+const VERSION_RE = /^[A-Za-z0-9][\w.-]{0,29}$/ // no ".", ".." or leading "-" in a file name
 const slug = (s) => String(s).toLowerCase().replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'app'
 
 function runPaths(dir, version) {
@@ -199,8 +203,8 @@ function autonomous(argv, out) {
       const bud = readJson(path.join(ROOT, 'autonomous', 'budget-defaults.json'), {})
       if (Number.isSafeInteger(bud.defaultVersionBudget) && bud.defaultVersionBudget > 0) budget = bud.defaultVersionBudget
       const t = fs.readFileSync(path.join(ROOT, 'autonomous', 'version-list.template.md'), 'utf8')
-        .replace(/\{\{VERSION\}\}/g, version).replace(/\{\{APP\}\}/g, p.app).replace(/\{\{RUN_ID\}\}/g, p.runId)
-        .replace(/\{\{BRANCH\}\}/g, p.branch).replace(/\{\{BUDGET\}\}/g, String(budget))
+        .replace(/\{\{VERSION\}\}/g, () => version).replace(/\{\{APP\}\}/g, () => p.app).replace(/\{\{RUN_ID\}\}/g, () => p.runId)
+        .replace(/\{\{BRANCH\}\}/g, () => p.branch).replace(/\{\{BUDGET\}\}/g, () => String(budget))
       atomicWrite(p.stateFile, t)
       out('created ' + rel)
     }
@@ -243,17 +247,28 @@ function awakePlan(platform, pid) {
   return null
 }
 const isAlive = (pid) => { try { process.kill(pid, 0); return true } catch (e) { return e.code === 'EPERM' } }
+/** The command line of a PID (macOS and Linux only, where awake works), or null. */
+const inspectPid = (pid) => {
+  const r = spawnSync('ps', ['-p', String(pid), '-o', 'command='], { encoding: 'utf8', windowsHide: true })
+  return r.error || r.status !== 0 ? null : r.stdout.trim() || null
+}
 
 function awake(argv, out, deps) {
-  const d = Object.assign({ platform: process.platform, spawn, alive: isAlive }, deps)
+  const d = Object.assign({ platform: process.platform, spawn, alive: isAlive, inspect: inspectPid }, deps)
   const args = argv.slice()
   const sub = args.shift()
   const file = path.join(home(), 'awake.json')
   const rec = readJson(file, null)
   if (sub === 'stop') {
     if (!rec) { out('Not holding the machine awake.'); return 0 }
-    // only the holder this command started and recorded
-    if (rec.holder && d.alive(rec.holder)) { try { process.kill(rec.holder) } catch { /* gone meanwhile */ } }
+    // only the holder this command started: a PID can be reused by an
+    // unrelated process, so the live command line must still be the helper
+    // watching the recorded PID
+    if (rec.holder && d.alive(rec.holder)) {
+      const cmdline = d.inspect(rec.holder)
+      if (cmdline && cmdline.includes(String(rec.via)) && cmdline.includes(String(rec.watching))) { try { process.kill(rec.holder) } catch { /* gone meanwhile */ } }
+      else out('Process ' + rec.holder + ' is not the helper any more: left running.')
+    }
     try { fs.unlinkSync(file) } catch { /* already gone */ }
     out('Released.'); return 0
   }
