@@ -858,7 +858,7 @@ All data invented. "Doc check" tests are done by reading the bundled files;
 | `agents/PROJECT.template.md` | New sections: Owner gates, Test suites (full / fast / slow), pointer to `REVIEW.md` |
 | `agents/REVIEW.template.md` | New |
 | `agents/dev-docs.md` | Can write `REVIEW.md` from the template |
-| `agents/labels.fa.json` | Label for `finding-verifier` |
+| `agents/labels.json` | Label for `finding-verifier` |
 | `adapters/claude-code/skills/version-run/SKILL.md`, `version-resume/SKILL.md` | New skills; `adapters/*/README.md` get the "run the autonomous cycle" instruction block for other tools |
 | `install.ps1`, `install.sh`, `tools/test/install.test.cjs` | Install and uninstall the new agent, skills and template; test them |
 | `tools/runlog.cjs` | Optional `versionRun`, `phase` on start/finish; new `versionRun` record write; the owner-only rule: only the board answers its gates (already so) |
@@ -884,7 +884,7 @@ step, and review as in the normal cycle.
    run-log reader ignores unknown fields.
 2. **Run-log fields and version-run record** in `runlog.cjs` and the CLI, with
    tool tests (tests 15, 20).
-3. **`finding-verifier.md`**, `labels.fa.json`, the severity labels in the four
+3. **`finding-verifier.md`**, `labels.json`, the severity labels in the four
    reviewer definitions, the `REVIEW.template.md`.
 4. **`PROJECT.template.md` and `spec-writer.md`** changes.
 5. **`WORKFLOW.md` and `AGENT-RULES.md` sections** (rules of section 5).

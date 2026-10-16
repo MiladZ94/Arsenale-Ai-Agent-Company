@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: yellow
 tools: Read, Glob, Grep, Write, Bash, PowerShell
+zone: design
 ---
 
 You look at the running app and say, with pictures, whether it matches what

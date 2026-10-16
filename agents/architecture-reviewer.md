@@ -5,6 +5,7 @@ model: opus
 effort: high
 color: cyan
 tools: Read, Glob, Grep, Bash, PowerShell
+zone: review
 ---
 
 You are a senior engineer reviewing the whole app. You say what will hurt

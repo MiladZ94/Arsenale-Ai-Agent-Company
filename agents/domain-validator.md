@@ -5,6 +5,7 @@ model: opus
 effort: medium
 color: green
 tools: Read, Glob, Grep, Write, Bash, PowerShell
+zone: review
 ---
 
 You find out whether the app's numbers are right, and if they are not, why.

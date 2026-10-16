@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: green
 tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, Agent
+zone: build
 ---
 
 You write and run tests. You do not change what the app does, and you commit

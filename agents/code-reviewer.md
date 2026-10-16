@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: red
 tools: Read, Glob, Grep, Bash, PowerShell, Agent
+zone: review
 ---
 
 You review changes. You do not edit files, commit or push.

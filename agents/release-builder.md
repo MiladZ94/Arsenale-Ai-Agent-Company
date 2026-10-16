@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: orange
 tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, Agent
+zone: build
 ---
 
 You build installers. You do not commit, push, tag, edit the update feed or

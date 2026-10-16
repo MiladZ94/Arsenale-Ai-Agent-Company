@@ -46,7 +46,7 @@ function requireBoard(actor) {
   if (!actor || actor.role !== 'board') throw fail(403, OWNER_ONLY)
 }
 
-/** Clips on code points, so a Persian letter or an emoji is never cut in half. */
+/** Clips on code points, so an emoji or an accented letter is never cut in half. */
 const clipCp = (s, n) => { const a = Array.from(String(s == null ? '' : s)); return a.length > n ? a.slice(0, n).join('') : a.join('') }
 
 // Agents that started another agent used to name it only in the task text,

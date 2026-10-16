@@ -81,8 +81,8 @@ test('tasks: keys per prefix, validation with units, links only http(s) or a pat
   assert.equal(ok.dueDate, '2025-01-01', 'a past date is allowed')
   // the board's task is in the assistant's inbox
   assert.ok(sb.lines('company/inbox.jsonl').some((l) => l.type === 'task.created' && l.id === 'BLU-1'))
-  // a Persian title is clipped on characters, never in the middle of one
-  const long = T.createTask({ title: 'ن'.repeat(150) + '😀'.repeat(100) }, board)
+  // a title is clipped on characters, never in the middle of one
+  const long = T.createTask({ title: 'n'.repeat(150) + '😀'.repeat(100) }, board)
   assert.equal(Array.from(long.title).length, 200)
   assert.ok(!/[\uD800-\uDBFF]$/.test(long.title))
 })
@@ -422,11 +422,11 @@ test('T-3.2/T-3.6/R-3.2: nothing before Create; a bad amount writes nothing; a f
   // with runs but no company: a banner, not the wizard (T-3.3)
   sb.run({ agent: 'tester' })
   assert.deepEqual([O2.status().wizard, O2.status().banner], [false, true])
-  // a Persian name: the prefix falls back to CO, the name is stored in both fields (T-3.5)
-  const r = O2.create({ name: 'نانوایی آبی', lang: 'fa', packs: ['design'] }, board)
+  // a name with no letters to make a prefix from: the prefix falls back to CO (T-3.5)
+  const r = O2.create({ name: '1234 !!', packs: ['design'] }, board)
   assert.equal(r.issuePrefix, 'CO')
   const co = sb.read('company/company.json')
-  assert.equal(co.name, 'نانوایی آبی'); assert.equal(co.nameFa, 'نانوایی آبی')
+  assert.equal(co.name, '1234 !!')
 })
 
 // ---------- phone approvals (token core)

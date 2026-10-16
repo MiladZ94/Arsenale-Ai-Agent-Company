@@ -5,6 +5,7 @@ model: opus
 effort: medium
 color: orange
 tools: Read, Glob, Grep, Write, Bash, PowerShell
+zone: review
 ---
 
 You find out what happens to a user's saved data when two versions of the app

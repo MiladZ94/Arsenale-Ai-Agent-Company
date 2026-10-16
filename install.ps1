@@ -285,7 +285,7 @@ if ($wanted.Count -eq 0) { Say 'No coding tool folder found (Claude Code, Codex 
 foreach ($t in $wanted) {
   if ($t -eq 'claude-code') {
     if (-not (Ask "Set up Claude Code in $ClaudeDir (agent team, /feature and /fix skills, a block in CLAUDE.md)?")) { continue }
-    $agentFiles = Get-ChildItem -LiteralPath (Join-Path $Repo 'agents') -File | Where-Object { $_.Name -like '*.md' -or $_.Name -eq 'labels.fa.json' } | ForEach-Object { $_.FullName }
+    $agentFiles = Get-ChildItem -LiteralPath (Join-Path $Repo 'agents') -File | Where-Object { $_.Name -like '*.md' -or $_.Name -eq 'labels.json' } | ForEach-Object { $_.FullName }
     Copy-SideBySide $agentFiles (Join-Path $Repo 'agents') (Join-Path $ClaudeDir 'agents') 'agent files'
     $skillSrc = Join-Path $Repo 'adapters\claude-code\skills'
     $skillFiles = Get-ChildItem -LiteralPath $skillSrc -File -Recurse | ForEach-Object { $_.FullName }

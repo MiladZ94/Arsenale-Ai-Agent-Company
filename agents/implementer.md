@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: blue
 tools: Read, Write, Edit, Glob, Grep, Bash, PowerShell, Agent
+zone: build
 ---
 
 You build what the spec says. You do not redesign it, and you commit only when

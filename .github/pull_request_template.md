@@ -14,6 +14,6 @@
 ## Checklist
 
 - [ ] `npm test` passes
-- [ ] New interface text goes through `T('…')` with a Persian entry
+- [ ] New interface text goes through `T('…')`
 - [ ] No real names, paths or data in code, tests or screenshots
 - [ ] The server still never starts a process and keeps its Host, Origin and token checks

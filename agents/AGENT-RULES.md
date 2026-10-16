@@ -282,8 +282,7 @@ When `agent-builder` has been asked to create one:
 4. Every new agent inherits these rules. Say so in its body:
    "Follow `AGENT-RULES.md` (in the same folder as this file) and the repo's
    `PROJECT.md`."
-5. If the user keeps translated dashboard labels (`labels.fa.json`), add an
-   entry for it there.
+5. If the user keeps desk labels (`labels.json`), add an entry for it there.
 6. A definition written now may not be available as an agent type until the
    session restarts. Until then, use it by pointing a general-purpose agent at
    the file with the right model.

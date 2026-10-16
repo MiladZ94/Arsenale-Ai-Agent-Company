@@ -23,7 +23,7 @@ installed by `install.ps1` / `install.sh` as before.
 packs/<id>/
   pack.json          the pack, below
   agents/<member>.md one definition per member
-  labels.fa.json     Persian titles: { "<member>": { "title", "what", "dept" } }
+  labels.json        desks: { "<member>": { "dept" } }
   README.md          what the office does, the members, sample tasks, limits
 ```
 
@@ -35,10 +35,10 @@ packs/<id>/
 | `formatVersion` | `1`; a higher number is not installable by this Arsenale |
 | `id` | `^[a-z][a-z0-9-]{1,30}$`, the folder name |
 | `version` | semver, `"1.0.0"`; an update needs a higher version |
-| `name`, `nameFa`, `description` (≤ 200), `descriptionFa` | shown on the pack card |
+| `name`, `description` (≤ 200) | shown on the pack card |
 | `minArsenale` | semver; a newer value than the app shows "Needs a newer Arsenale" |
-| `office` | `{ id, name, nameFa, theme, profile, lead }`; `theme` is one of teal, blue, violet, coral, amber, slate; `lead` is a member id |
-| `members` | `[{ file: "agents/<id>.md", id, zone, title, titleFa, tier }]`, 1 to 12; `zone` is lead, build, review, docs or design; `tier` is light or standard |
+| `office` | `{ id, name, theme, profile, lead }`; `theme` is one of teal, blue, violet, coral, amber, slate; `lead` is a member id |
+| `members` | `[{ file: "agents/<id>.md", id, zone, title, tier }]`, 1 to 12; `zone` is lead, build, review, docs or design; `tier` is light or standard |
 | `sampleTasks` | 2 to 5 `{ title, description, assignee }`, invented, offered as one-click task templates |
 | `policy` | `{ members: { <id>: { <category>: "ask" or "never" } } }`; only stricter than the defaults. A pack that says `"allow"` is refused: "A pack can only make the rules stricter." |
 
@@ -61,7 +61,7 @@ and that no e-mail address other than `@example.*` appears.
 
 - **Install** copies the member files into `~/.arsenale/agents`, records each
   file's SHA-256 in `~/.arsenale/packs/installed.json`, adds the office and
-  the members, merges the Persian labels, and applies the stricter policy
+  the members, merges the desk labels, and applies the stricter policy
   rows. A member id you already have is never overwritten: keep yours, or
   install the pack's member as `<id>-2`.
 - **Remove** deletes only the files whose hash still matches (the ones you

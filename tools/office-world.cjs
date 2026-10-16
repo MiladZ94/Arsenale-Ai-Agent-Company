@@ -313,7 +313,7 @@ function campusArt(h) {
     // the text runs up the face, from its near end (y1) to its far end (y0)
     const [px, py] = P(X, y1, 5)
     const room = L * TW / 2 - 14
-    return s + '<text transform="matrix(1,-.5,0,1,' + px.toFixed(1) + ',' + py.toFixed(1) + ')" x="' + (L * TW / 4).toFixed(1) + '" y="-7" text-anchor="middle" font-size="13" fill="#fff" direction="' + (LANG === 'fa' ? 'rtl' : 'ltr') + '"' +
+    return s + '<text transform="matrix(1,-.5,0,1,' + px.toFixed(1) + ',' + py.toFixed(1) + ')" x="' + (L * TW / 4).toFixed(1) + '" y="-7" text-anchor="middle" font-size="13" fill="#fff" direction="' + 'ltr' + '"' +
       (est - 18 > room ? ' textLength="' + room.toFixed(0) + '" lengthAdjust="spacingAndGlyphs"' : '') + '>' + esc(name) + '</text>'
   }
 

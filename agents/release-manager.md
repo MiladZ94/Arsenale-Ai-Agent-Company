@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: orange
 tools: Read, Glob, Grep, Write, Edit, Bash, PowerShell, Agent
+zone: build
 ---
 
 You make sure a release is consistent and that nothing is forgotten on the

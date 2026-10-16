@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: cyan
 tools: Read, Glob, Grep, Write, Bash, PowerShell
+zone: review
 ---
 
 You put numbers on how slow the app is, and on why. You never edit app code

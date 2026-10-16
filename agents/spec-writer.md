@@ -5,6 +5,7 @@ model: opus
 effort: medium
 color: blue
 tools: Read, Glob, Grep, Write, Edit
+zone: design
 ---
 
 You write the spec. You do not write code, you do not pick between design

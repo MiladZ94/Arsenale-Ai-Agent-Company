@@ -1,12 +1,11 @@
-/* English only (owner, 2026-10-12: Persian is out for now). Nothing a person
+/* English only (owner, 2026-10-12). Nothing a person
  * reads may be in Arabic script, in any view of the dashboard; there is no
  * language switch, and neither ?lang=fa nor an old dash-lang=fa cookie
- * brings Persian back.
+ * brings another language back.
  *
  * "Data" is allowed to be in either language: agent ids, model names, project
  * names and codes, file names and flags, numbers, and what a person typed
- * (task text, decision and gate text). The fixture has invented Persian and
- * English free text, and the tests prove it is shown as written.
+ * (task text, decision and gate text).
  *
  * The pages draw themselves with script, so these tests open them in a
  * headless Chrome or Edge (test/browser.cjs). With none installed they skip.
@@ -18,7 +17,7 @@ const http = require('http')
 const path = require('path')
 const { makeSandbox, startServer: startWithKey } = require('./helpers.cjs')
 const browser = require('./browser.cjs')
-const { SEED, FA_DECISION, EN_DECISION, EN_TASK, DATA_FA, fixture } = require('./language-fixture.cjs')
+const { SEED, TYPED_DECISION, EN_DECISION, EN_TASK, DATA_TYPED, fixture } = require('./language-fixture.cjs')
 
 const SKIP = browser.unavailable()
 const ARABIC = /\p{Script=Arabic}/u
@@ -43,8 +42,7 @@ function getJson(port, url) {
 }
 
 /** Latin words that are data, not interface: every word of the invented data
- *  and the real names of the fixture, but not the English names of offices
- *  that have a Persian one. */
+ *  and the real names of the fixture. */
 function dataWords(sb) {
   // model families, tool names, and the words of the command the set-up screen shows (node log-agent-run.cjs --seed <file>)
   const words = new Set(['opus', 'sonnet', 'read', 'grep', 'glob', 'edit', 'write', 'bash', 'powershell', 'agent', 'mystery', 'node', 'file', 'arsenale', 'log', ...BRANDS])
@@ -62,8 +60,8 @@ function dataWords(sb) {
   const company = (n) => { try { return JSON.parse(fs.readFileSync(path.join(sb.company, n + '.json'), 'utf8')) } catch { return null } }
   // the company's own name heads the org chart: data, as typed in the wizard
   const co = company('company')
-  if (co && !co.nameFa) add(co.name)
-  for (const o of company('offices') || []) { if (!o.nameFa) add(o.name); for (const k of ['id', 'leadEmployeeId']) add(o[k] || '') }
+  if (co) add(co.name)
+  for (const o of company('offices') || []) { add(o.name); for (const k of ['id', 'leadEmployeeId']) add(o[k] || '') }
   for (const p of company('projects') || []) { add(p.id); add(p.name); add(p.key); (p.aliases || []).forEach(add) }
   for (const e of Object.keys(company('employees') || {})) add(e)
   // the characters on the 3D floor are data too: a file's name and the names of its clips
@@ -93,7 +91,7 @@ const BRANDS = ['claude', 'desktop', 'code', 'cursor', 'gemini', 'codex', 'cli',
   'txt', 'csv', 'png', 'jpg', 'gif', 'webp', 'pdf',
   'hello', 'get_inbox', 'start_job', 'log_step', 'finish_job', 'ask_you', 'get_answers', 'check_action', 'add_deliverable']
 
-const stripData = (text) => DATA_FA.reduce((t, d) => t.split(d).join(' '), text)
+const stripData = (text) => DATA_TYPED.reduce((t, d) => t.split(d).join(' '), text)
 
 /** The screens, each a function that brings the open page to that screen. */
 const VIEWS = (offices) => [
@@ -173,17 +171,16 @@ test.after(async () => {
   shared.sb.cleanup()
 })
 
-test('English: no Arabic script on any screen, and the typed Persian text is shown as written', { skip: SKIP || false }, async (t) => {
+test('English: no Arabic script on any screen, and the typed text is shown as written', { skip: SKIP || false }, async (t) => {
   const w = await world()
   const views = await readViews(w.page, w.offices, w.port)
   for (const [name, text] of Object.entries(views)) {
     const left = stripData(text).split('\n').filter((l) => ARABIC.test(l))
-    assert.deepEqual(left, [], 'English "' + name + '" shows Persian: ' + left.slice(0, 3).join(' | '))
+    assert.deepEqual(left, [], 'English "' + name + '" shows Arabic script: ' + left.slice(0, 3).join(' | '))
   }
-  // the Persian free text is data and is shown as typed
-  assert.ok(views.decisions.includes(FA_DECISION), 'a decision text keeps its language')
+  // the free text is data and is shown as typed
+  assert.ok(views.decisions.includes(TYPED_DECISION), 'a decision text keeps its language')
   assert.ok(views.campus.includes('Engineering') && views.campus.includes('Operations'), 'English office names')
-  assert.ok(!views.campus.includes('مهندسی'), 'no Persian office name under the English one')
   // the 1.0 screens were drawn with their data, not left loading
   const drawn = { tasks: EN_TASK + ' six', 'tasks list': 'not seen yet', 'task detail': 'Copy a message for your assistant', 'task edit': 'Ask me before it is finished', 'new task': 'File paths, one per line', approvals: 'sample title', 'approvals letter 1': 'Why it matters', 'approvals letter 2': 'If you say no', team: 'Your campus', 'team profile': 'Safety rules for this member', 'hire form': 'Pick a look', 'hire review': 'This is the file Arsenale will write', deliverables: 'deliverable sample', 'deliverable preview': 'Close', 'settings assistants': 'Claude Desktop', 'settings phone': 'Sign out all phones', 'settings safety': 'Paying or spending money', 'settings packs': 'Customer support', 'settings privacy': 'api.telegram.org', 'settings assistant steps': 'Let Arsenale add itself', 'settings pack detail': 'Add this office', 'settings phone telegram': 'Telegram', 'settings phone pushover': 'Pushover' }
   for (const [name, text] of Object.entries(drawn)) assert.ok(views[name].includes(text), name + ' shows "' + text + '"')
@@ -194,7 +191,7 @@ test('English: the same numbers keep Latin digits and the dot', { skip: SKIP || 
   await w.page.goto('http://127.0.0.1:' + w.port + '/?v=2#/campus')
   const t1 = await w.page.eval("document.querySelector('.ckpis').textContent")
   assert.match(t1, /[0-9]/)
-  assert.doesNotMatch(t1, /[۰-۹٫]/)
+  assert.doesNotMatch(t1, /\p{Script=Arabic}/u)
 })
 
 test('budget dialog: a refused save shows its reason, in English', { skip: SKIP || false }, async (t) => {
@@ -226,7 +223,7 @@ test('no company: the single-office page and the archive are English', { skip: S
     for (const h of ['#/campus', '#/decisions', '#/usage', '#/activity', '#/office']) { await page.eval("location.hash = '" + h + "'; 1"); await sleep(400); texts.push(await page.readable()) }
     await page.goto('http://127.0.0.1:' + port + '/archive')
     texts.push(await page.readable())
-    for (const text of texts) assert.ok(!ARABIC.test(text), 'the page shows Persian')
+    for (const text of texts) assert.ok(!ARABIC.test(text), 'the page shows Arabic script')
     assert.ok(words.size > 0)
   }
 })
@@ -275,7 +272,7 @@ test('the first-start wizard: every one of its four steps is English, with no la
       texts.push(await page.readable())
       if (sel !== '.wz pre') await page.eval("document.querySelector('.wz form').requestSubmit(); 1")
     }
-    for (const text of texts) assert.ok(!ARABIC.test(text), 'the wizard shows Persian')
+    for (const text of texts) assert.ok(!ARABIC.test(text), 'the wizard shows Arabic script')
     assert.equal(fs.existsSync(sb.company), false, 'reading the steps writes nothing')
   }
 })
@@ -290,7 +287,7 @@ test('English only: no EN/FA switch, and ?lang=fa or an old dash-lang=fa cookie 
     assert.equal(got.dir, 'ltr', url)
     assert.equal(got.sw, 0, 'no language switch on ' + url)
     if (!url.startsWith('/archive')) assert.equal(got.LANG, 'en')
-    assert.equal(got.fa, false, 'no Persian interface on ' + url)
+    assert.equal(got.fa, false, 'no Arabic-script interface on ' + url)
   }
   // a cookie an older dashboard set is ignored: the server answers in English and sets no cookie
   const res = await new Promise((resolve, reject) => {

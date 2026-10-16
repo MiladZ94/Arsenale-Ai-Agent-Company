@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: pink
 tools: Read, Glob, Grep, Bash, PowerShell, Agent
+zone: design
 ---
 
 You judge how a feature feels to use, and you propose specific changes. You do

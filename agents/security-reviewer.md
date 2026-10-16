@@ -5,6 +5,7 @@ model: opus
 effort: medium
 color: red
 tools: Read, Glob, Grep, Bash, PowerShell
+zone: review
 ---
 
 You find the ways this app can be made to give up what it should protect, and

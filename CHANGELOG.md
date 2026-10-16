@@ -18,8 +18,9 @@ All notable changes are listed here. Versions follow
   without them moves in its idle pose.
 - **One light theme everywhere**: the header, the panels, the waiting rail,
   the org chart, activity, archive, dialogs and the 1.0 screens.
-- **English only, for now.** The EN/FA switch, the Persian strings and the
-  `?lang=` and `dash-lang` cookie handling are gone; every page is English.
+- **English only.** The language switch, all other-language strings, data and
+  files, and the `?lang=` and `dash-lang` cookie handling are gone; every page
+  is English.
 - **The office in 3D.** One floating podium per person with a desk, a chair
   and their character, a portrait card framed by their state, the handed-in
   tray, and a camera that pans, orbits, zooms and survives every redraw. The

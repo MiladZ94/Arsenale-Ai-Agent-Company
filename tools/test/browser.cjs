@@ -33,21 +33,66 @@ function unavailable() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-async function launch() {
+/* One Chrome per test file, not per test, and its tabs are reused: starting
+ * Chrome costs 5 to 13 seconds and a new tab's renderer another 4 to 7 on a
+ * machine with a virus scanner, while a file often opens a dozen pages one
+ * after another. A closed page goes back to a pool (what a test sets,
+ * such as emulation or injected scripts, belongs to its DevTools session and
+ * goes with it; every test has its own server port, and the dashboard's key
+ * cookie and storage are named or keyed by port, so nothing is shared). The browser holds no open
+ * handle between pages (its DevTools socket is opened per call), so a file can
+ * finish; it is killed when the process exits. */
+let shared = null
+function killShared() {
+  if (!shared) return
+  const { child, profile } = shared
+  shared = null
+  try { child.kill() } catch { /* gone */ }
+  try { fs.rmSync(profile, { recursive: true, force: true }) } catch { /* Windows may still hold it; the temp folder is cleaned later */ }
+}
+process.on('exit', killShared)
+
+async function sharedBrowser() {
+  if (shared) return shared.ready
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-company-browser-'))
   const child = spawn(findBrowser(), [
     '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
     '--remote-debugging-port=0', '--user-data-dir=' + profile, '--window-size=1600,950', 'about:blank',
   ], { stdio: 'ignore' })
-  const portFile = path.join(profile, 'DevToolsActivePort')
-  let port = 0
-  for (let i = 0; i < 100 && !port; i++) {
-    try { port = Number(fs.readFileSync(portFile, 'utf8').split('\n')[0]) || 0 } catch { /* not written yet */ }
-    if (!port) await sleep(100)
-  }
-  if (!port) { child.kill(); throw new Error('the browser did not open a DevTools port') }
+  child.unref()
+  const me = { child, profile, idle: [] }
+  me.ready = (async () => {
+    const portFile = path.join(profile, 'DevToolsActivePort')
+    let port = 0
+    for (let i = 0; i < 300 && !port; i++) {
+      try { port = Number(fs.readFileSync(portFile, 'utf8').split('\n')[0]) || 0 } catch { /* not written yet */ }
+      if (!port) await sleep(100)
+    }
+    if (!port) { if (shared === me) killShared(); throw new Error('the browser did not open a DevTools port') }
+    return port
+  })()
+  shared = me
+  return me.ready
+}
+
+/** One protocol call on the browser itself, over a socket that is closed again. */
+async function browserCall(port, method, params) {
+  const info = await (await fetch('http://127.0.0.1:' + port + '/json/version')).json()
+  const ws = new WebSocket(info.webSocketDebuggerUrl)
+  await new Promise((res, rej) => { ws.onopen = res; ws.onerror = () => rej(new Error('DevTools socket failed')) })
+  try {
+    return await new Promise((res, rej) => {
+      ws.onmessage = (m) => { const msg = JSON.parse(m.data); if (msg.id === 1) msg.error ? rej(new Error(msg.error.message)) : res(msg.result) }
+      ws.send(JSON.stringify({ id: 1, method, params: params || {} }))
+    })
+  } finally { ws.close() }
+}
+
+async function launch() {
+  const port = await sharedBrowser()
+  const targetId = shared.idle.pop() || (await browserCall(port, 'Target.createTarget', { url: 'about:blank' })).targetId
   const list = await (await fetch('http://127.0.0.1:' + port + '/json/list')).json()
-  const target = list.find((t) => t.type === 'page')
+  const target = list.find((t) => t.id === targetId)
   const ws = new WebSocket(target.webSocketDebuggerUrl)
   await new Promise((res, rej) => { ws.onopen = res; ws.onerror = () => rej(new Error('DevTools socket failed')) })
   let id = 0
@@ -62,12 +107,14 @@ async function launch() {
   await send('Runtime.enable')
 
   const api = {
-    /** Open an address and wait for the load event and one second of drawing. */
+    /** Open an address and wait for the load event and half a second of drawing. */
     async goto(url) {
+      // tabs share one browser: a tab in the background draws no animation frames
+      try { await browserCall(port, 'Target.activateTarget', { targetId }) } catch { /* the browser is already gone */ }
       const loaded = new Promise((res) => { const l = (msg) => { if (msg.method === 'Page.loadEventFired') { listeners.splice(listeners.indexOf(l), 1); res() } }; listeners.push(l) })
       await send('Page.navigate', { url })
       await loaded
-      await sleep(1000)
+      await sleep(500)
     },
     /** Run an expression in the page; the value comes back as plain data. */
     async eval(expr) {
@@ -88,7 +135,7 @@ async function launch() {
     },
     /** Wait until an expression is true in the page. */
     async waitFor(expr, ms) {
-      const end = Date.now() + (ms || 8000)
+      const end = Date.now() + Math.max(ms || 0, 20000)
       while (Date.now() < end) { if (await api.eval('!!(' + expr + ')')) return; await sleep(100) }
       throw new Error('the page never became: ' + expr)
     },
@@ -110,10 +157,10 @@ async function launch() {
     /** Run a script in every page this tab opens from now on, before the page's own (to take WebGL away, say). */
     async onNewDocument(source) { await send('Page.addScriptToEvaluateOnNewDocument', { source }) },
     async close() {
+      // off the page first: a 3D office left running would keep the CPU busy
+      try { await send('Page.navigate', { url: 'about:blank' }) } catch { /* already gone */ }
       try { ws.close() } catch { /* already gone */ }
-      child.kill()
-      await sleep(300)
-      try { fs.rmSync(profile, { recursive: true, force: true }) } catch { /* Windows may still hold the profile; the temp folder is cleaned later */ }
+      if (shared) shared.idle.push(targetId)
     },
   }
   return api
