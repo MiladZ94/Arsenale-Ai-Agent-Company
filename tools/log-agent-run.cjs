@@ -38,7 +38,8 @@ JSON input, for every mode that takes it:
 
 Runs
   --start <json>      {"agent","task", optional "model","effort","project","parent",
-                      "projectId","officeId","session","issue","doing"}
+                      "projectId","officeId","session","issue","doing",
+                      "versionRun","phase" (autonomous mode: version run id and phase)}
                       prints the new run id
   --progress <json>   {"id","doing", optional "pct": 0-100}: one line of what the agent
                       is doing now, and how far it is
@@ -46,6 +47,14 @@ Runs
                       failed|stopped, optional "summary","findings":[...],"files":[...],
                       "usage":{"tokens","toolUses","durationMs","model"},"transcript"}
                       prints the path of the run record
+
+Autonomous version runs (the state file in the repo is the source; this is its mirror)
+  --version-run <json>     {"id":"app-x-1.2", optional "app","version","status","budget"
+                      (positive whole tokens),"phases":[{"id","name","tier": low|medium|high,
+                      "requests","dependsOn","status","percent"}],"stateFile",
+                      "integrationBranch"}: creates or updates <data>/version-runs/<id>.json
+  --version-ledger <json>  {"versionRun"}: tokens per phase from the run log, as JSON
+                      (null = not recorded, never 0)
 
 Gates and decisions
   --gate <json>       {"project","question", optional "kind": A|B|C|approval,"label",
@@ -238,7 +247,7 @@ if (args[0] === '--company-status') {
   process.exit(0)
 }
 
-const MODES = ['--start', '--progress', '--budget-check', '--budget', '--employee', '--decision', '--gate', '--task', '--comment', '--deliverable', '--check-action']
+const MODES = ['--start', '--progress', '--budget-check', '--budget', '--employee', '--decision', '--gate', '--task', '--comment', '--deliverable', '--check-action', '--version-run', '--version-ledger']
 // no mode: the JSON (inline, --stdin, --file or @file) is a finish. "--finish"
 // says so outright; older run logs took it (as any unknown mode) for a finish,
 // and supervisors' notes still use it.
@@ -278,6 +287,14 @@ if (mode === '--budget' || mode === '--employee') {
     console.log(r.summary)
     process.exit(0)
   } catch (e) { die(e) }
+}
+
+if (mode === '--version-run' || mode === '--version-ledger') {
+  try {
+    if (mode === '--version-run') console.log(L.versionRun(input, actor).id)
+    else console.log(JSON.stringify(L.versionLedger(input.versionRun || input.id), null, 2))
+  } catch (e) { die(e) }
+  process.exit(0)
 }
 
 if (mode === '--decision' || mode === '--gate') {

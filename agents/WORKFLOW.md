@@ -16,7 +16,7 @@ models (the bundled definitions use Claude Code's `opus` and `sonnet`).
 |---|---|---|---|
 | Expensive to get wrong | heavy | `medium` | spec-writer, ui-designer, security-reviewer, data-migration, domain-validator, the tech plan |
 | Ordinary work | standard | `medium` or `low` | implementer, code-reviewer, tester, visual-qa, ux-reviewer, feature-scout, seo-specialist, user-guide, performance, release-builder, release-manager, dev-docs, docs-explainer (`low`), agent-builder, office-lead and the three heads |
-| Lookups | light | `low` | finding things, collecting lists, reading logs |
+| Lookups | light | `low` | finding things, collecting lists, reading logs, `finding-verifier` on ordinary findings |
 | Whole-app review, used rarely | heavy | `high` | architecture-reviewer |
 
 When a run is heavier than usual, raise it to the heavy tier for that run only: an
@@ -39,7 +39,7 @@ project: desktop apps, websites, mobile apps and design work.
 | 4 | Tech plan | supervisor (heavy tier, `medium`), or a planning agent if the tool has one. Ask `architecture-reviewer` only for large structural changes | the spec, the chosen mockup, the code | the files to touch, the order, the data and compatibility steps, the tests to write |
 | 5 | Build | `implementer`, then `tester` | the spec, the plan and the mockup | a working, uncommitted change, with tests. A regression test is proven to fail on the old code in a temporary worktree |
 | 6 | Visual QA | `visual-qa` | the running app, and the chosen mockup | screenshots, a table of differences, and fix verification. For a website, captures at 375, 768 and 1280px, with mobile problems ranked high |
-| 7 | Review and security | `code-reviewer` (always); `security-reviewer` when roles, restricted views, crypto, file format, licence, IPC or packaging are touched; `ux-reviewer` when a flow changed (on a website, walked on mobile first); `seo-specialist` when public website pages, routes, meta, structured data, the sitemap or the prerender changed; `data-migration` when anything saved changed (file format, fields, identity keys, encryption envelope, local storage, project files); `performance` when the change scales with data or speed was the complaint | the diff | findings, most serious first; a compatibility matrix and upgrade notes from `data-migration`; before and after numbers from `performance` |
+| 7 | Review and security | `code-reviewer` (always); `finding-verifier` re-checks the findings against the code before a fix round (autonomous mode, large reviews); `security-reviewer` when roles, restricted views, crypto, file format, licence, IPC or packaging are touched; `ux-reviewer` when a flow changed (on a website, walked on mobile first); `seo-specialist` when public website pages, routes, meta, structured data, the sitemap or the prerender changed; `data-migration` when anything saved changed (file format, fields, identity keys, encryption envelope, local storage, project files); `performance` when the change scales with data or speed was the complaint | the diff | findings, most serious first; a compatibility matrix and upgrade notes from `data-migration`; before and after numbers from `performance` |
 | 8 | Domain validation | `domain-validator`, for calculation apps only, whenever results could have changed | the reference workbook, report or standard | a comparison table with tolerances, and root causes |
 | 9 | Docs | `dev-docs` (README, PROJECT.md, notes); `user-guide` (manual and screenshots); `docs-explainer` (plain-language explanation for the user, and a hand-over note) | the finished change | updated documents, and the recap with a glossary in the user's language |
 | | **Gate C: permission to commit and release** | **user** | the review verdict, validation, visual QA, the release plan | "commit", "release", or neither. Given separately for each repo and each action |
@@ -140,6 +140,101 @@ and passes it to the agent. The agent reports each step with
 rule 8 of `AGENT-RULES.md`), one short line per real step, in the user's
 language. When the agent is done, the supervisor closes the run with
 `arsenale finish --stdin` and the result.
+
+## Autonomous mode (a whole version, one planning session)
+
+An explicit, separate mode: `/version-run <app> <version>`, or "run the
+autonomous cycle in WORKFLOW.md". It does not change `/feature` or `/fix`.
+Full rules and reasons: `docs/specs/autonomous-mode.md`. Arsenale still only
+watches; the supervisor does the running. Gates A, B and C are replaced by
+planning, one run authorisation and the owner gates below.
+
+1. **Plan (the only interactive part).** Collect the requests (R1, R2 ...).
+   Run `spec-writer` for each; merge the open questions into numbered batches
+   of at most 5, each with options and a default, asked one batch at a time in
+   the user's language. Run `ui-designer` for every UI request so all mockups
+   are chosen in one sitting. Record the test baseline. Show the phase plan,
+   the risk tier of each phase and the token budget; planning ends when the
+   owner says in his own message that the run may start. That message is the
+   **run authorisation**: agents commit on their own branches and the
+   supervisor merges into the integration branch, nothing else.
+2. **State file.** One per version: `docs/specs/<version>-list.md` (header,
+   requests, phases with tiers and dependencies, decisions D1 ..., open gates,
+   review log, token ledger). It is the only memory a resumed supervisor needs.
+   Update it at every phase change, decision and gate result, and before any
+   pause (write a temporary file, then rename). Every supervisor decision also
+   goes to `arsenale decision`; none is deleted, the owner overrules with a new
+   one. Mirror it with `arsenale version-run`; the file wins on conflict. No
+   secret, personal data or real project name in it.
+3. **Phases and worktrees.** Phases follow dependencies (data, logic, UI,
+   docs). Inside a phase, one agent per git worktree and branch
+   `auto/<version>/<phase>/<request>`, never two agents on one file. Agents
+   commit only on their own branch and never push, merge, tag or rebase. The
+   supervisor merges one by one into `auto/<version>/integration` (never
+   `main`), runs the full suite after each merge and reverts a breaking merge
+   with a revert commit.
+4. **Gates after each phase**, in order, each only if its trigger applies:
+   `code-reviewer` (two reviewers with different briefs on the high tier),
+   then `finding-verifier` on the findings, then the fix round by the same
+   implementer, then `data-migration`, `security-reviewer`, `visual-qa`,
+   `performance` as in stage 7. Only `confirmed` findings are fixed;
+   rejected ones are listed in the review log. Data, security, crypto,
+   permissions and file-format findings are verified at the standard tier or
+   above, and a rejection there is re-checked by the heavy tier before it is
+   final. "Done" needs evidence (real test result, opened screenshot), not a
+   claim. Severity: **Important** (must fix), **Nit**, **Pre-existing**
+   (recorded, not fixed unless asked).
+5. **Risk tiers**, set per phase with the reason, raised never lowered.
+   Low (text, docs, tests, one-component styling): one reviewer. Medium (an
+   ordinary feature or fix): reviewer, verifier, fix round, visual-qa if
+   visible. High (stored data, file format, crypto, IPC, permissions,
+   licence, packaging, calculations): two reviewers, the migration and
+   security gates, full and slow suites, heavy-tier fixes. A calculation
+   change is high and also an owner gate. The slow suite runs only when the
+   phase is high because of stored data; otherwise log "slow suite skipped,
+   no stored data touched".
+6. **3-round cap.** Round 1 reviews the phase diff; rounds 2 and 3 only the
+   fix diff and the confirmed findings. After round 3 with an Important
+   finding left, no round 4: rethink the approach, record it as a decision,
+   rebuild with a fresh counter. If that fails too, mark the phase
+   `blocked`, go on with independent phases, report it to the owner.
+7. **Recurring findings become tests.** A confirmed finding that is Important,
+   or the second of its kind, must get a regression test in the fix round
+   (shown to fail on the old code). If no test can catch it, propose a line
+   for `REVIEW.md` as a `reversible` decision. `REVIEW.md` (template
+   `REVIEW.template.md`) is read by reviewers and the verifier before the diff.
+8. **Owner gates, the only stops.** Release (build, sign, tag, copy, push,
+   publish, pull request to a protected branch); anything on the project's
+   "Owner gates (autonomous mode)" list; budget at 100 %; a blocked phase
+   others depend on; an unplanned requirement that needs an owner decision;
+   an action `check_action` marks `ask` or `never`. Park the gated item and
+   continue with independent phases; never work around a gate. Format and
+   security changes may run autonomously through their gates, but a change an
+   older release cannot open is allowed only with the owner's explicit answer.
+9. **Safety.** Only your own PIDs, never by name; headless only; no throwaway
+   executables; never push or publish; invented fixtures only
+   (AGENT-RULES sections 1, 2, 5 and 10).
+10. **Token budget.** Estimate during planning from the shipped defaults or
+    earlier runs, re-estimate after phase 1 as a decision. At 80 % warn and
+    go on; at 100 % start no new agent, let running ones finish their step,
+    save the state, ask (raise, cut scope, stop). Tag every run with
+    `versionRun` and `phase` (`arsenale start`); `arsenale version-ledger`
+    sums tokens per phase. Short prompts, diffs not repos (AGENT-RULES
+    section 10).
+11. **Multi-day and resume.** The state file plus the run log are enough.
+    Resume: read the file, `arsenale answers` and `arsenale inbox`, mark
+    abandoned `running` records `stopped` by PID (never by name), check
+    worktrees and branches, finish or abort an unfinished merge, continue
+    from the first phase not "merged and gated". A half-built phase resumes
+    from its branches. Stopping never deletes branches or work.
+12. **Final report** (state file and chat, user's language): requests and
+    what was delivered; phases with tiers, rounds and results; all decisions
+    (overrulings first); owner gates; Important findings and their fixes,
+    open Nits and Pre-existing items, rejected-finding counts; evidence and
+    the tests added from recurring findings; tokens per phase against the
+    budget; what was NOT done (not pushed, built or published, checks
+    skipped); the exact next owner actions. `docs-explainer` adds the recap
+    and glossary.
 
 ## Adding to this set
 

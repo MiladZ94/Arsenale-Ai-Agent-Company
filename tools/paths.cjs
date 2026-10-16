@@ -79,6 +79,8 @@ const P = {
   DECISIONS: path.join(RUNS, 'decisions'),
   ANSWERS: path.join(RUNS, 'answers.jsonl'),
   ANSWERS_READ: path.join(RUNS, 'answers.read.json'),
+  // mirrors of autonomous version runs (the state file in the project repo stays the source)
+  VERSION_RUNS: path.join(HOME, 'version-runs'),
   COMPANY: dirOf(CONFIG.companyDir, path.join(HOME, 'company')),
   OUT: path.join(PAGES, 'agent-dashboard.html'),
   OUT_ARCHIVE: path.join(PAGES, 'agent-dashboard-archive.html'),

@@ -420,7 +420,7 @@ function saveGate(input, via) {
   // an older dashboard ignores them and still shows an approval.
   if (!reused) {
     if (input.approvalType !== undefined) g.approvalType = APPROVAL_TYPES.includes(String(input.approvalType)) ? String(input.approvalType) : 'generic'
-    for (const k of ['officeId', 'taskId', 'askedVia', 'clientId']) if (input[k] !== undefined && input[k] !== '') g[k] = clip(String(input[k]).replace(/[^\w.:-]/g, ''), 80)
+    for (const k of ['officeId', 'taskId', 'askedVia', 'clientId', 'versionRun']) if (input[k] !== undefined && input[k] !== '') g[k] = clip(String(input[k]).replace(/[^\w.:-]/g, ''), 80)
     if (input.subject && typeof input.subject === 'object') g.subject = { type: clip(input.subject.type, 20), id: clip(input.subject.id, 80) }
     if (input.action && typeof input.action === 'object') g.action = { category: clip(input.action.category, 40), target: clip(input.action.target, 200), summary: clip(input.action.summary, 300), member: clip(String(input.action.member || '').replace(/[^\w.-]/g, ''), 60) }
     if (input.payload !== undefined) {
@@ -485,7 +485,7 @@ function answerGate(id, answer, opts) {
   fs.appendFileSync(ANSWERS, JSON.stringify(Object.assign({
     at: saved.answeredAt, type: 'answer', gate: saved.id, project: saved.project, kind: saved.kind, run: saved.run,
     question: saved.question, answer: text, by: 'user', via,
-  }, saved.clientId ? { clientId: saved.clientId } : {})) + '\n')
+  }, saved.clientId ? { clientId: saved.clientId } : {}, saved.versionRun ? { versionRun: saved.versionRun } : {})) + '\n')
   return saved
 }
 

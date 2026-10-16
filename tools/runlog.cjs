@@ -64,6 +64,19 @@ const companyFields = (input, from) => {
   return out
 }
 
+// The autonomous-mode tags (spec autonomous-mode, rule 46): which version run a
+// job belongs to and which phase of it. Optional; a record without them reads
+// exactly as before, and an older reader ignores them.
+const versionFields = (input, from) => {
+  const out = {}
+  for (const [k, n] of [['versionRun', 60], ['phase', 20]]) {
+    const v = input[k] !== undefined ? input[k] : from && from[k]
+    const clean = v ? String(v).replace(/[^\w.-]/g, '').slice(0, n) : ''
+    if (clean) out[k] = clean
+  }
+  return out
+}
+
 /** Which door a record came through, for records written by a door other
  *  than the CLI (old records without `source` read as cli). */
 function sourceFields(actor) {
@@ -111,7 +124,7 @@ function startRun(input, actor) {
     doing: input.doing || '',            // the latest line
     steps: input.doing ? [{ at: input.startedAt || now.toISOString(), text: String(input.doing) }] : [],
     startedAt: input.startedAt || now.toISOString(),
-  }, companyFields(input), sourceFields(actor), budget && budget.level !== 'ok' ? { budgetWarned: true, budgetLevel: budget.level } : {})
+  }, companyFields(input), versionFields(input), sourceFields(actor), budget && budget.level !== 'ok' ? { budgetWarned: true, budgetLevel: budget.level } : {})
   fs.writeFileSync(path.join(ACTIVE, id + '.json'), JSON.stringify(record, null, 2))
   // a job started for a task links to it and moves it from "to do" to "in
   // progress" (never backwards); a missing or unreadable task never stops the log
@@ -201,7 +214,7 @@ function finishRun(input, actor) {
   }
   if (usage) record.usage = usage
   if (transcript) record.transcript = transcript
-  Object.assign(record, companyFields(input, fromActive))
+  Object.assign(record, companyFields(input, fromActive), versionFields(input, fromActive))
   if (fromActive && fromActive.budgetWarned) { record.budgetWarned = true; record.budgetLevel = fromActive.budgetLevel || 'warn' }
   // the plain-language fields a door other than the CLI may add (spec 5.7)
   if (actor && actor.door !== 'cli') {
@@ -222,6 +235,88 @@ function finishRun(input, actor) {
   fs.writeFileSync(file, JSON.stringify(record, null, 2))
   if (record.issue) { try { require('./tasks.cjs').linkRun(record.issue, record.id, actor || cliActor({}), { finish: true }) } catch { /* not a task here */ } }
   return { file, record }
+}
+
+// ---------- autonomous version runs
+// The mirror the dashboard reads: <data>/version-runs/<id>.json. The state file
+// in the project repo is the source; when the two disagree the supervisor
+// rewrites the mirror from the file.
+const RUN_STATUS = ['planning', 'running', 'waiting for owner', 'stopped', 'blocked', 'done', 'empty']
+const TIERS = ['low', 'medium', 'high']
+const versionFile = (id) => path.join(P.VERSION_RUNS, id + '.json')
+
+/** Creates or updates a version-run mirror. Fields not given keep their value.
+ *  The supervisor writes it; an agent may not. A budget must be a positive
+ *  whole number of tokens; anything else is refused and nothing is written. */
+function versionRun(input, actor) {
+  if (actor && actor.role === 'agent') throw fail(403, 'only the supervisor records a version run')
+  const id = input && input.id ? String(input.id).replace(/[^\w.-]/g, '').slice(0, 60) : ''
+  if (!id) throw fail(400, 'a version run needs an "id" such as app-x-1.2')
+  let cur = {}
+  try { cur = JSON.parse(fs.readFileSync(versionFile(id), 'utf8')) } catch { /* new */ }
+  const rec = Object.assign({ id, app: '', version: '', status: 'planning', phases: [], budget: null, stateFile: '', integrationBranch: '' }, cur)
+  for (const k of ['app', 'version', 'stateFile', 'integrationBranch']) if (input[k] !== undefined) rec[k] = clipCp(input[k], 200)
+  if (input.status !== undefined) {
+    if (!RUN_STATUS.includes(input.status)) throw fail(400, 'status must be one of: ' + RUN_STATUS.join(', '))
+    rec.status = input.status
+  }
+  if (input.budget !== undefined) {
+    const b = typeof input.budget === 'number' ? input.budget : /^\d+$/.test(String(input.budget)) ? Number(input.budget) : NaN
+    if (!Number.isSafeInteger(b) || b <= 0) throw fail(400, 'budget must be a positive whole number of tokens')
+    rec.budget = b
+  }
+  if (input.phases !== undefined) {
+    if (!Array.isArray(input.phases)) throw fail(400, '"phases" must be a list')
+    rec.phases = input.phases.slice(0, 50).map((p) => {
+      const pct = Number(p && p.percent)
+      return {
+        id: clipCp(String((p && p.id) || '').replace(/[^\w.-]/g, ''), 20),
+        name: clipCp(p && p.name, 120),
+        tier: TIERS.includes(p && p.tier) ? p.tier : 'medium',
+        requests: Array.isArray(p && p.requests) ? p.requests.slice(0, 50).map((r) => clipCp(r, 20)) : [],
+        dependsOn: Array.isArray(p && p.dependsOn) ? p.dependsOn.slice(0, 20).map((r) => clipCp(r, 20)) : [],
+        status: clipCp((p && p.status) || 'planned', 40),
+        percent: Number.isFinite(pct) ? Math.max(0, Math.min(100, Math.round(pct))) : 0,
+      }
+    })
+  }
+  rec.updatedAt = new Date().toISOString()
+  // a temporary file next to it, then a rename: an interrupted write must not
+  // leave a half file for the dashboard to choke on
+  fs.mkdirSync(P.VERSION_RUNS, { recursive: true })
+  const tmp = versionFile(id) + '.' + process.pid + '.tmp'
+  fs.writeFileSync(tmp, JSON.stringify(rec, null, 2))
+  fs.renameSync(tmp, versionFile(id))
+  return rec
+}
+
+/** Tokens per phase for one version run, from the run log (finished records
+ *  and runs still going, tagged with that versionRun). A phase whose runs
+ *  carry no token count reports `tokens: null` ("not recorded"), never 0. */
+function versionLedger(id) {
+  const key = String(id || '').replace(/[^\w.-]/g, '')
+  if (!key) throw fail(400, 'a version run id is needed')
+  const phases = {}
+  const take = (dir, running) => {
+    let names = []
+    try { names = fs.readdirSync(dir) } catch { return }
+    for (const n of names) {
+      if (!n.endsWith('.json')) continue
+      let r
+      try { r = JSON.parse(fs.readFileSync(path.join(dir, n), 'utf8')) } catch { continue }
+      if (!r || r.versionRun !== key) continue
+      const ph = r.phase || '(none)'
+      const e = phases[ph] || (phases[ph] = { phase: ph, runs: 0, running: 0, tokens: null })
+      e.runs++
+      if (running) e.running++
+      const t = Number(r.tokens) || Number(r.usage && r.usage.tokens) || Number(r.transcript && r.transcript.tokensNew) || 0
+      if (t > 0) e.tokens = (e.tokens || 0) + t
+    }
+  }
+  take(RUNS, false)
+  take(ACTIVE, true)
+  const list = Object.values(phases).sort((a, b) => a.phase.localeCompare(b.phase, undefined, { numeric: true }))
+  return { versionRun: key, phases: list, tokens: list.some((e) => e.tokens !== null) ? list.reduce((s, e) => s + (e.tokens || 0), 0) : null }
 }
 
 /** Budget thresholds this run crossed, logged once per scope and month. */
@@ -278,6 +373,6 @@ function updateEmployee(input, actor) { return company().updateEmployee(asBoard(
 
 module.exports = {
   OWNER_ONLY, fail, actorFor, cliActor, actorLabel, requireBoard, clipCp,
-  startRun, progress, finishRun, noteIncidents, budgetCheck, readActive,
+  startRun, progress, finishRun, versionRun, versionLedger, noteIncidents, budgetCheck, readActive,
   gate, decision, answer, dismiss, setBudget, setBudgetsEnabled, updateEmployee,
 }

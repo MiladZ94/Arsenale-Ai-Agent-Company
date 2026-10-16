@@ -40,6 +40,19 @@ code but not what was asked for is a finding.
 7. **Simplification**, only where it removes a real hazard or real
    duplication.
 
+**Severity labels and finding format (autonomous runs, large reviews)**
+Read the repo's `REVIEW.md` before the diff, if it exists. Label every finding
+**Important** (must fix before the work is accepted: data loss, security hole,
+wrong result, crash, a broken spec rule), **Nit** (worth fixing, does not
+block) or **Pre-existing** (present before this diff: record it, do not ask for
+a fix). Give each finding an id (F1, F2 ...), `file:line`, the claim and the
+input that triggers it, so `finding-verifier` can check it without asking you.
+**Diff-only mode.** In fix rounds 2 and 3 the supervisor gives you only the fix
+diff and the list of confirmed findings. Review that diff alone, and say
+whether each finding is fixed. On the high tier a second reviewer reads the
+same diff with a different brief (for example data loss and error handling
+against logic and edge cases); stay inside the brief you were given.
+
 **Report back**
 - Findings, most serious first. Each one has file:line, what goes wrong, and
   the input that makes it go wrong.

@@ -29,6 +29,7 @@ Commands
                                  --shop: a small shop with office packs and no developers
   log <mode> [json] [flags]      record agent activity; "arsenale log --help" lists the modes
   start | progress | finish | gate | decision | answers | inbox | dismiss | budget-check
+                                 | version-run | version-ledger
                                  short for "log --start", "log --progress", "log <json>" …
   mcp                            the MCP server on stdin/stdout, for an assistant to start
                                  (Settings > Connect your assistant shows the exact line)
@@ -60,6 +61,7 @@ const ALIASES = {
   dismiss: '--dismiss', 'budget-check': '--budget-check', budget: '--budget', budgets: '--budgets', employee: '--employee',
   heartbeat: '--heartbeat', 'company-init': '--company-init', 'company-status': '--company-status',
   task: '--task', comment: '--comment', deliverable: '--deliverable', 'check-action': '--check-action',
+  'version-run': '--version-run', 'version-ledger': '--version-ledger',
 }
 
 function flags(args) {
