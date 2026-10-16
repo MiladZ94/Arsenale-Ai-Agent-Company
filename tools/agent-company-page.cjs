@@ -414,12 +414,14 @@ function companyViews(h) {
   }
 
   // ---------- the strip over an office floor
-  function officeHead(S, officeId) {
+  // `idleN`: the floor's own count when there is one (the 3D lounge), so the
+  // strip and the lounge never disagree; without it, the company's home staff.
+  function officeHead(S, officeId, idleN) {
     const o = officeById(officeId)
     if (!o) return ''
     const c = counts(S.full || S, officeId)
     const home = C().employees.filter((e) => e.kind === 'employee' && e.homeOfficeId === officeId)
-    const idle = home.filter((e) => empStatus(S.full || S, e.id, officeId) === 'idle').length
+    const idle = Number.isInteger(idleN) ? idleN : home.filter((e) => empStatus(S.full || S, e.id, officeId) === 'idle').length
     const sd = o.standing || {}
     const b = sd.budget
     return '<div class="crumb"><button type="button" data-goto="campus">' + T('Campus') + '</button><span class="dim">/</span><span class="sq" style="background:' + esc(o.color) + '"></span><b>' + esc(oname(o)) + '</b>' + '</div>' +

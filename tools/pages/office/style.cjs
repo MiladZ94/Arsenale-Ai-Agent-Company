@@ -253,6 +253,8 @@ const CR_STYLE = `
 .views button{font:12.5px var(--font-ui);background:var(--panel-raised);border:0;border-left:1px solid var(--line);padding:6px 14px;color:var(--ink-soft);cursor:pointer;white-space:nowrap}
 .views button:last-child{border-left:0}
 .views button[aria-pressed=true]{background:var(--accent-soft);color:var(--accent);font-weight:700;box-shadow:inset 0 -2px 0 var(--accent)}
+/* at 1366 the nine view tabs, four counts and the Live badge no longer fit with the roomy spacing */
+@media (max-width:1440px){.top{gap:12px;padding:0 14px}.views button{padding:6px 9px}.counts{gap:12px}}
 .gate-c{color:var(--gate)!important}
 .mono{font-family:var(--font-ui)}
 

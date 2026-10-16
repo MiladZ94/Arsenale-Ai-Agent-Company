@@ -327,7 +327,7 @@ waste.
 ## 10. Autonomous runs
 
 These add to the rules above when the supervisor runs a whole version (WORKFLOW,
-"Autonomous mode"; detail in `docs/specs/autonomous-mode.md`). They bind
+"Autonomous mode"; short digest in `autonomous/RULES.md`, installed to `<data folder>/autonomous/RULES.md`). They bind
 every agent in such a run.
 
 1. **Your own branch and worktree.** Work only in the worktree you were given,

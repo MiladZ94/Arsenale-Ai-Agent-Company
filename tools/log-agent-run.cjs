@@ -39,7 +39,9 @@ JSON input, for every mode that takes it:
 Runs
   --start <json>      {"agent","task", optional "model","effort","project","parent",
                       "projectId","officeId","session","issue","doing",
-                      "versionRun","phase" (autonomous mode: version run id and phase)}
+                      "versionRun","phase" (autonomous mode: version run id and phase),
+                      "pid" (the agent process, so a resume can tell a dead run from a live one),
+                      "tier": light|standard|heavy (a 4th heavy run at once is refused)}
                       prints the new run id
   --progress <json>   {"id","doing", optional "pct": 0-100}: one line of what the agent
                       is doing now, and how far it is

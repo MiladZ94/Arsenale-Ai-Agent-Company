@@ -126,3 +126,39 @@ test('dry run S1: --reviews are stored cleaned and the page can show them; a dec
   const d = sb.cli('--decision', '{"project":"app X","by":"supervisor","text":"Tabs, not spaces","versionRun":"app-x-1.2"}').out
   assert.equal(sb.read('agent-runs/decisions/' + d + '.json').run, 'app-x-1.2', 'the decision is listed under its run')
 })
+
+test('a run record carries the agent PID when given (optional); a record without one reads as before', (t) => {
+  const sb = box(t)
+  const id = sb.cli('--start', JSON.stringify({ agent: 'implementer', task: 'with pid', pid: process.pid })).out
+  assert.equal(sb.read('agent-runs/active/' + id + '.json').pid, process.pid)
+  for (const bad of ['"abc"', '-4', '0', '1.5']) {
+    const o = sb.cli('--start', '{"agent":"tester","task":"x","pid":' + bad + '}').out
+    assert.ok(!('pid' in sb.read('agent-runs/active/' + o + '.json')), 'pid ' + bad + ' is not kept')
+  }
+  const plain = sb.cli('--start', '{"agent":"tester","task":"plain"}').out
+  assert.ok(!('pid' in sb.read('agent-runs/active/' + plain + '.json')))
+})
+
+test('spec test 28: a 4th heavy-tier run is refused across version runs; a finished or dead one frees a place; lighter runs are never counted', (t) => {
+  const sb = box(t)
+  const heavy = (run, extra) => sb.cli('--start', JSON.stringify(Object.assign({ agent: 'implementer', task: 'h', tier: 'heavy', versionRun: run, pid: process.pid }, extra)))
+  const ids = [heavy('app-x-1.2'), heavy('app-x-1.2'), heavy('arsenale-1.1')].map((r) => { assert.equal(r.code, 0, r.err); return r.out })
+  const fourth = heavy('arsenale-1.1')
+  assert.equal(fourth.code, 1)
+  assert.match(fourth.err + fourth.out, /3 heavy-tier runs are already going/)
+  assert.equal(fs.readdirSync(path.join(sb.root, 'agent-runs', 'active')).filter((n) => n.endsWith('.json')).length, 3, 'nothing was written for the refused start')
+  assert.equal(sb.cli('--start', '{"agent":"tester","task":"light","tier":"standard"}').code, 0)
+  assert.equal(sb.cli('--start', '{"agent":"tester","task":"untiered"}').code, 0)
+  assert.equal(sb.cli('--start', '{"agent":"tester","task":"x","tier":"enormous"}').code, 1)
+  // a finish frees a place
+  assert.equal(sb.cli('--finish', JSON.stringify({ id: ids[0], agent: 'implementer', task: 'h' })).code, 0)
+  assert.equal(heavy('app-x-1.2').code, 0)
+  // a heavy run whose process is gone does not hold a place
+  const gone = require('child_process').spawnSync(process.execPath, ['-e', '0'])
+  const L = sb.mod('runlog.cjs')
+  const dead = fs.readdirSync(path.join(sb.root, 'agent-runs', 'active')).find((n) => n.endsWith('.json') && sb.read('agent-runs/active/' + n).tier === 'heavy')
+  const f = path.join(sb.root, 'agent-runs', 'active', dead)
+  fs.writeFileSync(f, JSON.stringify(Object.assign(JSON.parse(fs.readFileSync(f, 'utf8')), { pid: gone.pid })))
+  assert.equal(L.heavyActive().length, 2)
+  assert.equal(heavy('app-x-1.2').code, 0)
+})

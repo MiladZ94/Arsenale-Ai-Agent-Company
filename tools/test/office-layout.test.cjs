@@ -96,6 +96,11 @@ for (const [w, h] of [[1366, 768], [1920, 1080]]) {
     const clash = []
     for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) if (hit(boxes[i][1], boxes[j][1])) clash.push(boxes[i][0] + ' / ' + boxes[j][0])
     assert.deepEqual(clash, [], 'overlapping boxes')
+    // a label may not sit on a desk either (the "×2" chip and the "Guest" name used to)
+    assert.ok(info.desks.length >= 8, 'the desks are reported')
+    const onDesk = []
+    for (const [name, b] of boxes) if (!/^avatar/.test(name)) for (const d of info.desks) if (hit(b, d)) { onDesk.push(name); break }
+    assert.deepEqual(onDesk, [], 'labels touching a desk')
     // everything of the scene lies inside the scene, left of the list
     for (const [name, b] of boxes) { assert.ok(b.l >= info.scene.l - 1 && b.r <= info.scene.r + 1 && b.t >= info.scene.t - 1 && b.b <= info.scene.b + 1, name + ' is inside the scene') }
     assert.ok(info.scene.r <= info.side.l + 1, 'the list does not cover the scene')
@@ -122,3 +127,43 @@ test('one run keeps its figure, number and desk while the page redraws; a second
   assert.deepEqual(nums, [1, 2, 3, 4, 5, 6, 7, 8, 9])
 })
 
+
+test('the top bar fits at 1366 with every count showing, "Live" whole and nothing clipped', { skip: SKIP || false }, async () => {
+  const { sb, page, base } = await world()
+  // a run with no step for 40 minutes is "quiet": the fourth count chip
+  const r = sb.cli('--start', JSON.stringify({ agent: 'helper', task: 'long wait', project: 'ledger', model: 'sonnet', startedAt: new Date(Date.now() - 40 * 60000).toISOString() }))
+  assert.equal(r.code, 0, r.err)
+  await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
+  await page.screenshot(require('path').join(require('os').tmpdir(), 'office-layout-top.png'), 1366, 768)
+  await page.waitFor("document.querySelectorAll('#counts li').length >= 4", 15000)
+  const got = await page.eval(`(() => {
+    const top = document.querySelector('header.top'), t = top.getBoundingClientRect()
+    const live = document.getElementById('mode')
+    return {
+      overflow: top.scrollWidth - top.clientWidth,
+      kids: [...top.children].map((c) => { const b = c.getBoundingClientRect(); return { id: c.id || c.className || c.tagName, r: b.right, l: b.left, own: c.scrollWidth - c.clientWidth } }),
+      topRight: t.right, live: live.textContent.trim(), liveRight: live.getBoundingClientRect().right, vw: window.innerWidth,
+    }
+  })()`)
+  assert.ok(got.overflow <= 0, 'the header is not wider than the window: ' + JSON.stringify(got))
+  for (const k of got.kids) assert.ok(k.r <= got.vw + 0.5 && k.own <= 1, 'header item ' + k.id + ' is whole inside the window: ' + JSON.stringify(k))
+  assert.equal(got.live, 'Live')
+})
+
+test('"N idle" in the office strip is the number the lounge shows, in the headquarters too (the lead is on the floor)', { skip: SKIP || false }, async () => {
+  const { page, base } = await world()
+  for (const office of ['engineering', 'hq']) {
+    await page.goto(base + '/?v=' + Date.now() + '#/office/' + office)
+    await page.screenshot(require('path').join(require('os').tmpdir(), 'office-layout-idle.png'), 1366, 768)
+    await page.waitFor("window.__office3d && window.__office3d.info().rooms.length > 0 && document.querySelector('.ostats')", 20000)
+    await page.sleep(600)
+    const got = await page.eval(`(() => {
+      const strip = [...document.querySelectorAll('.ostats div')].find((d) => /idle/.test(d.textContent))
+      const lounge = document.querySelector('.o3c.lounge')
+      return { strip: strip ? strip.querySelector('b').textContent.trim() : null, lounge: lounge ? lounge.textContent.trim() : '', list: (document.querySelector('.o3idle') || {}).textContent || '' }
+    })()`)
+    const n = (/(\d+) idle/.exec(got.lounge) || [])[1] || '0'
+    assert.equal(got.strip, n, office + ': strip ' + got.strip + ' vs lounge "' + got.lounge + '"')
+    if (got.list) assert.match(got.list, new RegExp('^\D*' + n + ' idle'), office + ': list ' + got.list)
+  }
+})

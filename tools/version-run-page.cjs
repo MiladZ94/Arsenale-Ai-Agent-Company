@@ -82,13 +82,15 @@ const VR_STYLE = `
 .vr .v-gl span{white-space:nowrap;position:absolute;transform:translateX(-50%)}
 .vr .v-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:11px;color:var(--ink-soft)}
 .vr .v-scroll{overflow:auto}
+.fbar .v-sel{margin-left:auto;font-size:12px;color:var(--ink-dim);display:flex;gap:8px;align-items:center}
+.fbar .v-sel select{font:12px var(--font-ui);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:3px 6px}
 .vr .empty{color:var(--ink-dim);padding:16px;margin:0}
 .vr .empty code{background:var(--panel-raised);border:1px solid var(--line);padding:1px 6px;border-radius:3px}
 `
 
 function versionRunView(h) {
   const { esc, T, ms } = h
-  const st = { data: null, error: false, supOnly: false, at: 0, busy: false }
+  const st = { data: null, error: false, supOnly: false, at: 0, busy: false, sel: '' }
   const SEG = ['#0C8A62', '#1F7A8C', '#6B55B0', '#B8720F', '#2563EB', '#8A5A44', '#66727F']
 
   // Not part of the 1.5 s state poll: read when the page is opened and every
@@ -229,22 +231,44 @@ function versionRunView(h) {
     return html + '<div class="v-scroll"><table><tr><th>' + T('Run') + '</th><th>' + T('Phase') + '</th><th class="n">' + T('Rnd') + '</th><th class="n">' + T('Findings') + '</th><th>' + T('Conf / rej / unclear') + '</th><th>' + T('Report') + '</th></tr>' + rows + '</table></div></div>'
   }
 
+  // Decision A24: side by side while at most two runs are active; beyond that
+  // one run at a time, chosen here. The default is the run with an open gate,
+  // then the newest.
+  const isActive = (r) => !/^(done|stopped|empty)$/.test(r.status)
+  function pick(all) {
+    if (all.filter(isActive).length <= 2) return { runs: all, selector: '' }
+    const waiting = new Set((DATA.gates || []).filter((g) => g.status === 'waiting').map((g) => g.versionRun))
+    const dflt = all.filter((r) => waiting.has(r.id)).pop() || all[all.length - 1]
+    const cur = all.find((r) => r.id === st.sel) || dflt
+    const selector = '<label class="v-sel">' + T('Run') + ' <select data-vrsel="1" aria-label="' + T('Run') + '">' +
+      all.map((r) => '<option value="' + esc(r.id) + '"' + (r.id === cur.id ? ' selected' : '') + '>' + esc(label(r)) + ' · ' + esc(r.status) + '</option>').join('') + '</select></label>'
+    return { runs: [cur], selector }
+  }
+
   function render(S0) {
     watch()
-    const head = '<div class="fbar"><h2>' + T('Version run') + '</h2></div>'
-    const runs = st.data ? st.data.runs.map((r) => Object.assign({}, r, { phases: Array.isArray(r.phases) ? r.phases : [] })) : []
+    const all = st.data ? st.data.runs.map((r) => Object.assign({}, r, { phases: Array.isArray(r.phases) ? r.phases : [] })) : []
+    const shownRuns = pick(all)
+    const runs = shownRuns.runs
+    const head = '<div class="fbar"><h2>' + T('Version run') + '</h2>' + shownRuns.selector + '</div>'
     if (!runs.length) {
       const known = st.data || st.error || !h.live()
       return head + '<div class="vr"><div class="v-card"><p class="empty">' + (known
         ? T('No version run yet. Start one from the repo of the app:') + ' <code>arsenale autonomous start &lt;version&gt;</code>'
         : T('Loading…')) + '</p></div></div>'
     }
-    return head + '<div class="vr" id="vr">' + gatesCard(runs) +
+    return head + '<div class="vr" id="vr">' + gatesCard(all) /* a question of a run not selected must not hide */ +
       '<div class="pair">' + runs.map(header).join('') + '</div>' +
       compare(runs) + agentsCard(runs, S0) +
       '<div class="pair">' + decisionsCard(runs) + reviewsCard(runs) + '</div></div>'
   }
 
+  document.addEventListener('change', (e) => {
+    const sel = e.target.closest && e.target.closest('[data-vrsel]')
+    if (!sel) return
+    st.sel = sel.value
+    h.redraw()
+  })
   document.addEventListener('click', (e) => {
     if (!e.target.closest('[data-vrsup]')) return
     st.supOnly = !st.supOnly

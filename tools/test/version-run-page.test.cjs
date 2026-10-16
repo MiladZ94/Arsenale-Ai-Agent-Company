@@ -27,6 +27,7 @@ function view(data, extra) {
     answerBox: (gate) => '<div class="ansbox" data-for="' + esc(gate.id) + '"></div>',
   })
   v.st.data = data
+  if (extra && extra.sel) v.st.sel = extra.sel
   const html = v.render({ active: (extra && extra.active) || [] })
   g.fetch = realFetch
   return html
@@ -109,6 +110,24 @@ test('two runs: two header cards, one compare table with both runs, nothing merg
   assert.match(html, /colspan="4"[^>]*>B 2<\/th>/)
   assert.match(html, /Uno/)
   assert.match(html, /<td class="dim bl" colspan="4">—<\/td>/) // B has no second phase
+})
+
+test('A24: with three runs active a selector shows one run at a time; with two (or one active and others done) all sit side by side', () => {
+  const r = (id, app, status) => run({ id, app, version: '1', status })
+  const three = { runs: [r('a-1', 'Alpha', 'running'), r('b-2', 'Beta', 'running'), r('c-3', 'Gamma', 'planning')] }
+  const html = view(three)
+  assert.match(html, /data-vrsel="1"/)
+  assert.equal((html.match(/<option /g) || []).length, 3)
+  assert.equal((html.match(/<h1 /g) || []).length, 1, 'one run drawn')
+  assert.match(html, /<h1[^>]*>Gamma 1<\/h1>/, 'the newest is the default')
+  // the owner's choice is kept, and a run with a waiting gate is the default
+  assert.match(view(three, { sel: 'a-1' }), /<h1[^>]*>Alpha 1<\/h1>/)
+  const gated = view(three, { DATA: { gates: [{ id: 'g', status: 'waiting', versionRun: 'b-2', question: 'q', askedAt: new Date().toISOString() }] } })
+  assert.match(gated, /<h1[^>]*>Beta 1<\/h1>/)
+  // two active and one finished: side by side, no selector
+  const two = view({ runs: [r('a-1', 'Alpha', 'running'), r('b-2', 'Beta', 'waiting for owner'), r('c-3', 'Gamma', 'done')] })
+  assert.doesNotMatch(two, /data-vrsel/)
+  assert.equal((two.match(/<h1 /g) || []).length, 3)
 })
 
 test('user text is escaped', () => {

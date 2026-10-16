@@ -5,7 +5,7 @@ description: "Starts an autonomous run of a whole version: planning questions, t
 
 # /version-run <version>
 
-You are the supervisor. Read `WORKFLOW.md` (section "Autonomous mode"),
+You are the supervisor. Read `WORKFLOW.md` (section "Autonomous mode"), `autonomous/RULES.md` (the digest),
 `AGENT-RULES.md` and the repo's `PROJECT.md`.
 
 1. Run `arsenale autonomous start <version>`; it creates

@@ -5,6 +5,8 @@ All notable changes are listed here. Versions follow
 
 ## Unreleased
 
+- **Autonomous version runs.** `arsenale init` sets up agents, skills, PROJECT.md and the autonomous files; `arsenale autonomous start|status|resume <version>` keeps the state file and its mirror; a Version run page shows phases, token budget, agents, owner gates and review reports (a run selector when more than two runs are active). Run records carry optional `versionRun`, `phase`, `pid` and `tier`; a 4th heavy-tier run at once is refused, and `resume` closes runs whose process is gone. `arsenale awake` holds a Mac or Linux machine awake. The essential rules ship as `autonomous/RULES.md`. A version must look like `1.2` or `1.2.3-beta.1`.
+- **Header and office.** The top bar fits at 1366 wide ("Live" with the interval as a tooltip), the office strip and the lounge show one idle count, and no label touches a desk.
 - **Dry-run fixes.** `arsenale init --dry-run` shows the whole plan and a declined `init` writes nothing (not even `docs/specs`); `arsenale campus --help` (and the other short modes) print the help; `--version-run` takes a `reviews` list for the Version run page; a gate or decision can name its run with `versionRun`; a supervisor campus change needs a reason and is listed under its run; the round cap and the slow-suite note are in the autonomous rules; waiting-question and phone callouts lose the thick left stripe.
 - **Campus builder and a calmer office (design C2).** The campus is a board of lots
   drawn in 3D from code: 12 building types, a Build mode with a hotbar (keys 1 to 9),

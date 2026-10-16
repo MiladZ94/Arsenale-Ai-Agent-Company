@@ -176,7 +176,8 @@ function init(argv, out) {
 /* ------------------------------------------------------- autonomous start */
 
 const VERSION_RE = /^[A-Za-z0-9][\w.-]{0,29}$/ // no ".", ".." or leading "-" in a file name
-const slug = (s) => String(s).toLowerCase().replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'app'
+const SEMVER_LIKE = /^\d+(\.\d+){0,2}([-.][\w.]+)?$/ // 1, 1.2, 1.2.3, 1.2.3-beta.1
+const slug =(s) => String(s).toLowerCase().replace(/[^\w.-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'app'
 
 function runPaths(dir, version) {
   const app = (readJson(path.join(dir, 'package.json'), {}).name) || path.basename(dir)
@@ -197,6 +198,7 @@ function autonomous(argv, out) {
   const version = args.shift()
   if (!['start', 'status', 'resume'].includes(sub) || !version) { out('usage: arsenale autonomous start|status|resume <version> [--dir <repo>]'); return 1 }
   if (!VERSION_RE.test(version)) { out('The version may use letters, digits, dot, dash and underscore only.'); return 1 }
+  if (sub === 'start' && !SEMVER_LIKE.test(version)) { out('The version must look like 1.2 or 1.2.3 or 1.2.3-beta.1: "' + version + '" is not a version number.'); return 1 }
   const p = runPaths(dir, version)
   const rel = 'docs/specs/' + version + '-list.md'
   if (sub === 'start') {
@@ -233,8 +235,31 @@ function autonomous(argv, out) {
   const s = status.toLowerCase()
   register(p, version, known.includes(s) ? s : undefined)
   out('version run re-registered: ' + p.runId + ' (status: ' + status + ')')
-  out('Next step for the supervisor: read ' + rel + ', run "arsenale answers" and "arsenale inbox", mark runs of this version whose recorded PID is gone as stopped (by PID, never by name), then continue from the first phase that is not merged and gated.')
+  orphans(p.runId, out)
+  out('Next step for the supervisor: read ' + rel + ', run "arsenale answers" and "arsenale inbox", then continue from the first phase that is not merged and gated.')
   return 0
+}
+
+/** Runs of this version still marked as going: one whose recorded PID is gone
+ *  is closed as stopped (by PID, never by name); a live one is left alone, and
+ *  so is one with no PID, which cannot be judged. */
+function orphans(runId, out) {
+  const L = require('./runlog.cjs')
+  const ACTIVE = require('./paths.cjs').ACTIVE
+  let names = []
+  try { names = fs.readdirSync(ACTIVE) } catch { /* none */ }
+  let dead = 0, live = 0, unknown = 0
+  for (const n of names.filter((x) => x.endsWith('.json'))) {
+    const r = readJson(path.join(ACTIVE, n), null)
+    if (!r || r.versionRun !== runId) continue
+    if (!r.pid) { unknown++; continue }
+    if (L.pidAlive(r.pid)) { live++; continue }
+    try {
+      L.finishRun({ id: r.id, agent: r.agent, task: r.task, status: 'stopped', summary: 'Process ' + r.pid + ' is gone (marked stopped by autonomous resume).' }, null)
+      dead++
+    } catch (e) { out('  could not close ' + r.id + ': ' + e.message) }
+  }
+  out('runs of this version: ' + dead + ' marked stopped (process gone), ' + live + ' still alive, ' + unknown + ' without a recorded PID (left as they are)')
 }
 
 /* ----------------------------------------------------------------- awake */

@@ -56,7 +56,7 @@ exact command and a **Test** button. Adapters for each tool are in
 - Safety rules (`policy.json`) are advisory: your assistant is asked to check
   before an outside action, and you approve on the dashboard.
 - `arsenale --help` lists every command.
-- Autonomous runs: `arsenale init`, then `arsenale autonomous start <version>`; `arsenale awake start --pid N` keeps a Mac or Linux machine awake while that process lives.
+- Autonomous runs: `arsenale init`, then `arsenale autonomous start <version>`; `arsenale awake start --pid N` keeps a Mac or Linux machine awake while that process lives. The essential rules are in `autonomous/RULES.md`; `arsenale log --help` lists the run fields (`versionRun`, `phase`, `pid`, `tier`).
 - Uninstall: `install.ps1 -Uninstall` or `./install.sh --uninstall`.
 
 More: [full reference](docs/reference.md), [CONTRIBUTING](CONTRIBUTING.md),

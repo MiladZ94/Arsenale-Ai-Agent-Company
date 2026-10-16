@@ -78,6 +78,32 @@ const versionFields = (input, from) => {
   return out
 }
 
+// The agent process (optional): lets `autonomous resume` tell a run whose
+// process is gone from one still working. Old readers ignore it.
+const pidFields = (input) => {
+  const n = Number(input.pid)
+  return Number.isSafeInteger(n) && n > 0 ? { pid: n } : {}
+}
+const TASK_TIERS = ['light', 'standard', 'heavy']
+const MAX_HEAVY = 3 // AGENT-RULES section 9 rule 7, spec rule 62: across every version run
+const pidAlive = (pid) => { try { process.kill(pid, 0); return true } catch (e) { return e.code === 'EPERM' } }
+
+/** Heavy-tier runs going now. A record whose recorded PID is gone is not
+ *  counted (a crashed run must not block the others); one without a PID is. */
+function heavyActive() {
+  let names = []
+  try { names = fs.readdirSync(ACTIVE) } catch { return [] }
+  const out = []
+  for (const n of names) {
+    if (!n.endsWith('.json')) continue
+    try {
+      const r = JSON.parse(fs.readFileSync(path.join(ACTIVE, n), 'utf8'))
+      if (r && r.tier === 'heavy' && !(r.pid && !pidAlive(r.pid))) out.push(r)
+    } catch { /* being written, or not a run */ }
+  }
+  return out
+}
+
 /** Which door a record came through, for records written by a door other
  *  than the CLI (old records without `source` read as cli). */
 function sourceFields(actor) {
@@ -100,8 +126,17 @@ function readActive(id) {
  *  flagged, and `warnings` carries the line the CLI prints. */
 function startRun(input, actor) {
   if (!input || !input.agent || !input.task) throw fail(400, 'an entry needs at least "agent" and "task"')
-  const now = new Date()
+  if (input.tier !== undefined && !TASK_TIERS.includes(input.tier)) throw fail(400, 'tier must be one of: ' + TASK_TIERS.join(', '))
   fs.mkdirSync(ACTIVE, { recursive: true })
+  // the count and the write sit under one lock, so two starts cannot both pass
+  return input.tier === 'heavy' ? withLock(path.join(ACTIVE, '.heavy'), () => startRunLocked(input, actor)) : startRunLocked(input, actor)
+}
+function startRunLocked(input, actor) {
+  if (input.tier === 'heavy') {
+    const n = heavyActive().length
+    if (n >= MAX_HEAVY) throw fail(409, 'Refused: ' + n + ' heavy-tier runs are already going (the limit is ' + MAX_HEAVY + ' at once, across all version runs). Wait for one to finish, or start this one at the standard tier.')
+  }
+  const now = new Date()
   const id = now.toISOString().replace(/[:.]/g, '-') + '-' + Math.random().toString(36).slice(2, 6)
   const warnings = []
   let budget = null
@@ -125,7 +160,7 @@ function startRun(input, actor) {
     doing: input.doing || '',            // the latest line
     steps: input.doing ? [{ at: input.startedAt || now.toISOString(), text: String(input.doing) }] : [],
     startedAt: input.startedAt || now.toISOString(),
-  }, companyFields(input), versionFields(input), sourceFields(actor), budget && budget.level !== 'ok' ? { budgetWarned: true, budgetLevel: budget.level } : {})
+  }, pidFields(input), TASK_TIERS.includes(input.tier) ? { tier: input.tier } : {}, companyFields(input), versionFields(input), sourceFields(actor), budget && budget.level !== 'ok' ? { budgetWarned: true, budgetLevel: budget.level } : {})
   writeAtomic(path.join(ACTIVE, id + '.json'), JSON.stringify(record, null, 2))
   // a job started for a task links to it and moves it from "to do" to "in
   // progress" (never backwards); a missing or unreadable task never stops the log
@@ -398,6 +433,6 @@ function campus(input, actor) { return require('./campus.cjs').apply(input, acto
 
 module.exports = {
   campus, OWNER_ONLY, fail, actorFor, cliActor, actorLabel, requireBoard, clipCp,
-  startRun, progress, finishRun, activeFileFor, versionRun, versionLedger, noteIncidents, budgetCheck, readActive,
+  startRun, heavyActive, pidAlive, progress, finishRun, activeFileFor, versionRun, versionLedger, noteIncidents, budgetCheck, readActive,
   gate, decision, answer, dismiss, setBudget, setBudgetsEnabled, updateEmployee,
 }

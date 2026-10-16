@@ -217,8 +217,23 @@ function office3d(h) {
     const ppu = eng.view.ppu
     last.ppu = ppu
     const obstacles = []   // avatar boxes
+    const deskBoxes = []   // every desk drawn: no label may touch one (an avatar stands behind its desk, so desks are not avatar obstacles)
     const placed = []      // label boxes
     const pos = new Map()
+    for (const r of rooms) {
+      if (r.zone === 'lounge') continue
+      for (let i = 0, n = caps.get(r.zone) || 0; i < n; i++) {
+        const d = deskPos(r.zone, i)
+        let l = Infinity, rr = -Infinity, t = Infinity, b = -Infinity
+        // the desk of kit.cjs: 1.0 x 0.5 on the floor, 0.6 high, centred 0.12 in front of its spot
+        for (const dx of [-0.5, 0.5]) for (const dz of [-0.25, 0.25]) for (const y of [0, 0.6]) {
+          const p = eng.project(d.x + dx, y, d.z + 0.12 + dz)
+          l = Math.min(l, p.x); rr = Math.max(rr, p.x); t = Math.min(t, p.y); b = Math.max(b, p.y)
+        }
+        deskBoxes.push({ l, r: rr, t, b })
+      }
+    }
+    last.desks = deskBoxes
     for (const f of model.figures) {
       const o = figs.get(f.id)
       if (!o) continue
@@ -252,7 +267,7 @@ function office3d(h) {
     ov.querySelectorAll('.o3c,.o3r').forEach((c) => c.remove())
     while (lines.firstChild) lines.removeChild(lines.firstChild)
     const tagged = new Set()
-    const free = (b, ignore) => !obstacles.some((q) => hit(q, b)) && !placed.some((q) => q !== ignore && hit(q, b))
+    const free = (b, ignore) => !obstacles.some((q) => hit(q, b)) && !deskBoxes.some((q) => hit(q, b)) && !placed.some((q) => q !== ignore && hit(q, b))
     const inside = (b) => b.l >= 2 && b.t >= 2 && b.r <= eng.W - 2 && b.b <= eng.H - 2
     const chip = (cls, html, cands, extra) => {
       const c = document.createElement('div')
@@ -388,9 +403,11 @@ function office3d(h) {
     zoomPct: () => eng.zoomPct(),
     view: () => eng.getView(),
     info() {
+      const o0 = () => eng.host.getBoundingClientRect()
       const rect = (el) => { const r = el.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height } }
       return {
         figures: model ? model.figures.map((f) => ({ id: f.id, agent: f.agent, key: f.key, n: f.n, state: f.state, zone: f.zone, runCount: f.runCount, box: rect(figs.get(f.id).el), tag: figs.get(f.id).tag.style.visibility === 'hidden' ? null : rect(figs.get(f.id).tag) })) : [],
+        desks: (last.desks || []).map((d) => ({ l: d.l + o0().left, r: d.r + o0().left, t: d.t + o0().top, b: d.b + o0().top })),
         idle: model ? model.idle.length : 0, rooms: rooms.map((r) => r.zone), ppu: last.ppu,
         labels: [...ov.querySelectorAll('.o3c,.o3r')].map((c) => ({ cls: c.className, text: c.textContent, box: rect(c) })),
         side: rect(side), scene: rect(eng.host),

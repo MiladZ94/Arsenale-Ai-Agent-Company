@@ -80,6 +80,8 @@
     if (w3on()) {
       const model = scene3d(S, desks, current)
       keys3 = model.keys
+      // one source for "N idle": the list the lounge shows
+      if (CO) $('ohead').innerHTML = CO.officeHead(S, officeId, model.idle.length)
       W3.sync(model)
       if ($('stage-in').firstChild) $('stage-in').innerHTML = ''
     } else {
@@ -271,7 +273,8 @@
         const res = await fetch('api/state', { cache: 'no-store', headers: stateTag ? { 'If-None-Match': stateTag } : {} })
         if (res.status !== 304 && !res.ok) throw new Error('HTTP ' + res.status)
         badge.className = 'live'
-        badge.innerHTML = '<i></i> ' + T('Live · every 1.5s')
+        badge.innerHTML = '<i></i> ' + T('Live')
+        badge.title = T('Refreshes every 1.5 seconds')
         if (res.status === 304) return
         stateTag = res.headers.get('ETag') || ''
         const fresh = await res.json()

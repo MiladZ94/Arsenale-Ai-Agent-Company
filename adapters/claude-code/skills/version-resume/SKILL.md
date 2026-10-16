@@ -6,7 +6,7 @@ description: "Resumes an autonomous version run from its state file after a stop
 # /version-resume <version>
 
 You are the supervisor. Run `arsenale autonomous resume <version>`, then follow
-the rules in `WORKFLOW.md` "Autonomous mode":
+the rules in `WORKFLOW.md` "Autonomous mode" (digest: `autonomous/RULES.md`):
 
 1. Read `docs/specs/<version>-list.md`, `arsenale answers` and `arsenale inbox`.
 2. Mark runs of this version whose recorded PID is gone as `stopped`

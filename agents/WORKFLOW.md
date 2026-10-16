@@ -144,7 +144,7 @@ language. When the agent is done, the supervisor closes the run with
 ## Autonomous mode (a whole version, one planning session)
 
 A separate mode: `/version-run <app> <version>`. It does not change `/feature`
-or `/fix`. Full rules: `docs/specs/autonomous-mode.md`.
+or `/fix`. Short digest of the rules: `autonomous/RULES.md` (installed to `<data folder>/autonomous/RULES.md`).
 
 1. **Plan** (the only interactive part): specs, questions in batches of 5,
    mockups, test baseline, phase plan with risk tiers and a token budget. The

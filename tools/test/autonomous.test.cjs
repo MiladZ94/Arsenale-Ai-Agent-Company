@@ -171,3 +171,49 @@ test('dry run S2: --dry-run lists every step without asking; a declined init cre
   const real = m.run('init', '--yes')
   assert.match(fs.readFileSync(path.join(m.repo, 'PROJECT.md'), 'utf8'), /Last checked against the code: \d{4}-\d\d-\d\d/, real.out)
 })
+
+test('spec test 16: resume closes this version\'s runs whose PID is gone (by PID), leaves live ones and ones without a PID', (t) => {
+  const m = machine(t)
+  assert.equal(m.run('autonomous', 'start', '2.0').code, 0)
+  const runId = fs.readdirSync(path.join(m.data, 'version-runs'))[0].replace(/\.json$/, '')
+  const gone = spawnSync(process.execPath, ['-e', '0']).pid
+  const start = (task, extra) => {
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'log-agent-run.cjs'), '--start', JSON.stringify(Object.assign({ agent: 'implementer', task, versionRun: runId }, extra))], { env: Object.assign({}, process.env, { HOME: m.homeDir, USERPROFILE: m.homeDir, ARSENALE_HOME: m.data }), encoding: 'utf8' })
+    assert.equal(r.status, 0, r.stderr)
+    return r.stdout.trim()
+  }
+  const dead = start('dead one', { pid: gone }), live = start('live one', { pid: process.pid }), nopid = start('no pid')
+  const other = start('other version', { pid: gone, versionRun: 'some-other-1.0' })
+  const act = (id) => fs.existsSync(path.join(m.data, 'agent-runs', 'active', id + '.json'))
+  const r = m.run('autonomous', 'resume', '2.0')
+  assert.equal(r.code, 0, r.out)
+  assert.match(r.out, /1 marked stopped.*1 still alive.*1 without a recorded PID/)
+  assert.ok(!act(dead), 'the dead run is closed')
+  assert.ok(act(live) && act(nopid) && act(other), 'the others stay')
+  const rec = fs.readdirSync(path.join(m.data, 'agent-runs')).filter((n) => n.endsWith('.json')).map((n) => JSON.parse(fs.readFileSync(path.join(m.data, 'agent-runs', n), 'utf8')))
+  assert.deepEqual(rec.map((x) => [x.id, x.status]), [[dead, 'stopped']])
+  assert.equal(rec[0].versionRun, runId)
+})
+
+test('autonomous start refuses a version that is not a version number, and takes the usual shapes', (t) => {
+  const m = machine(t)
+  for (const bad of ['abc', 'v1', '1.', '1.2.3.4x-', 'x1.0']) {
+    const r = m.run('autonomous', 'start', bad)
+    assert.equal(r.code, 1, bad + ': ' + r.out)
+  }
+  assert.match(m.run('autonomous', 'start', 'abc').out, /not a version number/)
+  assert.ok(!fs.existsSync(path.join(m.repo, 'docs', 'specs', 'abc-list.md')))
+  for (const ok of ['1', '1.2', '1.2.3', '1.2.3-beta.1']) assert.equal(m.run('autonomous', 'start', ok).code, 0, ok)
+})
+
+test('the autonomous rules are shipped as a short digest, and nothing installed points at the unshipped spec', () => {
+  const digest = fs.readFileSync(path.join(ROOT, 'autonomous', 'RULES.md'), 'utf8')
+  assert.ok(digest.split('\n').length <= 120, 'a digest, not the spec')
+  assert.ok(JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).files.includes('autonomous/'))
+  const files = []
+  const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const f = path.join(d, e.name); e.isDirectory() ? walk(f) : files.push(f) } }
+  for (const d of ['agents', 'autonomous', 'adapters', 'packs']) walk(path.join(ROOT, d))
+  const bad = files.filter((f) => /docs\/specs\/autonomous-mode/.test(fs.readFileSync(f, 'utf8')))
+  assert.deepEqual(bad, [])
+  assert.match(fs.readFileSync(path.join(ROOT, 'agents', 'WORKFLOW.md'), 'utf8'), /autonomous\/RULES\.md/)
+})
