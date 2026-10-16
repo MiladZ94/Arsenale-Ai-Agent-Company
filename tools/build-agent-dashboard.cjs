@@ -39,13 +39,9 @@ const { RUNS, ACTIVE, OUT, OUT_ARCHIVE, GATES, DECISIONS, ANSWERS } = P
 const { renderOffice } = require('./agent-office-page.cjs')
 const { t, langScript, langFromRequest } = require('./dashboard-strings.cjs')
 
-/** Other agents log while the server reads, so a file is never seen half
- *  written: write a temp file next to it, then rename over. */
-function writeAtomic(file, text) {
-  const tmp = file + '.' + process.pid + '-' + Math.random().toString(36).slice(2, 8) + '.tmp'
-  fs.writeFileSync(tmp, text)
-  fs.renameSync(tmp, file)
-}
+// Other agents log while the server reads, so a file is never seen half
+// written: a temp file next to it, then a rename (store.cjs).
+const { writeAtomic } = require('./store.cjs')
 
 function readJsonDir(dir) {
   if (!fs.existsSync(dir)) return []
@@ -904,14 +900,17 @@ function computeStats(runs) {
     const d = new Date(iso);
     return !isNaN(d) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
   };
-  const totalTokens = runs.reduce((a, r) => a + (r.tokens || 0), 0);
-  const todayTokens = runs.filter((r) => isToday(r.finishedAt)).reduce((a, r) => a + (r.tokens || 0), 0);
+  // the board's count (transcript first, then what was reported): a record's
+  // own "tokens" is often absent, so the archive used to say 0
+  const tok = (r) => r.tokTotal || 0;
+  const totalTokens = runs.reduce((a, r) => a + (tok(r)), 0);
+  const todayTokens = runs.filter((r) => isToday(r.finishedAt)).reduce((a, r) => a + (tok(r)), 0);
 
   const byAgent = new Map();
   for (const r of runs) {
     const k = r.agent || T('unknown');
     const e = byAgent.get(k) || { name: k, tokens: 0, runs: 0, time: 0 };
-    e.tokens += r.tokens || 0; e.runs += 1; e.time += r.durMs || 0;
+    e.tokens += tok(r); e.runs += 1; e.time += r.durMs || 0;
     byAgent.set(k, e);
   }
   const agents = [...byAgent.values()]
@@ -922,7 +921,7 @@ function computeStats(runs) {
   for (const r of runs) {
     const label = (r.modelKey || T('unknown')) + (r.effort ? ' · ' + r.effort : '');
     const e = byModel.get(label) || { name: label, tokens: 0, runs: 0 };
-    e.tokens += r.tokens || 0; e.runs += 1;
+    e.tokens += tok(r); e.runs += 1;
     byModel.set(label, e);
   }
   const models = [...byModel.values()].sort((a, b) => b.tokens - a.tokens);
@@ -943,7 +942,7 @@ function computeStats(runs) {
     const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
     const tokens = runs
       .filter((r) => { const t = new Date(r.finishedAt).getTime(); return t >= start.getTime() && t < end.getTime(); })
-      .reduce((a, r) => a + (r.tokens || 0), 0);
+      .reduce((a, r) => a + (tok(r)), 0);
     days.push({ label: start.toLocaleDateString('en-CA', { month: '2-digit', day: '2-digit' }), tokens });
   }
 

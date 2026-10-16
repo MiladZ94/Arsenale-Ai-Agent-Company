@@ -158,20 +158,23 @@ h1.co{white-space:nowrap;font-size:17px}
 .org .ocol{padding-top:30px}
 .org .ocol:before{top:0;height:30px;width:2px;background:#CBD3DB}
 .org .ocolh{font:700 15px var(--font-ui);color:#F3F5F7;border-radius:10px 10px 0 0;padding:11px 16px;align-items:center;flex-wrap:nowrap}
-.org .ocolh b{color:#F3F5F7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* a name keeps a fixed width and ends in an ellipsis; the numbers give way first */
+.org .ocolh b{color:#F3F5F7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto;min-width:100px}
 .org .ocolh .ocnt{font:700 11px var(--font-ui);background:rgba(30,40,50,.12);color:#F3F5F7;border-radius:9px;padding:1px 8px;flex:none}
 .ompl{list-style:none;margin:0;padding:10px 14px;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;background:var(--panel)}
-.opr{display:flex;align-items:center;gap:6px}
+.opr{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .opr.retired{opacity:.55}
-.opb{flex:1;min-width:0;display:flex;gap:12px;align-items:center;padding:7px 2px;background:none;border:0;cursor:pointer;text-align:start;font:inherit;color:inherit;border-radius:6px}
+.opb{flex:1 1 150px;min-width:150px;display:flex;gap:12px;align-items:center;padding:7px 2px;background:none;border:0;cursor:pointer;text-align:start;font:inherit;color:inherit;border-radius:6px}
 .opb:hover:not(:disabled) b{text-decoration:underline dotted}
 .opb:disabled{cursor:default}
 /* what each person costs this month: model, tokens or the budget, its bar */
+/* model, cost and Budget… move under the name together when the column is narrow */
+.oside{flex:none;margin-inline-start:auto;display:flex;align-items:center;gap:6px}
 .ost{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px;max-width:46%;text-align:end}
 .ost .ostl{display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .ost .num{font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ost .cbar{width:90px}
-.org .ocolh .ocsp{font:400 12px var(--font-ui);color:#F3F5F7;opacity:.9;margin-inline-start:auto;white-space:nowrap;font-variant-numeric:tabular-nums}
+.org .ocolh .ocsp{font:400 12px var(--font-ui);color:#F3F5F7;opacity:.9;margin-inline-start:auto;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 .oav{position:relative;border-radius:8px;padding:5px 7px 0;line-height:0;flex:none}
 .oav i{position:absolute;inset-inline-end:-3px;bottom:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--panel)}
 .otx{min-width:0}
@@ -229,7 +232,8 @@ function companyViews(h) {
     if (!sp) return ''
     // each part isolated, so "$0" stays "$0" inside other text
     const tok = '<bdi>' + k(sp.tokens) + ' ' + T('tok') + '</bdi> · '
-    if (sp.usdStatus === 'none') return tok + '<bdi dir="ltr">' + (sp.runs ? T('USD n/a') : '$' + fa(0)) + '</bdi>'
+    // nothing measured is not "$0": like every unpriced sum it is n/a
+    if (sp.usdStatus === 'none') return tok + '<bdi dir="ltr">' + T('USD n/a') + '</bdi>'
     if (sp.usdStatus === 'na') return tok + '<bdi dir="ltr" class="dim" title="' + T('Model prices are not set in model-prices.json') + '">' + T('USD n/a') + '</bdi>'
     return tok + '<bdi dir="ltr">' + usd(sp.usd) + (sp.usdStatus === 'partial' ? '<span class="dim" title="' + fa(sp.usdMissing) + T(' runs have tokens but no price') + '">+</span>' : '') + '</bdi>'
   }
@@ -436,7 +440,7 @@ function companyViews(h) {
     return '<div class="crumb"><button type="button" data-goto="campus">' + T('Campus') + '</button><span class="dim">/</span><span class="sq" style="background:' + esc(o.color) + '"></span><b>' + esc(oname(o)) + '</b>' + '</div>' +
       '<div class="ostats"><div class="a"><b>' + fa(c.working) + '</b>' + T('working') + '</div><div class="b"><b>' + fa(c.waiting) + '</b>' + T('waiting for you') + '</div><div><b>' + fa(idle) + '</b>' + T('idle') + '</div>' +
       '<div><b dir="ltr">' + (sd.spend ? k(sd.spend.tokens) : '—') + '</b>' + T('tokens this month') + '</div>' +
-      '<div><b dir="ltr">' + (!sd.spend || sd.spend.usdStatus === 'na' || (sd.spend.usdStatus === 'none' && sd.spend.runs) ? T('n/a') : usd(sd.spend.usd)) + '</b>' + T('USD') + '</div>' +
+      '<div><b dir="ltr">' + (!sd.spend || sd.spend.usdStatus === 'na' || sd.spend.usdStatus === 'none' ? T('n/a') : usd(sd.spend.usd)) + '</b>' + T('USD') + '</div>' +
       (b && b.on ? '<div class="' + (b.level === 'stop' || b.level === 'over' ? 'r' : b.level === 'soft' ? 'b' : '') + '"><b>' + pctTxt(b.pct) + '</b>' + T('monthly budget') + '</div>' : '<div><b>—</b>' + budgetWord(b) + '</div>') +
       (o.builtIn ? '' : '<div style="display:flex;align-items:center">' + editBtn('office', o.id) + '</div>') + '</div>'
   }
@@ -459,7 +463,7 @@ function companyViews(h) {
     const al = b && b.on ? (b.level === 'stop' ? '<span class="alert h">' + T('HARD STOP') + '</span>' : b.level === 'over' ? '<span class="alert h">' + fa(100) + T('%') + '+</span>' : b.level === 'soft' ? '<span class="alert s">' + fa(b.softAlertPct) + T('%') + '+</span>' : '') : ''
     const num = b && b.on ? limitTxt(b) : sp && sp.tokens ? k(sp.tokens) + ' ' + T('tok') : ''
     const stat = e.kind === 'retired' || !(e.model || al || num) ? '' : '<span class="ost"><span class="ostl">' + (e.model ? '<span class="mdlc">' + esc(e.model) + '</span>' : '') + al + '</span>' + (num ? '<span class="num" dir="ltr">' + num + '</span>' : '') + bar(b) + '</span>'
-    return '<li class="opr' + (e.kind === 'retired' ? ' retired' : '') + '"><button type="button" class="opb" data-ev="member-open" data-arg="' + esc(e.id) + '" data-to-team="1"' + (e.kind === 'retired' ? ' disabled' : '') + '><span class="oav" style="background:' + esc(ART.shade(o.color || '#56B6C2', 0.42)) + '">' + ART.person(e.id + (e.look ? ':' + e.look : ''), o.color, 30) + (dot ? '<i style="background:' + dot + '" title="' + esc(T(STATUS_TXT[s])) + '"></i>' : '') + '</span><span class="otx"><b dir="auto">' + esc(pname(e)) + '</b>' + (ptitle(e) || e.kind === 'retired' ? '<span dir="auto">' + esc(e.kind === 'retired' ? T('retired: definition file removed') : ptitle(e)) + '</span>' : '') + '</span></button>' + stat + budget + '</li>'
+    return '<li class="opr' + (e.kind === 'retired' ? ' retired' : '') + '"><button type="button" class="opb" data-ev="member-open" data-arg="' + esc(e.id) + '" data-to-team="1"' + (e.kind === 'retired' ? ' disabled' : '') + '><span class="oav" style="background:' + esc(ART.shade(o.color || '#56B6C2', 0.42)) + '">' + ART.person(e.id + (e.look ? ':' + e.look : ''), o.color, 30) + (dot ? '<i style="background:' + dot + '" title="' + esc(T(STATUS_TXT[s])) + '"></i>' : '') + '</span><span class="otx"><b dir="auto">' + esc(pname(e)) + '</b>' + (ptitle(e) || e.kind === 'retired' ? '<span dir="auto">' + esc(e.kind === 'retired' ? T('retired: definition file removed') : ptitle(e)) + '</span>' : '') + '</span></button>' + (stat || budget ? '<span class="oside">' + stat + budget + '</span>' : '') + '</li>'
   }
 
   function org(S) {
@@ -491,7 +495,7 @@ function companyViews(h) {
     }
     html += '</div></div>'
     // the office packs not installed yet, read once from the server
-    if (LIVE && st.packsLeft === undefined) { st.packsLeft = null; fetch('api/packs', { cache: 'no-store' }).then((r) => r.json()).then((d) => { st.packsLeft = (d.packs || []).filter((p) => !p.installed).map((p) => p.name); redraw() }, () => { st.packsLeft = [] }) }
+    if (LIVE && st.packsLeft === undefined) { st.packsLeft = null; fetch('api/packs', { cache: 'no-store' }).then((r) => r.json()).then((d) => { st.packsLeft = (d.packs || []).filter((p) => !p.installed && !officeList().some((o) => p.office && o.id === p.office.id)).map((p) => p.name); redraw() }, () => { st.packsLeft = [] }) }
     const cons = co.employees.filter((e) => e.kind === 'contractor')
     if (cons.length) html += '<div class="ocont"><div class="ch">' + T('Contractors') + ' <span class="dim" style="text-transform:none;letter-spacing:0">' + T('agent names with no definition in the agent folders, this month') + '</span></div><div class="chips">' + cons.map((e) => '<span class="ochip" dir="ltr">' + esc(e.id) + ' ×' + fa(e.runsThisPeriod) + (e.standing && e.standing.spend && e.standing.spend.tokens ? ' · ' + k(e.standing.spend.tokens) + ' ' + T('tok') : '') + '</span>').join('') + '</div></div>'
     html += '<div class="oft"><span><i style="background:#0C8A62"></i>' + T('working') + '</span><span><i style="background:#B8720F"></i>' + T('waiting for you') + '</span><span><i style="background:#C8372D"></i>' + T('paused or stopped by budget') + '</span>' +

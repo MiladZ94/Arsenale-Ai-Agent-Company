@@ -338,6 +338,8 @@ function start(opts = {}) {
       server.on('close', stopNotify)
       // the first start of 1.0 writes the safety defaults (spec 7, Migration)
       try { require('./policy.cjs').ensureDefaults('dashboard') } catch { /* read-only folder: every category reads as ask anyway */ }
+      // a writer killed between its temp file and the rename left the temp behind
+      try { const Pt = require('./paths.cjs'); require('./store.cjs').cleanStray([Pt.RUNS, Pt.ACTIVE, Pt.GATES, Pt.DECISIONS, Pt.VERSION_RUNS, Pt.COMPANY, require('path').join(Pt.COMPANY, 'issues')]) } catch { /* nothing to clean */ }
       const url = 'http://localhost:' + port + '/'
       resolve({ server, port, url, keyUrl: url + '?k=' + KEY })
     })

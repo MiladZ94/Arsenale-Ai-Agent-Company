@@ -22,6 +22,7 @@
 const fs = require('fs')
 const path = require('path')
 const P = require('./paths.cjs')
+const { writeAtomic, withLock } = require('./store.cjs')
 
 const { RUNS, ACTIVE } = P
 const B = () => require('./build-agent-dashboard.cjs')
@@ -125,7 +126,7 @@ function startRun(input, actor) {
     steps: input.doing ? [{ at: input.startedAt || now.toISOString(), text: String(input.doing) }] : [],
     startedAt: input.startedAt || now.toISOString(),
   }, companyFields(input), versionFields(input), sourceFields(actor), budget && budget.level !== 'ok' ? { budgetWarned: true, budgetLevel: budget.level } : {})
-  fs.writeFileSync(path.join(ACTIVE, id + '.json'), JSON.stringify(record, null, 2))
+  writeAtomic(path.join(ACTIVE, id + '.json'), JSON.stringify(record, null, 2))
   // a job started for a task links to it and moves it from "to do" to "in
   // progress" (never backwards); a missing or unreadable task never stops the log
   if (record.issue) { try { require('./tasks.cjs').linkRun(record.issue, id, actor || cliActor({})) } catch { /* not a task here */ } }
@@ -137,6 +138,12 @@ function startRun(input, actor) {
 function progress(input, actor) {
   const file = activeFileFor(input && input.id)
   if (!input || !input.id || !fs.existsSync(file)) throw fail(404, 'no run is active with that id')
+  // under the lock finishRun takes too: a step written after the finish would
+  // bring the run back as active
+  return withLock(file, () => progressLocked(file, input, actor))
+}
+function progressLocked(file, input, actor) {
+  if (!fs.existsSync(file)) throw fail(404, 'no run is active with that id')
   const run = JSON.parse(fs.readFileSync(file, 'utf8'))
   if (actor && actor.role === 'agent' && actor.name && actor.name !== run.agent) throw fail(403, 'agents may only log steps on their own job')
   // "text" is accepted too: briefs and agents often use it instead of "doing".
@@ -151,7 +158,7 @@ function progress(input, actor) {
   run.steps = Array.isArray(run.steps) ? run.steps : []
   if (text) run.steps.push({ at: new Date().toISOString(), text })
   if (run.steps.length > 200) run.steps = run.steps.slice(-200)
-  fs.writeFileSync(file, JSON.stringify(run, null, 2))
+  writeAtomic(file, JSON.stringify(run, null, 2))
   return { ok: true, run }
 }
 
@@ -166,7 +173,8 @@ function finishRun(input, actor) {
   let fromActive = null
   if (input.id) {
     const activeFile = activeFileFor(input.id)
-    if (fs.existsSync(activeFile)) {
+    if (fs.existsSync(activeFile)) withLock(activeFile, () => {
+      if (!fs.existsSync(activeFile)) return
       try {
         const run = JSON.parse(fs.readFileSync(activeFile, 'utf8'))
         startedAt = startedAt || run.startedAt
@@ -177,7 +185,7 @@ function finishRun(input, actor) {
         fromActive = run
       } catch { /* keep going */ }
       fs.unlinkSync(activeFile)
-    }
+    })
   }
   const usage = input.usage && typeof input.usage === 'object' ? {
     tokens: Number(input.usage.tokens || input.usage.totalTokens) || 0,
@@ -232,7 +240,7 @@ function finishRun(input, actor) {
   const safeAgent = record.agent.replace(/[^\w.-]/g, '').replace(/^\.+/, '').slice(0, 60) || 'agent'
   fs.mkdirSync(RUNS, { recursive: true })
   const file = path.join(RUNS, stamp + '-' + safeAgent + '-' + Math.random().toString(36).slice(2, 6) + '.json')
-  fs.writeFileSync(file, JSON.stringify(record, null, 2))
+  writeAtomic(file, JSON.stringify(record, null, 2))
   if (record.issue) { try { require('./tasks.cjs').linkRun(record.issue, record.id, actor || cliActor({}), { finish: true }) } catch { /* not a task here */ } }
   return { file, record }
 }
@@ -252,6 +260,10 @@ function versionRun(input, actor) {
   if (actor && actor.role === 'agent') throw fail(403, 'only the supervisor records a version run')
   const id = input && input.id ? String(input.id).replace(/[^\w.-]/g, '').slice(0, 60) : ''
   if (!id) throw fail(400, 'a version run needs an "id" such as app-x-1.2')
+  fs.mkdirSync(P.VERSION_RUNS, { recursive: true })
+  return withLock(versionFile(id), () => versionRunLocked(id, input))
+}
+function versionRunLocked(id, input) {
   let cur = {}
   try { cur = JSON.parse(fs.readFileSync(versionFile(id), 'utf8')) } catch { /* new */ }
   const rec = Object.assign({ id, app: '', version: '', status: 'planning', phases: [], budget: null, stateFile: '', integrationBranch: '' }, cur)
@@ -281,17 +293,7 @@ function versionRun(input, actor) {
     })
   }
   rec.updatedAt = new Date().toISOString()
-  // a temporary file next to it, then a rename: an interrupted write must not
-  // leave a half file for the dashboard to choke on
-  fs.mkdirSync(P.VERSION_RUNS, { recursive: true })
-  const tmp = versionFile(id) + '.' + process.pid + '.tmp'
-  try {
-    fs.writeFileSync(tmp, JSON.stringify(rec, null, 2))
-    fs.renameSync(tmp, versionFile(id))
-  } catch (e) {
-    try { fs.unlinkSync(tmp) } catch { /* nothing left to clean */ }
-    throw e
-  }
+  writeAtomic(versionFile(id), JSON.stringify(rec, null, 2))
   return rec
 }
 
