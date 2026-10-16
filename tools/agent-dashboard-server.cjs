@@ -55,7 +55,7 @@ const http = require('http')
 const fs = require('fs')
 const crypto = require('crypto')
 
-const PARTS = ['./build-agent-dashboard.cjs', './agent-office-page.cjs', './dashboard-strings.cjs', './agent-company.cjs', './agent-company-page.cjs', './activity-page.cjs', './everyone-page.cjs', './everyone-art.cjs', './office-world.cjs', './paths.cjs'].map((f) => require.resolve(f))
+const PARTS = ['./build-agent-dashboard.cjs', './agent-office-page.cjs', './dashboard-strings.cjs', './agent-company.cjs', './agent-company-page.cjs', './activity-page.cjs', './version-run-page.cjs', './everyone-page.cjs', './everyone-art.cjs', './office-world.cjs', './paths.cjs'].map((f) => require.resolve(f))
 let stamp = ''
 let page = null
 function pages() {
@@ -188,6 +188,7 @@ function start(opts = {}) {
     '/api/notify': [(b) => require('./notify.cjs').configure(b, BOARD)],
   }
   const READS = {
+    '/api/version-runs': () => require('./version-run-page.cjs').load(),
     '/api/tasks': () => ({ tasks: require('./tasks.cjs').listTasks() }),
     '/api/task': (q) => require('./tasks.cjs').getTask(q.get('id')),
     '/api/team': () => {

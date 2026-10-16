@@ -35,6 +35,7 @@ const path = require('path')
 delete require.cache[require.resolve('./office-world.cjs')]
 const { WORLD_STYLE, campusArt, office3d, worldScripts } = require('./office-world.cjs')
 const { ACTIVITY_STYLE, activityView } = require('./activity-page.cjs')
+const { VR_STYLE, versionRunView } = require('./version-run-page.cjs')
 const { EVERYONE_STYLE, everyoneViews } = require('./everyone-page.cjs')
 const { everyoneArt } = require('./everyone-art.cjs')
 
@@ -1043,7 +1044,7 @@ function controlRoom(h) {
     redraw()
   }
 
-  return { st, rail, mini, decisions, usage, inspectorExtra, answer, dismiss, waiting, shown, canAnswer, post }
+  return { st, rail, mini, decisions, usage, inspectorExtra, answer, dismiss, waiting, shown, canAnswer, post, answerBox }
 }
 
 function officeClient() {
@@ -1238,7 +1239,7 @@ function officeClient() {
   try {
     const saved = JSON.parse(sessionStorage.getItem('agent-office') || '{}')
     sel = saved.sel || null; drawerOpen = !!saved.drawer; filter = saved.filter || ''
-    if (['office', 'dec', 'use', 'campus', 'org', 'act', 'tasks', 'appr', 'team', 'dlv', 'set'].includes(saved.mode)) mode = saved.mode
+    if (['office', 'dec', 'use', 'campus', 'org', 'act', 'vr', 'tasks', 'appr', 'team', 'dlv', 'set'].includes(saved.mode)) mode = saved.mode
     if (typeof saved.office === 'string') officeId = saved.office
     const v = saved.view
     if (v && [v.z, v.x, v.y].every((n) => typeof n === 'number' && isFinite(n))) view = { z: v.z, x: v.x, y: v.y }
@@ -1257,12 +1258,13 @@ function officeClient() {
     portrait: (a, px, dim) => portrait(a, px, dim), sprite: (k, a, x, y, px, o) => sprite(k, a, x, y, px, o),
     post: (u, b) => CR.post(u, b), redraw: () => renderAll(), go: (to) => navigate(to), refresh: () => fetchCompany(true),
   }) : null
-  const HASH = { campus: 'campus', org: 'org', decisions: 'dec', usage: 'use', office: 'office', activity: 'act', tasks: 'tasks', approvals: 'appr', team: 'team', deliverables: 'dlv', settings: 'set' }
+  const HASH = { campus: 'campus', org: 'org', decisions: 'dec', usage: 'use', office: 'office', activity: 'act', versionrun: 'vr', tasks: 'tasks', approvals: 'appr', team: 'team', deliverables: 'dlv', settings: 'set' }
   const AV = activityView({ esc, fa, hhmm, ms, T, cleanTask, redraw: () => renderAll() })
+  const VV = versionRunView({ esc, T, ms, live: () => LIVE, shown: () => mode === 'vr', answerBox: (g) => CR.answerBox(g), redraw: () => renderAll() })
   // the 1.0 screens (everyone-page.cjs): tasks, approvals, team, deliverables, settings, the wizard
   const EV = everyoneViews({ esc, fa, T, errTxt, k, post: (u, b) => CR.post(u, b), redraw: () => redrawLater(), refresh: () => fetchCompany(true) })
   function fromHash() {
-    const m = /^#\/(campus|org|decisions|usage|office|activity|tasks|approvals|team|deliverables|settings)(?:\/([\w-]+))?/.exec(location.hash || '')
+    const m = /^#\/(campus|org|decisions|usage|office|activity|versionrun|tasks|approvals|team|deliverables|settings)(?:\/([\w-]+))?/.exec(location.hash || '')
     if (!m) return false
     mode = HASH[m[1]]
     if (m[2]) officeId = m[2]
@@ -2361,13 +2363,14 @@ function officeClient() {
     board.classList.toggle('rail-open', railOpen)
     board.classList.toggle('co', !!CO)
     // the campus and the org chart need the width: the rail folds to its strip there
-    board.classList.toggle('rail-mini', mode === 'campus' || mode === 'org' || EV.MODES.includes(mode))
+    board.classList.toggle('rail-mini', mode === 'campus' || mode === 'org' || mode === 'vr' || EV.MODES.includes(mode))
     $('v-office').hidden = mode !== 'office'
     $('v-dec').hidden = mode !== 'dec'
     $('v-use').hidden = mode !== 'use'
     $('v-campus').hidden = mode !== 'campus'
     $('v-org').hidden = mode !== 'org'
     $('v-act').hidden = mode !== 'act'
+    $('v-vr').hidden = mode !== 'vr'
     $('v-ev').hidden = !EV.MODES.includes(mode)
     if (EV.MODES.includes(mode)) EV.render(mode, $('v-ev'))
     EV.renderWizard($('wiz'))
@@ -2405,6 +2408,10 @@ function officeClient() {
       const box = $('act'), top = box ? box.scrollTop : 0
       $('v-act').innerHTML = AV.render(S0)
       if ($('act')) $('act').scrollTop = top
+    } else if (mode === 'vr') {
+      const box = $('vr'), top = box ? box.scrollTop : 0
+      $('v-vr').innerHTML = VV.render(S0)
+      if ($('vr')) $('vr').scrollTop = top
     } else if (mode === 'use') {
       const box = $('v-use').querySelector('.runs-box'), top = box ? box.scrollTop : 0
       $('v-use').innerHTML = CR.usage(S)
@@ -2581,7 +2588,7 @@ function renderOffice(state, opts = {}) {
 ${refresh}
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 rx=%273%27 fill=%27%230A0F14%27/%3E%3Crect x=%273%27 y=%273%27 width=%2710%27 height=%2710%27 fill=%27%233BE8B0%27/%3E%3C/svg%3E" />
 <title>Arsenale</title>
-<style>${OFFICE_STYLE}${CR_STYLE}${COMPANY_STYLE}${WORLD_STYLE}${ACTIVITY_STYLE}${EVERYONE_STYLE}</style>
+<style>${OFFICE_STYLE}${CR_STYLE}${COMPANY_STYLE}${WORLD_STYLE}${ACTIVITY_STYLE}${VR_STYLE}${EVERYONE_STYLE}</style>
 </head>
 <body>
 <div class="board" id="board">
@@ -2589,8 +2596,8 @@ ${refresh}
     <h1${co ? ' class="co"' : ''}>Arsenale${co ? '<span class="brand-b">' + T('BOARD VIEW') + '</span>' : ''}</h1><span class="date" id="date"></span>
     <div class="views" role="group" aria-label="${T('View')}"><button type="button" data-view="campus" aria-pressed="false">${T('Campus')}</button><button type="button" data-view="office" id="vtab-office" aria-pressed="true">${T('Office')}</button>${co
       // the two views from before the company stay one release, under "More" (spec Q11)
-      ? '<button type="button" data-omenu="office" id="omenu-office" aria-label="' + T('Choose an office') + '" aria-haspopup="true">▾</button><button type="button" data-view="tasks" aria-pressed="false">' + T('Tasks') + '</button><button type="button" data-view="appr" aria-pressed="false">' + T('Approvals') + '</button><button type="button" data-view="dlv" aria-pressed="false">' + T('Finished work') + '</button><button type="button" data-view="team" aria-pressed="false">' + T('Team') + '</button><button type="button" data-view="act" aria-pressed="false">' + T('Activity') + '</button><button type="button" data-omenu="legacy" id="omenu-legacy" aria-haspopup="true">' + T('More') + ' ▾</button>'
-      : `<button type="button" data-view="appr" aria-pressed="false">${T('Approvals')}</button><button type="button" data-view="dec" aria-pressed="false">${T('Decisions & gates')}</button><button type="button" data-view="use" aria-pressed="false">${T('Tools & usage')}</button><button type="button" data-view="act" aria-pressed="false">${T('Activity')}</button><button type="button" data-view="set" aria-pressed="false">${T('Settings')}</button>`}</div>
+      ? '<button type="button" data-omenu="office" id="omenu-office" aria-label="' + T('Choose an office') + '" aria-haspopup="true">▾</button><button type="button" data-view="tasks" aria-pressed="false">' + T('Tasks') + '</button><button type="button" data-view="appr" aria-pressed="false">' + T('Approvals') + '</button><button type="button" data-view="dlv" aria-pressed="false">' + T('Finished work') + '</button><button type="button" data-view="team" aria-pressed="false">' + T('Team') + '</button><button type="button" data-view="act" aria-pressed="false">' + T('Activity') + '</button><button type="button" data-view="vr" aria-pressed="false">' + T('Version run') + '</button><button type="button" data-omenu="legacy" id="omenu-legacy" aria-haspopup="true">' + T('More') + ' ▾</button>'
+      : `<button type="button" data-view="appr" aria-pressed="false">${T('Approvals')}</button><button type="button" data-view="dec" aria-pressed="false">${T('Decisions & gates')}</button><button type="button" data-view="use" aria-pressed="false">${T('Tools & usage')}</button><button type="button" data-view="act" aria-pressed="false">${T('Activity')}</button><button type="button" data-view="vr" aria-pressed="false">${T('Version run')}</button><button type="button" data-view="set" aria-pressed="false">${T('Settings')}</button>`}</div>
     <ul class="counts" id="counts" aria-label="${T('Summary')}"></ul>
     <span class="live" id="mode"><i></i> ${live ? T('Live · every 1.5s') : T('Built file · refreshes automatically')}</span>
   </header>
@@ -2606,6 +2613,7 @@ ${refresh}
   <main class="vm" id="v-dec" aria-label="${T('Decisions & gates')}" hidden></main>
   <main class="vm" id="v-use" aria-label="${T('Tools & usage')}" hidden></main>
   <main class="vm" id="v-act" aria-label="${T('Activity')}" hidden></main>
+  <main class="vm" id="v-vr" aria-label="${T('Version run')}" hidden></main>
   <main class="cv" id="v-campus" aria-label="${T('Campus')}" hidden></main>
   <main class="cv" id="v-org" aria-label="${T('Org chart')}" hidden></main>
   <main class="ev" id="v-ev" hidden></main>
@@ -2629,6 +2637,7 @@ const office3d = (${office3d.toString()});
 const controlRoom = (${controlRoom.toString()});
 const companyViews = (${companyViews.toString()});
 const activityView = (${activityView.toString()});
+const versionRunView = (${versionRunView.toString()});
 const everyoneArt = (${everyoneArt.toString()});
 const everyoneViews = (${everyoneViews.toString()});
 (${officeClient.toString()})();
