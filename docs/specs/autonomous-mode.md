@@ -995,3 +995,91 @@ Arsenale must contain NO Persian text (remove `agents/labels.fa.json`, any Persi
 - Archive / database: correct structure, NO Persian in stored data; LTR/RTL alignment correct and consistent with the design.
 - Add anything else that helps reach reliable autonomous development and avoids future problems.
 Plan: review pass → spec addendum + one batch of owner questions → autonomous phases (after the current phase 2a/2b).
+
+## 16. Redesign and hardening (from the full review)
+
+Source: the full review of 2026-10-16 (not stored in the repo). Phases 2a (cleanup) and 2b (portable) continue as planned; the phases below follow them. Phase 3 is the Version run page of sections 7 and 13 step 8, unchanged. Each phase is sized for one or two parallel worktrees.
+
+### 16.1 Decisions (final, no open questions)
+
+- **A1** Nothing Arsenale ships or writes contains Persian text: no `*Fa` fields written, no Persian labels, files or screenshots. Text typed by the user is stored as typed and shown with `dir="auto"`. Old `*Fa` fields are ignored on load (not migrated, not deleted).
+- **A2** Assets are CC0 only. Candidates: Kenney, KayKit, Quaternius free packs. Names and licences must be re-verified on the source page before any asset file is committed.
+- **A3** The campus is drawn with three.js (orthographic, isometric) with a static image fallback when WebGL is unavailable.
+- **A4** In autonomous runs the supervisor may place buildings and offices and logs each one as a decision. The user can move or remove any of them.
+- **A5** The core team becomes a pack.
+- **A6** The archive page is restyled to the board style.
+
+### 16.2 Rules
+
+**Phase H, hardening (first)**
+
+1. Every write of a run-log file or company file writes a temporary file in the same folder, then renames it. A reader never sees a partial file.
+2. Company files (`employees.json`, `offices.json`, `projects.json`, `campus.json`) are changed under a per-file lock. Two writers in parallel lose no update. A stale lock (owner PID gone) is taken over.
+3. Tests have two tiers: `fast` (default `npm test`, no browser, under 3 minutes) and `ui` (Chrome tests, concurrency at most 2, one retry on "no DevTools port", separate command). The phase gate runs `fast` per merge and both tiers before the phase is accepted.
+4. Page builders over 800 lines are split into modules per screen or concern. The split changes no behaviour: generated HTML/JS is identical before and after (byte comparison in a test) and visual-qa screenshots match.
+5. Bug fixes, each with a regression test: (a) Team page lists an existing office as "not set up"; (b) Archive shows 0 tokens while the board shows the real total; (c) "Unassigned work" shows "$0", must show "n/a" like other unpriced items; (d) org chart names and headers are cut to a letter at 1366 px, they must show an ellipsis at a fixed width; (e) Tasks page shows "No tasks yet" before data arrives, it must show a loading state; (f) `demo` prints its address and key URL to a redirected stdout and has a `--no-open` mode that does not block.
+6. User-entered text elements carry one shared class (`unicode-bidi: plaintext; text-align: start`) on every page, so Persian and English both start at the left edge.
+
+**Phase 4, Campus and offices**
+
+7. `company/campus.json` (schemaVersion 1, optional; absent = layout derived as today): `grid {cols, rows}`, `buildings [{id, officeId, type, x, y, rot, floors, createdBy, createdAt}]`, `roads`, `props`. An older Arsenale ignores it; a newer file than the app knows is read-only.
+8. Buildings stay inside the grid and never overlap. One office per building. A building without an office is a lot. Removing a building archives its office; history is kept.
+9. One write path: `campus.place|move|rotate|remove`. The board calls it directly. The supervisor calls it in autonomous runs only; every call writes a decision (A4). An agent through MCP cannot remove a building.
+10. 12 office types, each with a shipped model, default zones and default pack: engineering, verification, security, release, docs, design, data, planning, legal, business (finance/hr/support/marketing), archive hall, domain lab. The office `profile` selects the type; list position no longer does.
+11. Build mode on the campus: palette, click a lot to place, drag to move, `R` rotates, `Delete` archives. Placing creates the office and offers its default pack.
+12. Run id is the figure id: N parallel runs of one agent type show N figures, each at its own desk with its own bubble; the title shows the multiplier. A run keeps figure and desk for its whole life.
+13. One simple avatar style in campus, office, team and org pages. No person is drawn twice (no portrait card plus figure). Name tag only; details are in the panel.
+14. No label, bubble or box overlaps an avatar or another label (rule 67 of 5.15), measured by bounding boxes at 1366x768 and 1920x1080.
+15. Every asset file is listed in `assets/LICENSES.json` with `file, name, author, source URL, licence, date fetched, sha256`, plus `NOTICE.md`. A test fails when a shipped asset has no entry or its entry's licence is not `CC0-1.0`, or its hash differs. Assets are added to package `files`.
+16. The campus fallback without WebGL is one pre-rendered image per building type (also CC0-derived and listed in the manifest).
+
+**Phase 4b, Packs**
+
+17. Pack format: members up to 24, zones beyond the current 5 (verify, ship, plan, ops, data, legal), and an optional `taskType` list used to route tasks to an office.
+18. Nine new packs, all tool-agnostic and stricter-only: `autonomous-dev`, `verification`, `security`, `release`, `docs`, `data-integrity`, `devops`, `domain-engineering`, `legal-compliance` (`product-discovery` is optional). The core team is a pack `core-team`; every core agent has an explicit `zone:` line before `labels.fa.json` is removed.
+19. Packs install, update and remove like the existing ones; an edited member is kept on update.
+
+### 16.3 Edge cases
+
+- Old company files with `*Fa` keys load; the keys are not written back. Old files without `campus.json` show the derived layout; the first placement creates the file.
+- Crash between temp write and rename leaves the old file intact and a stray temp file that is cleaned at next start.
+- Two lots requested at the same cell: the second placement is refused with the reason.
+- Very many buildings (200) and runs (50 of one type): the page stays usable; extra figures collapse to a count.
+- Long names and Persian names are cut at a fixed width with an ellipsis.
+- No WebGL: static fallback, no error.
+- A shipped asset removed from disk: the building shows a plain placeholder, the test fails.
+
+### 16.4 Phase plan
+
+| Phase | Content | Depends on | Worktrees | Tier |
+|---|---|---|---|---|
+| 2a, 2b | in progress | | | |
+| H | rules 1-6 | 2a | 2 (storage and bug fixes; test tiers and module split) | High (stored data) |
+| 3 | Version run page (section 7) | H | 1 | Medium |
+| 4 | rules 7-16; sub-steps 4.1 data and write path, 4.2 assets and manifest, 4.3 three.js campus and Build mode, 4.4 figures, avatar, overlap | H, 3 | 2 | High (stored data), visual-qa |
+| 4b | rules 17-19 | 4.1 | 2 (pack format and core team; new packs) | High (pack format) |
+| 5 | dry run per section 13 step 9, on a throwaway repo | 4b | 1 | Medium |
+| 6 | review, README and CONTRIBUTING trimmed, regenerated screenshots, docs-explainer recap | 5 | 1 | Low |
+
+Owner gates unchanged: no asset file is committed before its licence has been re-verified and recorded; release stays a gate.
+
+### 16.5 Acceptance tests
+
+H1. Given two processes writing the same `employees.json` 200 times each, then the file always parses and no update is lost.
+H2. Given a kill between temp write and rename, then the old file is intact and the dashboard still shows the run.
+H3. Given `npm test`, then no browser starts and it ends in under 3 minutes; given `npm run test:ui`, then at most 2 Chrome instances run at once and a launch timeout is retried once.
+H4. Given the split page builders, then output HTML equals the stored pre-split output, and no builder file exceeds 800 lines.
+H5. Given the demo data, then the Team page shows no existing office as "not set up"; Archive tokens equal the board total; "Unassigned work" shows "n/a"; org chart names show an ellipsis; Tasks shows a loading state first (visual-qa at 1366 and 1920).
+H6. Given `arsenale demo --no-open > out.txt`, then `out.txt` contains the key URL within 5 seconds and the command can be stopped by its PID.
+H7. Given a task, a question and a run typed in Persian (fixture built from escapes), then they are stored as typed, shown with `dir="auto"`, start at the same edge as English in tasks, approvals, activity, decisions (visual-qa); and a repo search finds no Persian text in shipped files except the two name-normalisation helpers, written as escapes.
+C1. Given a company file with `nameFa` keys, then it loads and the next save contains none of them.
+C2. Given `campus.place` onto an occupied cell, an out-of-grid cell, or by an agent through MCP for `remove`, then it is refused and nothing changes.
+C3. Given the supervisor places an office in an autonomous run, then a decision with the reason is on the timeline and the user can move or remove the building.
+C4. Given 3 parallel runs of one agent type, then 3 figures at 3 desks with own bubbles and the title "x3"; when one ends, only its figure leaves (visual-qa).
+C5. Given 14 agents at 1366x768 and 1920x1080, then no bounding boxes of labels, bubbles, boxes and avatars intersect (DOM check plus an opened screenshot) and the right-hand project cards are unchanged.
+C6. Given a file under `assets/` without a manifest entry, or with a non-CC0 licence, or a changed hash, then the test fails.
+C7. Given WebGL disabled, then the campus shows the static fallback for every building type.
+C8. Given a campus with the 12 office types, then each type is visually distinct (visual-qa), not one shape with a different colour.
+P1. Given the install of all packs, then `core-team` and the 9 new packs install, update and remove; an edited member is kept; every member has a `zone:`.
+P2. Given a task with `taskType` "security review", then it is routed to the security office, or shown unrouted when none exists.
+R1. Given the final repo, then no shipped file contains `labels.fa.json`, `*Fa` writes, `LANG === 'fa'` branches or `-fa` screenshots (code review plus search).
