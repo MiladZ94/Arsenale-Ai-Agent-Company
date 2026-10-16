@@ -210,7 +210,7 @@
   // step, state) is in the side list the 3D floor draws, under the figure's number.
   const figNum = new Map()   // office key -> Map(figure id -> number)
   const initialsOf = (title) => {
-    const w = String(title || '?').split(/[s_-]+/).filter(Boolean)
+    const w = String(title || '?').split(/[\s_-]+/).filter(Boolean)
     const ch = (x) => Array.from(x)[0] || ''
     return (w.length > 1 ? ch(w[0]) + ch(w[1]) : Array.from(w[0] || '?').slice(0, 2).join('')).toLocaleUpperCase()
   }
