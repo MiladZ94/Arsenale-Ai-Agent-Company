@@ -31,6 +31,11 @@ Commands
   start | progress | finish | gate | decision | answers | inbox | dismiss | budget-check
                                  | version-run | version-ledger
                                  short for "log --start", "log --progress", "log <json>" …
+  init [--dir D] [--dry-run] [--yes] [--force]
+                                 install agents, rules and skills; scaffold PROJECT.md, REVIEW.md, docs/specs
+  autonomous start|status|resume <version>
+                                 state file docs/specs/<version>-list.md for an autonomous run
+  awake start [--pid N] | stop   keep the machine awake while a process lives (macOS, Linux)
   mcp                            the MCP server on stdin/stdout, for an assistant to start
                                  (Settings > Connect your assistant shows the exact line)
   task | comment | deliverable | check-action
@@ -171,7 +176,10 @@ if (cmd === 'serve') serve(flags(args))
 else if (cmd === 'open') openDashboard(flags(args))
 else if (cmd === 'demo') demo(flags(args))
 else if (cmd === 'log') log(args)
-else if (cmd === 'mcp') require(path.join(TOOLS, 'mcp-server.cjs')).runStdio()
+else if (cmd === 'init' || cmd === 'autonomous' || cmd === 'awake') {
+  const A = require(path.join(TOOLS, 'autonomous.cjs'))
+  process.exitCode = A[cmd](args, console.log)
+} else if (cmd === 'mcp') require(path.join(TOOLS, 'mcp-server.cjs')).runStdio()
 else if (cmd === 'finish') log(args)
 else if (Object.hasOwn(ALIASES, cmd)) log([ALIASES[cmd], ...args])
 else if (cmd === 'build') {

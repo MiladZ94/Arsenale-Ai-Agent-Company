@@ -267,7 +267,7 @@ function versionRun(input, actor) {
   }
   if (input.phases !== undefined) {
     if (!Array.isArray(input.phases)) throw fail(400, '"phases" must be a list')
-    rec.phases = input.phases.slice(0, 50).map((p) => {
+    rec.phases = input.phases.slice(0, 50).filter((p) => String((p && p.id) || '').replace(/[^\w.-]/g, '')).map((p) => {
       const pct = Number(p && p.percent)
       return {
         id: clipCp(String((p && p.id) || '').replace(/[^\w.-]/g, ''), 20),
@@ -285,8 +285,13 @@ function versionRun(input, actor) {
   // leave a half file for the dashboard to choke on
   fs.mkdirSync(P.VERSION_RUNS, { recursive: true })
   const tmp = versionFile(id) + '.' + process.pid + '.tmp'
-  fs.writeFileSync(tmp, JSON.stringify(rec, null, 2))
-  fs.renameSync(tmp, versionFile(id))
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(rec, null, 2))
+    fs.renameSync(tmp, versionFile(id))
+  } catch (e) {
+    try { fs.unlinkSync(tmp) } catch { /* nothing left to clean */ }
+    throw e
+  }
   return rec
 }
 
@@ -297,6 +302,7 @@ function versionLedger(id) {
   const key = String(id || '').replace(/[^\w.-]/g, '')
   if (!key) throw fail(400, 'a version run id is needed')
   const phases = {}
+  const seen = new Set() // a run can sit in both folders for a moment while it finishes
   const take = (dir, running) => {
     let names = []
     try { names = fs.readdirSync(dir) } catch { return }
@@ -305,6 +311,7 @@ function versionLedger(id) {
       let r
       try { r = JSON.parse(fs.readFileSync(path.join(dir, n), 'utf8')) } catch { continue }
       if (!r || r.versionRun !== key) continue
+      if (r.id) { if (seen.has(r.id)) continue; seen.add(r.id) }
       const ph = r.phase || '(none)'
       const e = phases[ph] || (phases[ph] = { phase: ph, runs: 0, running: 0, tokens: null })
       e.runs++

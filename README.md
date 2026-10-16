@@ -343,6 +343,8 @@ Exit codes: `0` done, `1` failed (bad input, unknown id, port taken), `2`
 `budget-check` said stop or `check-action` said never, `3` `check-action`
 said ask.
 
+Autonomous runs: `arsenale init` installs the agents and skills and scaffolds `PROJECT.md`, `REVIEW.md` and `docs/specs/`; `arsenale autonomous start <version>` creates the version state file; `arsenale awake start --pid N` keeps a Mac or Linux machine awake only while that process lives (on Windows it prints the manual setting).
+
 ## Configuration
 
 | Setting | Where | Default |

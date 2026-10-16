@@ -53,7 +53,7 @@ Autonomous version runs (the state file in the repo is the source; this is its m
                       (positive whole tokens),"phases":[{"id","name","tier": low|medium|high,
                       "requests","dependsOn","status","percent"}],"stateFile",
                       "integrationBranch"}: creates or updates <data>/version-runs/<id>.json
-  --version-ledger <json>  {"versionRun"}: tokens per phase from the run log, as JSON
+  --version-ledger <json>  {"versionRun"} ("id" is accepted too): tokens per phase from the run log, as JSON
                       (null = not recorded, never 0)
 
 Gates and decisions
