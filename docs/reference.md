@@ -198,43 +198,44 @@ Every agent you have gets a desk, whatever it is called: the zone comes from a
 its name (`…-reviewer` reviews, `ui-…` designs, `…-docs` writes), else build.
 A floor has 18 desks; more agents than that take a guest desk while they work.
 
-### The 3D office and the characters
+### The campus and the 3D office
 
-The office floor is drawn in 3D, as a room on the light ground grid: a work
-area with a desk and a low screen per person, the supervisor's station in the
-middle (a lilac platform, a wide desk with the in-tray, and a sign), a lounge
-along the windows with sofas, coffee tables and a coffee bar, a reception by
-the door, and screens on the wall with the projects that had work today.
-Nothing casts a shadow and everything stands on the floor. Above each desk is a
-portrait card whose frame is the person's state (blue working, amber waiting
-or quiet, red failed, green done, grey idle).
+**The campus** is a board of lots on a grid (6 by 4 to begin with), one building per
+office, drawn in 3D (isometric, from code: no asset files). The office profile
+selects one of 12 building types (engineering, verification, security, release,
+docs, design, data, planning, legal, business, archive hall, domain lab). Click a
+building to enter its office. **Build** opens build mode: a hotbar of the 12 types
+(keys 1 to 9), a tool column (select, move, rotate, archive), a ghost building that
+follows the pointer (blue on a free lot; red with "Lot taken: <office>" on a used
+one), **R** to turn, **Delete** to archive (twice, so a stray key does nothing),
+**Done building** to leave. Placing a building creates its office; archiving one
+archives the office and keeps its history. The layout is `company/campus.json`
+(see `tools/campus.cjs`); without the file it is derived from the offices, and
+nothing is written until the first change. The supervisor may place, move, turn and
+remove buildings with `arsenale campus <json>` in an autonomous run only; each
+change is also written as a decision. An agent cannot change the campus.
 
-The people move with their state: someone who starts a task walks from the
-lounge to the supervisor (the task is handed over), then to their desk and
-works; when they finish they walk back to the supervisor, hand in the report
-(the sheet lands in the tray), and go back to the lounge. Someone whose run
-asked you a question waits at the desk. A change halfway through a walk is
-taken from where the person is. Drag to pan, right-drag to orbit, wheel to
-zoom, click a desk to fly to it, **Fit** (or Esc) for the whole office; the
-camera stays where you left it through every redraw. The campus is light
-isometric white buildings on paved plots flush with the ground, one plot per
-office, with the office's card above its building. Without WebGL, and in the
-built file, the office stays the flat isometric one.
+**The office floor** is a building with walled zone rooms, a desk per run and a
+lounge. A run is a figure: a round head on a body in the colour of its zone, the
+initials on it, a number badge above (a circle for working, a triangle for quiet, a
+diamond for waiting, a square for failed, a ring for done). The name, the step and
+the state are in the side list under the same number. Two runs of one agent are two
+figures at two desks ("Implementer · run 1", "run 2") under one "Implementer ×2"
+chip, and a run keeps its figure, number and desk for its whole life. Idle people
+are not figures: they are "6 idle" in the lounge and in the list. A name tag or chip
+takes the nearest free slot, shrinks, and then disappears rather than cover a
+figure or another label. Wheel to zoom, drag to pan, **Fit** (or Esc) for the
+whole office; the camera stays where you left it through every redraw. Without
+WebGL, and in the built file, the office stays the flat isometric one and the
+campus is a flat grid of tiles.
 
 - **three.js r184**, pinned and served from the page itself, never a CDN:
   `tools/vendor/three/` (MIT, see `three-LICENSE.txt` and the `README.md`
   there).
-- **The default character** is `tools/characters/default.glb`: a low-poly
-  person (seated at rest, with walking and standing clips) made from three.js primitives by
-  `tools/characters/make-default-character.cjs`, our own work, released as
-  **CC0 1.0** (`tools/characters/LICENSE.txt`). No model was downloaded. Each
-  person's copy gets their own skin, hair and role colour.
-- **Your own characters**, one per person: drop a `.glb` on their desk (kept
-  in that browser), use **Load .glb…** in the details panel, or put
-  `<agent-name>.glb` in `ARSENALE_HOME/characters/`. Name the clips `Idle`,
-  `Typing`, `Thinking`, `Celebrate`, `Walk` and `Stand` (a file without `Walk`
-  or `Stand` moves in its idle pose); the rest of the file conventions are in
-  [`tools/OFFICE-WORLD-NOTE.md`](tools/OFFICE-WORLD-NOTE.md).
+- **Nothing is downloaded.** The buildings, the avatar and the desk are made in
+  code. A real CC0 model may replace a building type: see
+  [`tools/OFFICE-WORLD-NOTE.md`](tools/OFFICE-WORLD-NOTE.md) and
+  `tools/assets/manifest.json`.
 
 ## Office packs
 

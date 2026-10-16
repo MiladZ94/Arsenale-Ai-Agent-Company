@@ -388,8 +388,11 @@ function setBudget(input, actor) { return company().setBudget(asBoard(input, act
 function setBudgetsEnabled(on, actor) { return company().setBudgetsEnabled(on, actor && actor.role === 'board' ? 'board' : '', actor.door) }
 function updateEmployee(input, actor) { return company().updateEmployee(asBoard(input, actor), actor.door) }
 
+/** Campus changes (place, move, rotate, remove): campus.cjs decides who may. */
+function campus(input, actor) { return require('./campus.cjs').apply(input, actor, actor.door) }
+
 module.exports = {
-  OWNER_ONLY, fail, actorFor, cliActor, actorLabel, requireBoard, clipCp,
+  campus, OWNER_ONLY, fail, actorFor, cliActor, actorLabel, requireBoard, clipCp,
   startRun, progress, finishRun, activeFileFor, versionRun, versionLedger, noteIncidents, budgetCheck, readActive,
   gate, decision, answer, dismiss, setBudget, setBudgetsEnabled, updateEmployee,
 }

@@ -64,14 +64,6 @@ function dataWords(sb) {
   for (const o of company('offices') || []) { add(o.name); for (const k of ['id', 'leadEmployeeId']) add(o[k] || '') }
   for (const p of company('projects') || []) { add(p.id); add(p.name); add(p.key); (p.aliases || []).forEach(add) }
   for (const e of Object.keys(company('employees') || {})) add(e)
-  // the characters on the 3D floor are data too: a file's name and the names of its clips
-  const chars = path.join(sb.tools, 'characters')
-  for (const f of fs.existsSync(chars) ? fs.readdirSync(chars) : []) {
-    if (!f.endsWith('.glb')) continue
-    add(f.replace(/\.glb$/, ''))
-    const b = fs.readFileSync(path.join(chars, f))
-    for (const c of JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString('utf8')).animations || []) add(c.name)
-  }
   // the company log is a record on disk, written in English by the CLI: the
   // Activity screen shows its lines as written, like a task text
   try { for (const l of fs.readFileSync(path.join(sb.company, 'activity.jsonl'), 'utf8').split('\n')) if (l.trim()) walk(JSON.parse(l)) } catch { /* no company log */ }

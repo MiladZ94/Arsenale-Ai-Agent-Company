@@ -181,7 +181,7 @@ test('T-5.4 through the page: a hire proposal is approved with two clicks, and t
   for (let i = 0; i < 160 && w.sb.read(gateFile).status !== 'answered'; i++) await w.page.sleep(150)
   assert.ok(fs.existsSync(path.join(w.sb.agents, 'invoice-ivo.md')))
   const saved = w.sb.read(gateFile)
-  assert.equal(saved.answer, 'hired invoice-ivo')
+  assert.equal(saved.answer, 'hired invoice-ivo', JSON.stringify(saved))
   assert.ok(saved.hiredAt)
 })
 

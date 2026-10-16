@@ -206,7 +206,8 @@ function companyViews(h) {
   const QUIET_MS = 10 * 60000
   const st = { armed: '', armT: 0, retired: false, dlg: null, busy: false, mmsg: '' }
   // the campus is drawn, zoomed and panned by the shared art (office-world.cjs); this file says what is on it
-  const CA = campusArt({ esc, fa, go })
+  const CA = campusArt({ esc, fa, go, post, refresh, redraw })
+  window.__campus = CA
   const ST_COL = CA.ST_COL
   const C = () => COMPANY
   const canEdit = () => LIVE && !!ANSWER_TOKEN && !C().readOnly
@@ -353,35 +354,19 @@ function companyViews(h) {
   }
 
   function campus(S) {
-    const list = officeList().filter((o) => !o.builtIn)
-    const un = officeById('unassigned')
-    const unC = counts(S, 'unassigned')
-    const showUn = !!(un && (unC.working || unC.today || unC.waiting))
-    // work no project claims sits in a shed on its own plot, after the offices
-    const plots = list.map((o, i) => ({ o, kind: i % 4 })).concat(showUn ? [{ o: un, kind: 'shed' }] : [])
-    const cells = plots.map(({ o, kind }) => {
-      const c = counts(S, o.id)
-      const sd = o.standing || {}
-      const small = kind === 'shed'
-      return {
-        id: o.id, name: oname(o), color: o.color || '#8A97A6', kind, small, wins: small ? [] : windowsOf(S, o.id),
-        label: oname(o) + T(', ') + fa(c.working) + ' ' + T('working'),
-        sign: '<h3 title="' + esc(oname(o)) + '">' + esc(oname(o)) + '</h3>' +
-          '<div class="n"><span class="a" title="' + T('working') + '">▸ ' + fa(c.working) + '</span><span class="b" title="' + T('waiting for you') + '">! ' + fa(c.waiting) + '</span>' + (small ? '' : '<span class="c">' + money(sd.spend) + '</span>') + '</div>' +
-          (small ? '' : bar(sd.budget)) +
-          '<button type="button" class="cbtn go" data-goto="office:' + esc(o.id) + '">' + T('Enter office →') + '</button>',
-      }
-    })
-    // visitors: a figure at the door for each employee working away from home
-    const visitors = []
-    for (const a of S.active) {
-      const e = emp(a.agent)
-      if (!e || !e.homeOfficeId || e.homeOfficeId === a.officeId) continue
-      visitors.push({ officeId: a.officeId, draw: (x, y) => sprite('stand', a.agent, x, y, 2) })
+    // the layout is the server's (campus.cjs); an older server sends none, and the offices are then laid out in a row-by-row grid
+    let cp = C().campus
+    if (!cp) {
+      const list = officeList().filter((o) => !o.builtIn)
+      const cols = 6
+      cp = { grid: { cols, rows: Math.max(4, Math.ceil(list.length / cols)) }, buildings: list.map((o, i) => ({ id: 'b-' + o.id, officeId: o.id, type: 'business', x: i % cols, y: Math.floor(i / cols), rot: 0, floors: 1 })), types: [], readOnly: true }
     }
-    const legend = '<div class="cleg"><span>' + T('Windows on the top floors: one per employee') + '</span><span><i style="background:' + ST_COL.working + '"></i>' + T('working') + '</span><span><i style="background:' + ST_COL.waiting + '"></i>' + T('waiting') + '</span><span><i style="background:' + ST_COL.paused + '"></i>' + T('paused') + '</span><span><i style="background:' + ST_COL.idle + '"></i>' + T('idle') + '</span></div>'
-    const tip = '<div class="ctip">' + T('Lavender kiosk = ') + '<b>' + T('Supervisor desk') + '</b>. ' + T('Click a building to enter.') + '</div>'
-    return CA.draw({ cells, hq: { id: hqId(), lit: !ceoAway(), label: T('Supervisor desk') }, visitors, legend, tip, side: side(S) })
+    const cells = cp.buildings.map((b) => {
+      const o = officeById(b.officeId)
+      const c = counts(S, b.officeId)
+      return { id: b.officeId, name: o ? oname(o) : b.officeId, color: (o && o.color) || '#8A97A6', working: c.working, waiting: c.waiting }
+    })
+    return CA.draw({ campus: cp, cells, canEdit: canEdit() && !!cp.types.length, side: side(S) })
   }
   const hqId = () => { const o = officeList().find((x) => x.leadEmployeeId === 'supervisor') || officeList()[0]; return o ? o.id : 'unassigned' }
   const ceoAway = () => { const hb = C().heartbeat; return !hb || !hb.lastSeenAt || Date.now() - ms(hb.lastSeenAt) > 30 * 60000 }

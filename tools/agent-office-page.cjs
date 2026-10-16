@@ -10,12 +10,10 @@
  * clock (elapsed time, "quiet for 10 minutes") without new data.
  *
  * On the live page, with WebGL, the floor is drawn in 3D instead: office3d
- * from office-world.cjs (shared with Arsenale) draws a room on the ground: a
- * desk per person round the supervisor's station, a lounge and a reception,
- * from the same state (scene3d below); people walk between them as their
- * state changes, and the camera stays put through every redraw. The flat
- * office stays as the fallback, and is what the
- * built file always shows.
+ * from office-world.cjs (shared with Arsenale) draws walled zone rooms, a
+ * desk and a figure per run, a lounge for the idle and a side list, from the
+ * same state (scene3d in pages/office/client). The flat office stays as the
+ * fallback, and is what the built file always shows.
  *
  * officeClient is never run in Node: its source is written into the page.
  * Keep it free of anything that only exists in Node.

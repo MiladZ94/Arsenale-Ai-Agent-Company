@@ -1,10 +1,9 @@
 const { t, langScript } = require('../../dashboard-strings.cjs')
 const { COMPANY_STYLE, companyViews } = require('../../agent-company-page.cjs')
-const path = require('path')
 // The campus art and the 3D office (office-world.cjs, see OFFICE-WORLD-NOTE.md).
 // Loaded fresh with this file, so a changed drawing shows on the next reload.
 delete require.cache[require.resolve('../../office-world.cjs')]
-const { WORLD_STYLE, campusArt, office3d, worldScripts } = require('../../office-world.cjs')
+const { WORLD_STYLE, campusArt, office3d, worldKit, WORLD_PALETTE, worldScripts } = require('../../office-world.cjs')
 const { ACTIVITY_STYLE, activityView } = require('../../activity-page.cjs')
 const { VR_STYLE, versionRunView } = require('../../version-run-page.cjs')
 const { EVERYONE_STYLE, everyoneViews } = require('../../everyone-page.cjs')
@@ -75,7 +74,7 @@ ${refresh}
 <div class="omenu" id="omenu" hidden></div>
 <div class="cdlg-back" id="cdlg" hidden></div>
 <div class="wiz-back" id="wiz" hidden></div>
-${live ? worldScripts({ characterDirs: [path.join(require('../../paths.cjs').HOME, 'characters')] }) : ''}
+${live ? worldScripts() : ''}
 <script>
 let DATA = ${data};
 const LIVE = ${live};
@@ -84,6 +83,8 @@ let ANSWER_TOKEN = ${JSON.stringify(token)};
 let COMPANY = ${JSON.stringify(company).replace(/</g, '\\u003c')};
 const homeDesks = (${homeDesks.toString()});
 ${langScript(lang, live)}
+const WORLD_PALETTE = ${JSON.stringify(WORLD_PALETTE)};
+const worldKit = (${worldKit.toString()});
 const campusArt = (${campusArt.toString()});
 const office3d = (${office3d.toString()});
 const controlRoom = (${controlRoom.toString()});

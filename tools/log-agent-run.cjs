@@ -79,6 +79,12 @@ Company (optional; see company.example/seed.json)
   --inbox [--peek|--all|--json]    what the owner changed on the dashboard
   --heartbeat [json]               "the supervisor is here"
 
+Campus
+  --campus <json>     {"op": list|place|move|rotate|remove, "type" (place), "name", "x","y", "rot",
+                      "id" or "officeId" (move, rotate, remove), "reason", "by"}. The supervisor may
+                      change the campus in an autonomous run only; each change is also a
+                      decision. Removing a building archives its office
+
 Tasks, deliverables and the safety rules
   --task <json>       create: {"title", optional "description","assignee","officeId",
                       "parentId"}: prints the new task id. Update: {"id","status":
@@ -247,7 +253,7 @@ if (args[0] === '--company-status') {
   process.exit(0)
 }
 
-const MODES = ['--start', '--progress', '--budget-check', '--budget', '--employee', '--decision', '--gate', '--task', '--comment', '--deliverable', '--check-action', '--version-run', '--version-ledger']
+const MODES = ['--start', '--progress', '--budget-check', '--budget', '--employee', '--decision', '--gate', '--task', '--comment', '--deliverable', '--check-action', '--version-run', '--version-ledger', '--campus']
 // no mode: the JSON (inline, --stdin, --file or @file) is a finish. "--finish"
 // says so outright; older run logs took it (as any unknown mode) for a finish,
 // and supervisors' notes still use it.
@@ -287,6 +293,17 @@ if (mode === '--budget' || mode === '--employee') {
     console.log(r.summary)
     process.exit(0)
   } catch (e) { die(e) }
+}
+
+if (mode === '--campus') {
+  try {
+    if (input.op === 'list') {
+      const v = require('./campus.cjs').view(company().readCompany())
+      console.log(JSON.stringify({ grid: v.grid, buildings: v.buildings, types: v.types.map((t) => t.id) }, null, 2))
+    } else console.log(L.campus(input, actor).summary)
+    if (input.op !== 'list') refresh()
+  } catch (e) { die(e) }
+  process.exit(0)
 }
 
 if (mode === '--version-run' || mode === '--version-ledger') {
