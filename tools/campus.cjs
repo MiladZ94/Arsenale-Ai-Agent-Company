@@ -16,22 +16,14 @@
  * writes a decision (A4); an agent cannot use it at all. Removing a building
  * archives its office: the office's history stays.
  *
- * The file is written whole into a temporary file and renamed (store.cjs when
- * it is there), under a lock, so a reader never sees half a file and two
+ * The file is written whole into a temporary file and renamed (store.cjs), under a lock, so a reader never sees half a file and two
  * writers lose no update.
  */
 const fs = require('fs')
 const path = require('path')
 const P = require('./paths.cjs')
 
-let store = null
-try { store = require('./store.cjs') } catch { /* before the storage helpers: plain write-then-rename below */ }
-const withLock = store ? store.withLock : (_file, fn) => fn()
-const writeAtomic = store ? store.writeAtomic : (file, text) => {
-  const tmp = file + '.' + process.pid + '.tmp'
-  fs.writeFileSync(tmp, text)
-  fs.renameSync(tmp, file)
-}
+const { withLock, writeAtomic } = require('./store.cjs')
 
 const SCHEMA = 1
 const DEFAULT_GRID = { cols: 6, rows: 4 }

@@ -131,9 +131,8 @@ test('a broken or overlapping file never crashes the read: bad buildings are lef
   assert.equal(K.readCampus().buildings.length, 3)
 })
 
-test('two parallel placements both land (the file is changed under a lock) when the storage helpers are there', async (t) => {
+test('two parallel placements both land (the file is changed under a lock)', async (t) => {
   const { sb } = world(t)
-  if (!fs.existsSync(path.join(sb.tools, 'store.cjs'))) return t.skip('store.cjs is not in this build')
   const { spawn } = require('child_process')
   const run = (x) => new Promise((res) => {
     const p = spawn(process.execPath, [path.join(sb.tools, 'log-agent-run.cjs'), '--campus', JSON.stringify({ by: 'board', op: 'place', type: 'docs', name: 'Docs ' + x, x, y: 3 })], { env: sb.env })
