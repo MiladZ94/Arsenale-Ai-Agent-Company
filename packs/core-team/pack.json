@@ -1,0 +1,201 @@
+{
+  "format": "arsenale-pack",
+  "formatVersion": 1,
+  "id": "core-team",
+  "version": "1.0.0",
+  "name": "Core team",
+  "description": "The engineering and product team that ships with Arsenale: planners, builders, reviewers, release and docs agents. Installed by default for a new company.",
+  "minArsenale": "1.0.0",
+  "office": {
+    "id": "engineering",
+    "name": "Engineering",
+    "theme": "teal",
+    "profile": "engineering",
+    "lead": "office-lead"
+  },
+  "members": [
+    {
+      "id": "agent-builder",
+      "core": true,
+      "zone": "docs",
+      "title": "Agent Builder",
+      "tier": "standard"
+    },
+    {
+      "id": "architecture-reviewer",
+      "core": true,
+      "zone": "review",
+      "title": "Architecture Reviewer",
+      "tier": "heavy"
+    },
+    {
+      "id": "code-reviewer",
+      "core": true,
+      "zone": "review",
+      "title": "Code Reviewer",
+      "tier": "standard"
+    },
+    {
+      "id": "data-migration",
+      "core": true,
+      "zone": "review",
+      "title": "Data Migration",
+      "tier": "heavy"
+    },
+    {
+      "id": "dev-docs",
+      "core": true,
+      "zone": "docs",
+      "title": "Dev Docs",
+      "tier": "standard"
+    },
+    {
+      "id": "docs-explainer",
+      "core": true,
+      "zone": "docs",
+      "title": "Docs Explainer",
+      "tier": "standard"
+    },
+    {
+      "id": "domain-validator",
+      "core": true,
+      "zone": "review",
+      "title": "Domain Validator",
+      "tier": "heavy"
+    },
+    {
+      "id": "engineering-lead",
+      "core": true,
+      "zone": "lead",
+      "title": "Engineering Lead",
+      "tier": "standard"
+    },
+    {
+      "id": "feature-scout",
+      "core": true,
+      "zone": "design",
+      "title": "Feature Scout",
+      "tier": "standard"
+    },
+    {
+      "id": "finding-verifier",
+      "core": true,
+      "zone": "review",
+      "title": "Finding Verifier",
+      "tier": "light"
+    },
+    {
+      "id": "implementer",
+      "core": true,
+      "zone": "build",
+      "title": "Implementer",
+      "tier": "standard"
+    },
+    {
+      "id": "office-lead",
+      "core": true,
+      "zone": "lead",
+      "title": "Office Lead",
+      "tier": "standard"
+    },
+    {
+      "id": "performance",
+      "core": true,
+      "zone": "review",
+      "title": "Performance",
+      "tier": "standard"
+    },
+    {
+      "id": "product-lead",
+      "core": true,
+      "zone": "lead",
+      "title": "Product Lead",
+      "tier": "standard"
+    },
+    {
+      "id": "release-builder",
+      "core": true,
+      "zone": "build",
+      "title": "Release Builder",
+      "tier": "standard"
+    },
+    {
+      "id": "release-manager",
+      "core": true,
+      "zone": "build",
+      "title": "Release Manager",
+      "tier": "standard"
+    },
+    {
+      "id": "research-lead",
+      "core": true,
+      "zone": "lead",
+      "title": "Research Lead",
+      "tier": "standard"
+    },
+    {
+      "id": "security-reviewer",
+      "core": true,
+      "zone": "review",
+      "title": "Security Reviewer",
+      "tier": "heavy"
+    },
+    {
+      "id": "spec-writer",
+      "core": true,
+      "zone": "design",
+      "title": "Spec Writer",
+      "tier": "heavy"
+    },
+    {
+      "id": "tester",
+      "core": true,
+      "zone": "build",
+      "title": "Tester",
+      "tier": "standard"
+    },
+    {
+      "id": "ui-designer",
+      "core": true,
+      "zone": "design",
+      "title": "Ui Designer",
+      "tier": "heavy"
+    },
+    {
+      "id": "user-guide",
+      "core": true,
+      "zone": "docs",
+      "title": "User Guide",
+      "tier": "standard"
+    },
+    {
+      "id": "ux-reviewer",
+      "core": true,
+      "zone": "design",
+      "title": "Ux Reviewer",
+      "tier": "standard"
+    },
+    {
+      "id": "visual-qa",
+      "core": true,
+      "zone": "design",
+      "title": "Visual Qa",
+      "tier": "standard"
+    }
+  ],
+  "sampleTasks": [
+    {
+      "title": "Write a spec for a small feature",
+      "description": "Turn the short request I give you into a spec with rules, edge cases and open questions.",
+      "assignee": "spec-writer"
+    },
+    {
+      "title": "Review the uncommitted changes",
+      "description": "Review the changes in the working tree I name and report real defects, most serious first.",
+      "assignee": "code-reviewer"
+    }
+  ],
+  "policy": {
+    "members": {}
+  }
+}

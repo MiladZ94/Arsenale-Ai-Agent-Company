@@ -142,7 +142,7 @@ test('read endpoints: team with the safety rules, packs, connect cards, the wiza
   const team = await req(port, { url: '/api/team' })
   assert.ok(team.json.members.some((m) => m.id === 'tester' && m.policy.payment.value === 'ask'))
   const packs = await req(port, { url: '/api/packs' })
-  assert.equal(packs.json.packs.length, 7)
+  assert.equal(packs.json.packs.length, 17)
   const conn = await req(port, { url: '/api/connect' })
   assert.deepEqual(conn.json.cards.map((c) => c.id), ['claude-desktop', 'claude-code', 'cursor', 'vscode', 'codex', 'gemini', 'other', 'chatgpt'])
   assert.equal(conn.json.http.on, false)

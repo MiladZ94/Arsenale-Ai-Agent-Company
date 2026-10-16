@@ -30,6 +30,19 @@
 
 None.
 
+## Gates and packs
+
+| Gate | Pack | Agent |
+|---|---|---|
+| review | `verification` | `code-reviewer` |
+| finding check | `verification` | `finding-verifier` |
+| visual | `verification` | `visual-qa` |
+| data | `data-integrity` | `data-migration` |
+| security | `security` | `security-reviewer` |
+| release | `release` | `release-manager`, `release-builder` |
+
+The core team pack (`core-team`) holds every one of these agents; the packs add the office and helpers for the gate.
+
 ## Review log
 
 One line per gate run: date, phase, reviewer, report path, result.

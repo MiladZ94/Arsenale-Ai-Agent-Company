@@ -95,7 +95,11 @@ function makeSandbox(opts = {}) {
   // the bundled office packs live next to tools/ in a checkout; in the
   // sandbox that is <root>/packs (the installed-state file sits there too,
   // which is harmless: it is not a pack folder)
-  if (opts.packs) fs.cpSync(path.join(TOOLS, '..', 'packs'), path.join(root, 'packs'), { recursive: true })
+  if (opts.packs) {
+    fs.cpSync(path.join(TOOLS, '..', 'packs'), path.join(root, 'packs'), { recursive: true })
+    // the core team's definitions are read from the repo's agents/, not from the sandbox's invented ones
+    process.env.ARSENALE_CORE_DIR = env.ARSENALE_CORE_DIR = path.join(TOOLS, '..', 'agents')
+  }
   const runs = path.join(root, 'agent-runs')
   fs.mkdirSync(path.join(runs, 'active'), { recursive: true })
   fs.mkdirSync(path.join(runs, 'gates'))

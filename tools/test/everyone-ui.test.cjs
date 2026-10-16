@@ -61,7 +61,7 @@ test('T-3.1 through the page: the wizard opens on an empty data folder, and Crea
   assert.equal(fs.existsSync(w.sb.company), false, 'the review step writes nothing')
   await w.submit('.wz form') // Create my team
   await w.waitFor("/Your company is set up/.test(document.querySelector('.wz').textContent)")
-  assert.deepEqual(w.sb.read('company/offices.json').map((o) => o.id), ['marketing', 'support', 'operations'])
+  assert.deepEqual(w.sb.read('company/offices.json').map((o) => o.id), ['engineering', 'marketing', 'support', 'operations'])
   assert.equal(w.sb.read('company/company.json').payModel, 'plan')
   assert.deepEqual(w.sb.read('company/company.json').assistants, ['claude-desktop'])
   assert.ok(w.sb.read('policy.json').defaults.payment === 'ask')

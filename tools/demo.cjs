@@ -216,7 +216,7 @@ function seedShop(home) {
   const sup = L.actorFor('mcp', 'supervisor', { client: { name: 'claude-ai', version: '0.9' }, clientId: 'claude-ai' })
   const M = 60000, now = Date.now()
   P.ensureDefaults('cli')
-  require('./onboard.cjs').create({ name: 'Northwind Labs', mission: 'We sell outdoor weather sensors online to gardeners and small farms in 14 countries.', payModel: 'plan', packs: ['content-marketing', 'customer-support', 'finance', 'hr'], assistants: ['claude-desktop'], lang: 'en' }, board)
+  require('./onboard.cjs').create({ name: 'Northwind Labs', mission: 'We sell outdoor weather sensors online to gardeners and small farms in 14 countries.', payModel: 'plan', packs: ['content-marketing', 'customer-support', 'finance', 'hr'], coreTeam: false, assistants: ['claude-desktop'], lang: 'en' }, board)
   for (const [id, name, skills] of SHOP_PEOPLE) { try { C.updateEmployee({ id, name, skills, by: 'board' }, 'cli') } catch { /* a pack without this member */ } }
   C.stampHeartbeat('demo')
   require('./mcp-server.cjs').createSession({ transport: 'stdio' }).handle({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', clientInfo: { name: 'claude-ai', version: '0.9' } } })

@@ -24,6 +24,10 @@ const { writeAtomic } = require('./build-agent-dashboard.cjs')
 const { fail, requireBoard, actorLabel, clipCp } = require('./runlog.cjs')
 
 const BUNDLED = path.join(__dirname, '..', 'packs')
+// the core team's definitions stay in agents/ (one copy); a pack names them with core:true (installed as the pack's own members) or ref:true (used where they are, never copied)
+const coreDir = () => process.env.ARSENALE_CORE_DIR || path.join(__dirname, '..', 'agents')
+const ZONES = ['lead', 'build', 'review', 'docs', 'design', 'verify', 'ship', 'plan', 'ops', 'data', 'legal']
+const MAX_MEMBERS = 24
 const STATE = path.join(P.HOME, 'packs', 'installed.json')
 // outside packs/: an installed copy of Arsenale may keep its bundled packs there
 const NEW_TEXT = path.join(P.HOME, 'pack-updates')
@@ -52,14 +56,22 @@ function readPack(dir) {
   if (!SEMVER.test(String(j.minArsenale || '0.0.0'))) throw fail(400, 'minArsenale is semver, for example "1.0.0"')
   const o = j.office || {}
   if (!company().OFFICE_ID.test(String(o.id))) throw fail(400, 'bad office id in the pack')
-  if (!Array.isArray(j.members) || j.members.length < 1 || j.members.length > 12) throw fail(400, 'a pack has 1 to 12 members')
+  if (!Array.isArray(j.members) || j.members.length < 1 || j.members.length > MAX_MEMBERS) throw fail(400, 'a pack has 1 to ' + MAX_MEMBERS + ' members')
   const members = j.members.map((m) => {
     if (!m || !MEMBER_ID.test(String(m.id))) throw fail(400, 'bad member id in the pack')
-    const rel = String(m.file || '')
-    if (rel !== 'agents/' + m.id + '.md') throw fail(400, 'a member file must be agents/<id>.md')
-    const file = path.join(dir, 'agents', m.id + '.md')
-    if (!fs.existsSync(file)) throw fail(400, 'missing member file ' + rel)
-    return { id: m.id, file, zone: String(m.zone || ''), title: clipCp(m.title, 60), tier: ['light', 'standard', 'heavy'].includes(m.tier) ? m.tier : 'standard' }
+    if (m.zone !== undefined && m.zone !== '' && !ZONES.includes(m.zone)) throw fail(400, 'bad zone in the pack: ' + clipCp(m.zone, 20))
+    const core = m.core === true, ref = m.ref === true
+    let file
+    if (core || ref) {
+      file = path.join(coreDir(), m.id + '.md')
+      if (!fs.existsSync(file)) throw fail(400, 'not a core team agent: ' + m.id)
+    } else {
+      const rel = String(m.file || '')
+      if (rel !== 'agents/' + m.id + '.md') throw fail(400, 'a member file must be agents/<id>.md')
+      file = path.join(dir, 'agents', m.id + '.md')
+      if (!fs.existsSync(file)) throw fail(400, 'missing member file ' + rel)
+    }
+    return { id: m.id, file, core, ref, zone: String(m.zone || ''), title: clipCp(m.title, 60), tier: ['light', 'standard', 'heavy'].includes(m.tier) ? m.tier : 'standard' }
   })
   if (!members.some((m) => m.id === o.lead)) throw fail(400, 'the office lead must be a member of the pack')
   const policyRows = require('./policy.cjs').packRows(j.policy)
@@ -105,7 +117,7 @@ function listPacks() {
     const inst = Object.hasOwn(st.packs, p.id) ? st.packs[p.id] : null
     return {
       id: p.id, version: p.version, name: p.name, description: p.description, 
-      office: p.office, members: p.members.map((m) => ({ id: m.id, title: m.title, tier: m.tier, zone: m.zone, lead: m.id === p.office.lead })),
+      office: p.office, members: p.members.map((m) => ({ id: m.id, title: m.title, tier: m.tier, zone: m.zone, ref: m.ref, lead: m.id === p.office.lead })),
       sampleTasks: p.sampleTasks, installed: inst ? inst.version : '', update: !!(inst && cmpSemver(p.version, inst.version) > 0),
       needs: cmpSemver(p.minArsenale, APP_VERSION) > 0 ? p.minArsenale : '',
     }
@@ -116,7 +128,7 @@ function listPacks() {
 function conflicts(id) {
   const p = bundledPack(id)
   const have = P.agentFiles()
-  return p.members.filter((m) => have.has(m.id)).map((m) => m.id)
+  return p.members.filter((m) => !m.ref && !m.core && have.has(m.id)).map((m) => m.id)
 }
 
 function mergeLabels(labels, rename) {
@@ -149,7 +161,10 @@ function copyFiles(p, onConflict) {
   let labelsBefore = null
   try { labelsBefore = fs.readFileSync(path.join(P.MANAGED_AGENTS, 'labels.json'), 'utf8') } catch { /* none yet */ }
   for (const m of p.members) {
+    if (m.ref) continue
     let id = m.id
+    // a core team agent that exists already is the very same agent: nothing to ask, nothing to copy
+    if (m.core && have.has(id)) continue
     if (have.has(id)) {
       if (onConflict === 'keep') { kept.push(id); continue }
       let n = 2
@@ -204,7 +219,8 @@ function employeesOf(p, copied) {
   const idOf = (m) => copied.rename[m] || m
   const lead = idOf(p.office.lead)
   for (const m of p.members) {
-    if (copied.kept.includes(m.id)) continue
+    if (m.ref || copied.kept.includes(m.id)) continue
+    // zones the company file does not know yet (verify, ship ...) stay empty: the desk is derived until it learns them
     out[idOf(m.id)] = { title: m.title, homeOfficeId: p.office.id, zone: m.zone === 'lead' ? 'lead' : ['build', 'review', 'docs', 'design'].includes(m.zone) ? m.zone : '', reportsTo: idOf(m.id) === lead ? 'supervisor' : lead, tier: m.tier, managed: true, createdBy: 'pack:' + p.id }
   }
   return out
@@ -299,4 +315,4 @@ function updatePack(id, actor) {
  *  matches, so removal keeps it. Nothing to write; kept for clarity. */
 function markEdited() { return true }
 
-module.exports = { BUNDLED, STATE, readPack, bundled, bundledPack, listPacks, conflicts, copyFiles, removeFiles, undoCopy, record, employeesOf, installPack, uninstallPack, updatePack, readState, cmpSemver, markEdited }
+module.exports = { ZONES, MAX_MEMBERS, BUNDLED, STATE, readPack, bundled, bundledPack, listPacks, conflicts, copyFiles, removeFiles, undoCopy, record, employeesOf, installPack, uninstallPack, updatePack, readState, cmpSemver, markEdited }

@@ -1,0 +1,27 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs, design, verify, ship, plan, ops, data or legal.",
+  "verification-lead": {
+    "dept": "lead"
+  },
+  "flaky-test-triager": {
+    "dept": "verify"
+  },
+  "evidence-collector": {
+    "dept": "verify"
+  },
+  "regression-guard": {
+    "dept": "verify"
+  },
+  "tester": {
+    "dept": "build"
+  },
+  "visual-qa": {
+    "dept": "design"
+  },
+  "finding-verifier": {
+    "dept": "review"
+  },
+  "code-reviewer": {
+    "dept": "review"
+  }
+}

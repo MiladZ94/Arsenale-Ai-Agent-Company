@@ -1,0 +1,18 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs, design, verify, ship, plan, ops, data or legal.",
+  "docs-lead": {
+    "dept": "lead"
+  },
+  "readme-trimmer": {
+    "dept": "docs"
+  },
+  "dev-docs": {
+    "dept": "docs"
+  },
+  "user-guide": {
+    "dept": "docs"
+  },
+  "docs-explainer": {
+    "dept": "docs"
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "format": "arsenale-pack",
+  "formatVersion": 1,
+  "id": "security",
+  "version": "1.0.0",
+  "name": "Security",
+  "description": "Audit an app for leaks, secrets, risky dependencies and weak spots. Reports only; it never changes code.",
+  "minArsenale": "1.0.0",
+  "office": {
+    "id": "security",
+    "name": "Security",
+    "theme": "coral",
+    "profile": "security",
+    "lead": "security-lead"
+  },
+  "members": [
+    {
+      "file": "agents/security-lead.md",
+      "id": "security-lead",
+      "zone": "lead",
+      "title": "Security Lead",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/dependency-auditor.md",
+      "id": "dependency-auditor",
+      "zone": "review",
+      "title": "Dependency Auditor",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/secrets-scanner.md",
+      "id": "secrets-scanner",
+      "zone": "review",
+      "title": "Secrets Scanner",
+      "tier": "light"
+    },
+    {
+      "file": "agents/threat-modeller.md",
+      "id": "threat-modeller",
+      "zone": "review",
+      "title": "Threat Modeller",
+      "tier": "heavy"
+    },
+    {
+      "id": "security-reviewer",
+      "ref": true,
+      "zone": "review",
+      "title": "Security Reviewer",
+      "tier": "heavy"
+    }
+  ],
+  "sampleTasks": [
+    {
+      "title": "Scan a sample folder for secrets",
+      "description": "In the invented sample folder I name, search for key-like strings and private paths and report file and line only.",
+      "assignee": "secrets-scanner"
+    },
+    {
+      "title": "Model the threats of a local file import",
+      "description": "For an invented import feature, list entry points, data and the ten likeliest abuse cases with the control for each.",
+      "assignee": "threat-modeller"
+    }
+  ],
+  "policy": {
+    "members": {
+      "security-lead": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "dependency-auditor": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "secrets-scanner": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "threat-modeller": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      }
+    }
+  }
+}

@@ -43,6 +43,13 @@ function readConfig() {
   try { const j = JSON.parse(P.stripBom(fs.readFileSync(path.join(P.HOME, 'config.json'), 'utf8'))); return j && typeof j === 'object' && !Array.isArray(j) ? j : {} } catch { return {} }
 }
 
+/** The core team is a pack and the default for a new company; coreTeam:false leaves it out. */
+function withCore(ids, a) {
+  if (a.coreTeam === false || ids.includes('core-team')) return ids
+  try { if (!require('./packs.cjs').bundled().some((p) => p.id === 'core-team')) return ids } catch { return ids }
+  return ['core-team', ...ids]
+}
+
 function create(answers, actor) {
   requireBoard(actor)
   const a = answers || {}
@@ -60,7 +67,7 @@ function create(answers, actor) {
   }
   if (status().hasCompany) throw fail(409, 'A company exists already: add offices from Settings → Office packs')
   const Pk = require('./packs.cjs')
-  const packs = packIds.map((id) => Pk.bundledPack(id))
+  const packs = withCore(packIds, a).map((id) => Pk.bundledPack(id))
   // packs must not bring the same office twice
   const offices = new Set()
   for (const p of packs) { if (offices.has(p.office.id)) throw fail(400, 'Two packs bring the same office: ' + p.office.id); offices.add(p.office.id) }
@@ -115,8 +122,8 @@ function preview(answers) {
   const a = answers || {}
   const out = [path.join(P.HOME, 'company') + path.sep + '  (company.json, offices.json, projects.json, employees.json)', path.join(P.HOME, 'policy.json'), path.join(P.HOME, 'packs', 'installed.json'), path.join(P.HOME, 'config.json') + '  (onboarding)', path.join(P.HOME, 'workspace') + path.sep]
   const Pk = require('./packs.cjs')
-  for (const id of Array.isArray(a.packs) ? a.packs : []) {
-    try { for (const m of Pk.bundledPack(String(id)).members) out.push(path.join(P.MANAGED_AGENTS, m.id + '.md')) } catch { /* unknown pack: Create will say so */ }
+  for (const id of withCore(Array.isArray(a.packs) ? a.packs.map(String) : [], a)) {
+    try { for (const m of Pk.bundledPack(String(id)).members) if (!m.ref) out.push(path.join(P.MANAGED_AGENTS, m.id + '.md')) } catch { /* unknown pack: Create will say so */ }
   }
   return { home: P.HOME, files: out }
 }

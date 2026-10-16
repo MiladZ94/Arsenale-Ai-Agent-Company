@@ -1,0 +1,18 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs, design, verify, ship, plan, ops, data or legal.",
+  "data-lead": {
+    "dept": "lead"
+  },
+  "schema-diff-reviewer": {
+    "dept": "data"
+  },
+  "backup-restore-checker": {
+    "dept": "data"
+  },
+  "archive-curator": {
+    "dept": "data"
+  },
+  "data-migration": {
+    "dept": "data"
+  }
+}

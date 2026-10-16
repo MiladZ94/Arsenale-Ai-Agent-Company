@@ -157,6 +157,19 @@ or `/fix`. Full rules: `docs/specs/autonomous-mode.md`.
 4. **Gates per phase:** `code-reviewer`, `finding-verifier`, fix round, then
    the data, security, visual and performance gates when they apply. Only
    confirmed findings are fixed. Three rounds at most.
+   Which pack provides which gate:
+
+   | Gate | Pack | Agent |
+   |---|---|---|
+   | review | `verification` | `code-reviewer` |
+   | finding check | `verification` | `finding-verifier` |
+   | visual | `verification` | `visual-qa` |
+   | data | `data-integrity` | `data-migration` |
+   | security | `security` | `security-reviewer` |
+   | release | `release` | `release-manager`, `release-builder` |
+   
+   The core team pack (`core-team`) holds every one of these agents; the packs add the office and helpers for the gate.
+
 5. **Owner gates are the only stops:** release, listed project gates, budget
    at 100 %, a blocked phase, an `ask` or `never` action.
 6. **Never:** push, tag or publish; kill by name; throwaway executables; real

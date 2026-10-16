@@ -1,0 +1,15 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs, design, verify, ship, plan, ops, data or legal.",
+  "domain-lead": {
+    "dept": "lead"
+  },
+  "numeric-regression-checker": {
+    "dept": "verify"
+  },
+  "standards-cross-checker": {
+    "dept": "review"
+  },
+  "domain-validator": {
+    "dept": "review"
+  }
+}
