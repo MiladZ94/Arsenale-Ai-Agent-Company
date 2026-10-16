@@ -17,6 +17,7 @@
   "files": [
     "bin/",
     "tools/*.cjs",
+    "tools/pages/",
     "tools/model-prices.json",
     "tools/OFFICE-WORLD-NOTE.md",
     "tools/vendor/",
