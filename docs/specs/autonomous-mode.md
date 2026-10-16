@@ -982,3 +982,6 @@ step, and review as in the normal cycle.
 
 ### Owner answers (2026-10-16)
 All seven recommendations accepted: Q1 A (mirrored JSON in the data folder, the md stays the source), Q2 A (`arsenale awake start|stop`, held only while its PID lives), Q3 A (run authorisation = commits on agent branches + merges into `auto/<version>/integration`; push, tag, build, publish stay owner gates), Q4 A (at 100 %: no new agents, running ones finish their step, then ask), Q5 A (data/security findings always re-checked at the heavy tier), Q6 A (shipped budget defaults, re-estimated after phase 1 and shown as a decision), Q7 A (pilot 1 keeps the installed agents until pilot 2's integration branch is merged and the installer re-run).
+
+### Owner rule (2026-10-16): English only, minimal text
+Arsenale must contain NO Persian text (remove `agents/labels.fa.json`, any Persian strings in tools, pages, docs and agent files, and any setting that switches the UI to Persian) and its UI and docs must be minimal: short labels, no explanatory paragraphs on screens, docs trimmed to what a new user needs. Planned as a cleanup phase of pilot 2 (after phase 1), with visual-qa on every page.
