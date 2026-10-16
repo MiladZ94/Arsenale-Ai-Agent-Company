@@ -186,6 +186,7 @@ function start(opts = {}) {
     '/api/connect-apply': [(b) => require('./connect.cjs').apply(String(b.client || ''), String(b.hash || ''), BOARD)],
     '/api/mcp-forget': [(b) => require('./mcp-server.cjs').forgetClient(String(b.id || ''), BOARD)],
     '/api/notify': [(b) => require('./notify.cjs').configure(b, BOARD)],
+    '/api/campus': [(b) => require('./campus.cjs').apply(b, BOARD, 'dashboard')],
   }
   const READS = {
     '/api/version-runs': () => require('./version-run-page.cjs').load(),

@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "note": "Every file in this folder needs an entry. CC0-1.0 only. See ../assets.cjs for the entry format. Empty: the campus and the office are drawn from built-in shapes.",
+  "assets": []
+}

@@ -1,10 +1,10 @@
   const QUIET_MIN = 10 // minutes without a step before a working agent counts as quiet
   const STATUS = {
-    running: { fa: T('Working'), g: '▶' },
-    ok: { fa: T('No issues'), g: '✓' },
-    findings: { fa: T('Has findings'), g: '!' },
-    failed: { fa: T('Failed'), g: '✕' },
-    stopped: { fa: T('Stopped'), g: '■' },
+    running: { label: T('Working'), g: '▶' },
+    ok: { label: T('No issues'), g: '✓' },
+    findings: { label: T('Has findings'), g: '!' },
+    failed: { label: T('Failed'), g: '✕' },
+    stopped: { label: T('Stopped'), g: '■' },
   }
   const stOf = (s) => (Object.prototype.hasOwnProperty.call(STATUS, s) ? s : 'ok')
 
@@ -54,10 +54,10 @@
   // from homeDesks() over the agents that exist; an agent with no desk there
   // takes a guest desk while it works.
   const DEPTS = {
-    build: { fa: T('Build & release'), slots: [[1, 2], [4.5, 2], [1, 5], [4.5, 5]] },
-    review: { fa: T('Review'), slots: [[8, 2], [10.5, 2], [13, 2], [8, 5], [10.5, 5], [13, 5]] },
-    docs: { fa: T('Docs'), slots: [[16, 2], [19, 2], [16, 5], [19, 5]] },
-    design: { fa: T('Design & spec'), slots: [[1, 9], [4.5, 9], [1, 12], [4.5, 12]] },
+    build: { label: T('Build & release'), slots: [[1, 2], [4.5, 2], [1, 5], [4.5, 5]] },
+    review: { label: T('Review'), slots: [[8, 2], [10.5, 2], [13, 2], [8, 5], [10.5, 5], [13, 5]] },
+    docs: { label: T('Docs'), slots: [[16, 2], [19, 2], [16, 5], [19, 5]] },
+    design: { label: T('Design & spec'), slots: [[1, 9], [4.5, 9], [1, 12], [4.5, 12]] },
   }
   let HOME = homeDesks(DATA.agents, DATA.desks).seats
   // Guest desks for built-in or unknown agents (Explore, general-purpose, …),

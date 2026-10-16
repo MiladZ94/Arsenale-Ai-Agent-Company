@@ -5,7 +5,7 @@
       const st = l ? stOf(l.status) : 'ok'
       return '<h2 class="ih" style="font-family:var(--font-ui)">' + T('No one has taken a task yet') + '</h2>' +
         '<p class="muted">' + T('When the supervisor gives an agent a task, it sits down at its desk and you see its live log here.') + '</p>' +
-        (l ? '<h3 class="sect">' + T('Last report') + '</h3><div class="slip g-' + st + '"><span class="st"><span class="g g-' + st + '">' + STATUS[st].g + '</span> ' + STATUS[st].fa + '</span>' +
+        (l ? '<h3 class="sect">' + T('Last report') + '</h3><div class="slip g-' + st + '"><span class="st"><span class="g g-' + st + '">' + STATUS[st].g + '</span> ' + STATUS[st].label + '</span>' +
           '<b dir="ltr">' + esc(l.agent) + '</b> · ' + esc(l.projectKey || '—') + ' · ' + esc(new Date(l.end).toLocaleDateString(SHORT_LOCALE)) + ' <span dir="ltr">' + hhmm(l.end) + '</span>' +
           '<p>' + esc(l.summary || cleanTask(l.task)) + '</p></div>' : '') +
         '<h3 class="sect">' + fa(DATA.agents.length) + T(' agents, 0 working') + '</h3>' +
@@ -25,7 +25,7 @@
     const who = (x) => '<button type="button" data-key="' + esc(x.key) + '"><b dir="ltr">' + esc(x.agent) + '</b></button>'
     let html = '<div class="who">' + portrait(r.agent, 5, false) +
       '<div><h2 class="ih" dir="ltr">' + esc(r.agent) + '</h2><div class="muted" style="margin:0">' + esc((def && def.title) || (def ? '' : T('agent with no definition in the agent folders'))) + '</div></div></div>' +
-      '<div class="chips"><span class="chip st-' + st + '"><span class="g">' + STATUS[st].g + '</span> ' + STATUS[st].fa + '</span>' +
+      '<div class="chips"><span class="chip st-' + st + '"><span class="g">' + STATUS[st].g + '</span> ' + STATUS[st].label + '</span>' +
       '<span class="chip mdl ' + (isHeavy(r.modelKey) ? 'opus' : 'son') + '">' + esc((r.modelKey || '—') + (r.effort ? ' · ' + r.effort : '')) + '</span>' +
       (r.projectKey ? '<span class="chip">' + esc(r.projectKey) + '</span>' : '') +
       (r.budgetLevel === 'stop' ? '<span class="chip despite" title="' + T('The supervisor started this run although the budget check said stop') + '">' + T('started despite stop') + '</span>' : '') + '</div>' +
@@ -38,7 +38,7 @@
       '<h3 class="sect">' + T('Task') + '</h3><p class="task">' + esc(cleanTask(r.task)) + '</p>'
     if (parent) html += '<p class="rel">' + T('Under ') + (parent.missing ? '<span dir="ltr" class="dim">' + esc(parent.id) + '</span>' : who(parent) + ' <span dir="ltr" class="dim">…' + esc(String(parent.id || '').slice(-4)) + '</span>') + '</p>'
     if (kids.length) {
-      html += '<p class="rel">' + T('Delegated to ') + kids.map((k) => who(k) + ' <span class="dim">(' + (k.live ? STATUS.running.fa + T(', ') + minsFa(Date.now() - k.start) + T(' min') : STATUS[stOf(k.status)].g + ' ' + STATUS[stOf(k.status)].fa) + ')</span>').join(T(', ')) + '</p>'
+      html += '<p class="rel">' + T('Delegated to ') + kids.map((k) => who(k) + ' <span class="dim">(' + (k.live ? STATUS.running.label + T(', ') + minsFa(Date.now() - k.start) + T(' min') : STATUS[stOf(k.status)].g + ' ' + STATUS[stOf(k.status)].label) + ')</span>').join(T(', ')) + '</p>'
     }
     html += '<h3 class="sect">' + (r.live ? T('Live log') : T('Log')) + (steps && steps.length ? ' <span class="dim">· ' + fa(steps.length) + T(' steps') + '</span>' : '') + '</h3>'
     if (steps && steps.length) {
@@ -55,7 +55,6 @@
       if (r.findings && r.findings.length) html += '<ul class="finds">' + r.findings.map((f) => '<li>' + esc(f) + '</li>').join('') + '</ul>'
       if (r.files && r.files.length) html += '<div class="files">' + r.files.map((f) => '<span class="file">' + esc(f) + '</span>').join('') + '</div>'
     }
-    if (W3 && mode === 'office') html += W3.characterBox(r.agent)
     return html
   }
 
@@ -97,7 +96,7 @@
         html += '<ol class="slips">' + list.map((d) => {
           const st = stOf(d.status)
           return '<li><button type="button" class="slip g-' + st + (current && current.key === d.key ? ' on' : '') + '" data-key="' + esc(d.key) + '">' +
-            '<span class="st"><span class="g g-' + st + '">' + STATUS[st].g + '</span> ' + STATUS[st].fa + '</span>' +
+            '<span class="st"><span class="g g-' + st + '">' + STATUS[st].g + '</span> ' + STATUS[st].label + '</span>' +
             '<span class="sl1"><b>' + esc(d.agent) + '</b><time>' + hhmm(d.end) + '</time></span>' +
             '<span class="sl2">' + esc((d.projectKey || '—') + ' · ' + cleanTask(d.task)) + '</span></button></li>'
         }).join('') + '</ol>'
@@ -105,7 +104,7 @@
         html += '<p class="muted pad">' + T('No report today with this result.') + '</p>'
       } else {
         const l = S.lastRun
-        html += '<p class="muted pad">' + T('No report handed in yet today.') + (l ? T(' Last: ') + esc(new Date(l.end).toLocaleDateString(SHORT_LOCALE)) + ' <span dir="ltr">' + hhmm(l.end) + '</span>' + T(', ') + '<span dir="ltr">' + esc(l.agent) + '</span>' + T(', ') + STATUS[stOf(l.status)].fa + '.' : '') + '</p>'
+        html += '<p class="muted pad">' + T('No report handed in yet today.') + (l ? T(' Last: ') + esc(new Date(l.end).toLocaleDateString(SHORT_LOCALE)) + ' <span dir="ltr">' + hhmm(l.end) + '</span>' + T(', ') + '<span dir="ltr">' + esc(l.agent) + '</span>' + T(', ') + STATUS[stOf(l.status)].label + '.' : '') + '</p>'
       }
       return html
     }
@@ -152,7 +151,7 @@
       const st = stOf(d.status)
       const fresh = i === S.today.length - 1
       html.push('<button type="button" class="sb-slip s-' + st + (fresh ? ' fresh' : '') + (current && current.key === d.key ? ' on' : '') + '" data-key="' + esc(d.key) + '" style="left:' + X(d.end) + 'px;top:' + (52 + (i % 2) * 17) + 'px"' +
-        ' aria-label="' + esc(hhmm(d.end) + ', ' + d.agent + ', ' + STATUS[st].fa) + '"><span class="g">' + STATUS[st].g + '</span>' +
+        ' aria-label="' + esc(hhmm(d.end) + ', ' + d.agent + ', ' + STATUS[st].label) + '"><span class="g">' + STATUS[st].g + '</span>' +
         (fresh ? ' <span class="sb-nw">' + esc(d.agent) + T(' · new') + '</span>' : '') + '</button>')
     })
     const quietGaps = (steps, from, to) => {
@@ -186,7 +185,7 @@
       const label = !r.live && w > 70 && alone(r) ? '<span class="sb-bl">' + esc(cleanTask(r.task)) + '</span>' : ''
       const g = r.live ? '' : '<span class="g">' + STATUS[st].g + '</span>'
       return '<button type="button" class="sb-bar ' + cls + (current && current.key === r.key ? ' on' : '') + '" data-key="' + esc(r.key) + '" style="left:' + x1 + 'px;top:' + (y + 12) + 'px;width:' + w + 'px"' +
-        ' aria-label="' + esc(r.agent + T(', ') + cleanTask(r.task) + T(', ') + STATUS[st].fa + T(', ') + (isNaN(r.start) ? '' : hhmm(r.start)) + T(' to ') + (r.live ? T('now') : hhmm(r.end))) + '">' + inner.join('') + g + label + '</button>'
+        ' aria-label="' + esc(r.agent + T(', ') + cleanTask(r.task) + T(', ') + STATUS[st].label + T(', ') + (isNaN(r.start) ? '' : hhmm(r.start)) + T(' to ') + (r.live ? T('now') : hhmm(r.end))) + '">' + inner.join('') + g + label + '</button>'
     }
     const laneY = new Map()
     order.forEach((agent, i) => laneY.set(agent, TOP + i * ROW))
@@ -366,11 +365,10 @@
   // the built file always shows).
   let W3 = null
   try {
-    W3 = typeof office3d === 'function' && typeof OFFICE_CHARACTERS === 'object' ? office3d({
-      esc, fa, calm, characters: OFFICE_CHARACTERS,
+    W3 = typeof office3d === 'function' ? office3d({
+      esc, fa,
       // the office strip (company) over the top of the floor, the legend along its foot
       pad: { top: CO ? 104 : 8, bottom: 36 },
-      onPick: (id, p) => { if (p && p.selKey) { sel = { key: p.selKey }; remember(); renderAll() } },
       onView: (v) => { view3[(CO ? officeId : '') || 'office'] = v; remember(); const z = $('zoomv'); if (z && W3) z.textContent = fa(W3.zoomPct()) + T('%') },
       onLost: () => { W3 = null; stage.classList.remove('w3on'); renderAll() },
     }) : null

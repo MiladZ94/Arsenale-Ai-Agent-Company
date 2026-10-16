@@ -1,0 +1,71 @@
+/* The asset manifest and loader (spec 16.2 rule 15, decision A2).
+ *
+ * The campus and the office are drawn from procedural low-poly shapes, so
+ * Arsenale needs no asset file to run. A real model may replace a shape: drop
+ * a .glb into tools/assets/ and add its entry to tools/assets/manifest.json:
+ *
+ *   { "file": "kenney/office-tower.glb", "use": "building:business",
+ *     "name": "...", "author": "...", "source": "<page URL>",
+ *     "licence": "CC0-1.0", "fetched": "YYYY-MM-DD", "sha256": "<hex>" }
+ *
+ * `use` is "building:<type>" (see campus.cjs TYPES). Only CC0 files are
+ * accepted and only when the hash matches the entry: anything else is left
+ * out of the page and named in `problems`, and the shape is drawn instead
+ * (tools/test/assets.test.cjs fails for a shipped file with no entry).
+ * Files are inlined into the page like the other scripts (the dashboard
+ * server serves pages and JSON only), so each is capped in size.
+ */
+const fs = require('fs')
+const path = require('path')
+const crypto = require('crypto')
+
+const DIR = path.join(__dirname, 'assets')
+const MAX_BYTES = 6 * 1024 * 1024
+const NOT_ASSETS = new Set(['manifest.json', 'NOTICE.md'])
+
+const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex')
+
+function readManifest(dir) {
+  try {
+    const m = JSON.parse(fs.readFileSync(path.join(dir || DIR, 'manifest.json'), 'utf8'))
+    return { assets: Array.isArray(m.assets) ? m.assets : [] }
+  } catch { return { assets: [] } }
+}
+
+/** Every file under the folder except the manifest and the notice, as paths with / . */
+function shippedFiles(dir) {
+  const root = dir || DIR
+  const out = []
+  const walk = (d) => {
+    let names = []
+    try { names = fs.readdirSync(d, { withFileTypes: true }) } catch { return }
+    for (const e of names) {
+      const p = path.join(d, e.name)
+      if (e.isDirectory()) walk(p)
+      else if (!(d === root && NOT_ASSETS.has(e.name))) out.push(path.relative(root, p).split(path.sep).join('/'))
+    }
+  }
+  walk(root)
+  return out.sort()
+}
+
+/** What the page may load: { models: { "building:docs": <base64 .glb> }, problems }. */
+function pageAssets(dir) {
+  const root = dir || DIR
+  const models = {}
+  const problems = []
+  for (const a of readManifest(root).assets) {
+    const file = String(a && a.file || '')
+    const use = String(a && a.use || '')
+    if (!/^[\w.\/-]+$/.test(file) || file.includes('..') || !/^building:[a-z]+$/.test(use)) { problems.push('bad entry: ' + file); continue }
+    if (a.licence !== 'CC0-1.0') { problems.push(file + ': licence is not CC0-1.0'); continue }
+    let buf
+    try { buf = fs.readFileSync(path.join(root, file)) } catch { continue } // an entry without its file: the shape is drawn
+    if (buf.length > MAX_BYTES) { problems.push(file + ': too large for the page'); continue }
+    if (sha256(buf) !== a.sha256) { problems.push(file + ': hash differs from the manifest'); continue }
+    models[use] = buf.toString('base64')
+  }
+  return { models, problems }
+}
+
+module.exports = { DIR, readManifest, shippedFiles, pageAssets, sha256 }

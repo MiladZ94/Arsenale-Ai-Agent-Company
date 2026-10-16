@@ -493,6 +493,7 @@ function companyState(state) {
       assistants: Array.isArray(co.company.assistants) ? co.company.assistants.slice(0, 12).map((a) => clip(a, 30)) : [],
     },
     themes: THEMES,
+    campus: require('./campus.cjs').view(co),
     offices: co.offices.map((o) => Object.assign({}, o, { color: THEMES[o.theme], standing: st.offices[o.id] })),
     projects: co.projects.map((p) => ({ id: p.id, name: p.name, key: p.key, officeId: p.officeId, status: p.status, aliases: p.aliases, standing: st.projects[p.id] })),
     employees,

@@ -51,10 +51,10 @@
       const [x, y] = P(gx, gy)
       return '<text transform="matrix(0.894,0.447,-0.894,0.447,' + x + ',' + y + ')" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="700" fill="#453E32" direction="rtl" text-anchor="middle">' + text + '</text>'
     }
-    base += floorText(3.6, 6.6, DEPTS.build.fa) + floorText(11.4, 6.6, DEPTS.review.fa) + floorText(18.6, 6.6, DEPTS.docs.fa)
+    base += floorText(3.6, 6.6, DEPTS.build.label) + floorText(11.4, 6.6, DEPTS.review.label) + floorText(18.6, 6.6, DEPTS.docs.label)
     // a company office: its head sits at the round table; HQ's head is the supervisor
     const lead = desks.lead === undefined ? 'supervisor' : desks.lead
-    base += floorText(3.6, 13.8, DEPTS.design.fa) + floorText(11.1, 13.6, lead && lead !== 'supervisor' ? T('Lead desk') : T('Supervisor desk')) + floorText(18.6, 13.9, T('Break room'))
+    base += floorText(3.6, 13.8, DEPTS.design.label) + floorText(11.1, 13.6, lead && lead !== 'supervisor' ? T('Lead desk') : T('Supervisor desk')) + floorText(18.6, 13.9, T('Break room'))
 
     const part = (gx, gy, w, d) => add(gx + w / 2 + gy + d / 2 - 0.4, box(gx, gy, w, d, 18, 0, '#6F7B88', '#4E5966', '#44505C'))
     part(0, 7.0, 6.2, 0.18); part(8.4, 7.0, 5.4, 0.18); part(16.2, 7.0, 5.8, 0.18)
@@ -202,13 +202,18 @@
     return { svg, overlays: layout(overlays, current), loungeAt }
   }
 
-  // ---------- the office in 3D (office3d, office-world.cjs): one desk per person
-  // The same people and states as the flat office: whoever has a desk here,
-  // whoever worked here today, the lead at the supervisor's station in the
-  // middle and the reports in its tray. Each person's state is all the 3D
-  // floor needs: it walks them from the lounge to the supervisor and their
-  // desk and back as the state changes. The labels are the flat office's own
-  // bubbles, pinned to a desk; the 3D floor places them over its points.
+  // ---------- the office in 3D (office3d, office-world.cjs): one figure per run
+  // Who is on the floor: every run that is going (N runs of one agent are N
+  // figures, numbered once and keeping their number and desk for their whole
+  // life), and whoever finished, failed or waits for you today. Idle people
+  // are not figures: they are the "N idle" count. The text of a figure (name,
+  // step, state) is in the side list the 3D floor draws, under the figure's number.
+  const figNum = new Map()   // office key -> Map(figure id -> number)
+  const initialsOf = (title) => {
+    const w = String(title || '?').split(/[s_-]+/).filter(Boolean)
+    const ch = (x) => Array.from(x)[0] || ''
+    return (w.length > 1 ? ch(w[0]) + ch(w[1]) : Array.from(w[0] || '?').slice(0, 2).join('')).toLocaleUpperCase()
+  }
   function scene3d(S, desks, current) {
     const lead = desks.lead === undefined ? 'supervisor' : desks.lead
     const lastBy = new Map()
@@ -216,16 +221,17 @@
     const waiting = new Set((DATA.gates || []).filter((g) => g.status === 'waiting' && g.run).map((g) => g.run))
     const away = new Map((desks.away || []).map((w) => [w.agent, w]))
     const order = []
-    const add = (a) => { if (a && a !== lead && !order.includes(a)) order.push(a) }
-    // a desk on the plan is a podium only for someone who exists here: an
+    const add = (a) => { if (a && !order.includes(a)) order.push(a) }
+    // a desk on the plan is a person only for someone who exists here: an
     // agent defined in this install, a company employee, or whoever worked today
     const known = (a) => AGENT.has(a) || S.busy.has(a) || lastBy.has(a) || !!(CO && CO.emp(a))
+    add(lead)
     for (const [a] of desks) if (known(a)) add(a)
     for (const a of desks.overflow || []) add(a)
     for (const a of S.busy.keys()) add(a)
-    for (const r of S.today) add(r.agent) // worked here today with no desk: a podium all the same
-    const GLYPH = { working: '▶', quiet: '◷', waiting: '!', done: '✓', findings: '!', failed: '✕', stopped: '■', away: '→' }
-    const WORD = { working: STATUS.running.fa, quiet: T('Quiet'), waiting: T('Waiting for you'), done: STATUS.ok.fa, findings: STATUS.findings.fa, failed: STATUS.failed.fa, stopped: STATUS.stopped.fa }
+    for (const r of S.today) add(r.agent) // worked here today with no desk: a figure all the same
+    // the whole home staff, so the idle count is the office strip's own
+    if (CO) for (const e of COMPANY.employees) if (e.kind === 'employee' && e.homeOfficeId === officeId && e.id !== 'supervisor') add(e.id)
     const stateOf = (agent) => {
       if (away.has(agent) && !S.busy.has(agent)) return 'away'
       const runs = S.busy.get(agent)
@@ -235,66 +241,47 @@
       if (last.id && waiting.has(last.id)) return 'waiting'
       return { ok: 'done', findings: 'findings', failed: 'failed', stopped: 'stopped' }[stOf(last.status)]
     }
-    const animOf = (agent, st) => st === 'working' ? (agent === lead ? 'thinking' : 'typing')
-      : st === 'quiet' || st === 'failed' ? 'thinking'
-        : st === 'done' && S.now - lastBy.get(agent).end < 12000 ? 'celebrate' : 'idle'
-    const podium = (agent, kind) => {
+    const titleOf = (agent) => {
+      if (agent === 'supervisor') return 'Supervisor'
+      const e = CO ? CO.emp(agent) : null
+      return (e && (e.name || e.title)) || agent
+    }
+    const zoneOf = (agent) => {
+      const e = CO ? CO.emp(agent) : null
+      return (e && e.zone) || (HOME[agent] && HOME[agent][0]) || (agent === lead ? 'lead' : 'guest')
+    }
+    const stepOf = (r) => (!r.live && r.summary ? r.summary : r.steps && r.steps.length ? r.steps[r.steps.length - 1].text : '') || r.doing || ''
+    const figures = [], idle = [], awayList = []
+    for (const agent of order) {
       const st = stateOf(agent)
-      const pal = palette(agent)
-      const run = (S.busy.get(agent) || [])[0] || lastBy.get(agent) || null
-      const name = agent === 'supervisor' ? T('Supervisor') : agent
-      return {
-        id: agent, kind, agent, state: st, anim: animOf(agent, st), shirt: pal.c, hair: pal.h, skin: pal.s,
-        name, sub: WORD[st] || '', glyph: GLYPH[st] || '', present: st !== 'away',
-        attrs: run ? 'data-key="' + esc(run.key) + '"' : '', selKey: run ? run.key : '',
-        aria: name + (WORD[st] ? T(', ') + WORD[st] : ''),
-      }
+      const title = titleOf(agent)
+      if (st === 'away') { awayList.push({ agent, name: title, note: 'at ' + oname3(away.get(agent).officeId) }); continue }
+      if (st === 'idle') { idle.push({ agent, name: title, note: '' }); continue }
+      const runs = S.busy.get(agent)
+      const list = runs ? runs.slice().sort((a, b) => a.start - b.start) : [lastBy.get(agent)]
+      list.forEach((r, k) => {
+        const state = runs ? (r.stale ? 'quiet' : 'working') : st
+        figures.push({
+          id: r.id || r.key, key: r.key, agent, group: agent, title, tag: title, initials: initialsOf(title), zone: zoneOf(agent), state,
+          step: stepOf(r) || (state === 'done' ? 'Handed in' : ''), runN: k + 1, runCount: list.length,
+          label: list.length > 1 ? title + ' · run ' + fa(k + 1) : title, n: 0,
+        })
+      })
     }
-    const pods = []
-    if (lead) pods.push(podium(lead, 'lead'))
-    for (const a of order) pods.push(podium(a, 'desk'))
-    pods.push({ id: '~tray', kind: 'tray', state: 'none', present: true, count: S.today.length, attrs: 'data-open="1"', name: fa(S.today.length) + T(' reports handed in'), aria: fa(S.today.length) + T(' reports handed in') })
-    const has = new Set(pods.map((p) => p.id))
-    // the labels: one bubble per working person, the hand-in, the empty chairs, the delegations
-    const pin = (html, id, at, extra) => html.replace(/^<(\w+) /, '<$1 data-anchor="' + esc(id) + '" data-at="' + at + '"' + (extra || '') + ' ')
-    let overlay = ''
-    const keys = new Set()
-    for (const [agent, runs] of S.busy) {
-      if (!has.has(agent)) continue
-      const run = runs[0]
-      const prio = (current && run.key === current.key ? 1e15 : 0) + (run.stale ? 1e14 : 0) + (run.lastAt || 0)
-      const o = { kind: 'bubble', run, count: runs.length, x: 0, y: 0, dx: 0 }
-      keys.add(overlayId(o))
-      overlay += pin(overlayHtml(o, current), agent, 'card', ' data-prio="' + prio + '"')
-    }
-    const hand = handInOf(S)
-    if (hand) overlay += pin(overlayHtml({ kind: 'handin', x: 0, y: 0, run: hand, wait: null }, current), '~tray', 'tray')
-    for (const w of desks.away || []) if (has.has(w.agent) && !S.busy.has(w.agent)) overlay += pin(overlayHtml({ kind: 'away', x: 0, y: 0, agent: w.agent, officeId: w.officeId }, current), w.agent, 'head')
-    const links = []
-    for (const child of S.active) {
-      const parent = parentOf(S, child)
-      if (!parent || !parent.live || parent.agent === child.agent || !has.has(parent.agent) || !has.has(child.agent)) continue
-      links.push([parent.agent, child.agent])
-      overlay += '<span class="deleg" data-anchor="' + esc(parent.agent) + '" data-anchor2="' + esc(child.agent) + '" data-at="mid">' + esc(parent.agent) + ' ← ' + esc(child.agent) + T(' · delegated ') + '<span dir="ltr">' + hhmm(child.start) + '</span></span>'
-    }
-    // the projects that had work today, as on the flat office's wall boards
-    const proj = new Map()
-    const bump = (k, f) => { if (!k) return; const e = proj.get(k) || { run: 0, done: 0, findings: 0, failed: 0 }; f(e); proj.set(k, e) }
-    S.active.forEach((a) => bump(a.projectKey, (e) => e.run++))
-    S.today.forEach((r) => bump(r.projectKey, (e) => { e.done++; if (r.status === 'findings') e.findings++; if (r.status === 'failed') e.failed++ }))
-    const top = [...proj.entries()].sort((a, b) => (b[1].run - a[1].run) || (b[1].done - a[1].done)).slice(0, 3).map(([name, e]) => {
-      const flag = e.failed ? 'x ' + fa(e.failed) + T(' failed') : e.findings ? '! ' + fa(e.findings) + T(' with findings') : ''
-      return { name, e, counts: fa(e.run) + T(' running · ') + fa(e.done) + T(' in'), flag: flag || T('no open issue') }
-    })
-    const projects = top.map((p) => '<div><b dir="ltr">' + esc(p.name) + '</b>' + p.counts + '<br><span' + (p.e.failed ? ' class="bad"' : '') + '>' + p.flag + '</span></div>').join('')
-    // the same projects on the screens of the office's wall
-    const boards = top.map((p) => ({ title: p.name, lines: [p.counts, p.flag], bad: !!p.e.failed }))
+    // numbers are kept for the life of a figure; a new one takes the smallest free number
     const key = (CO ? officeId : '') || 'office'
-    const title = CO ? CO.oname(CO.officeById(officeId)) : ''
-    // the head's station is the supervisor's, as the flat office labels it
-    const supLabel = lead && lead !== 'supervisor' ? T('Lead desk') : T('Supervisor desk')
-    return { key, view: view3[key] || null, selected: current && has.has(current.agent) ? current.agent : null, podiums: pods, links, overlay, projects, boards, title, supLabel, keys }
+    const nums = figNum.get(key) || new Map()
+    figNum.set(key, nums)
+    const live = new Set(figures.map((f) => f.id))
+    for (const id of [...nums.keys()]) if (!live.has(id)) nums.delete(id)
+    for (const f of figures) {
+      if (!nums.has(f.id)) { const used = new Set(nums.values()); let n = 1; while (used.has(n)) n++; nums.set(f.id, n) }
+      f.n = nums.get(f.id)
+    }
+    figures.sort((a, b) => a.n - b.n)
+    return { key, view: view3[key] || null, selected: current ? current.key : null, figures, idle, away: awayList, reports: S.today.length, title: CO ? CO.oname(CO.officeById(officeId)) : '', keys: new Set() }
   }
+  const oname3 = (id) => (CO && CO.officeById(id) ? CO.oname(CO.officeById(id)) : id)
 
   // a report handed in within the last minute and a half is still being delivered
   const handInOf = (S) => S.today.slice().reverse().find((r) => S.now - r.end < 90000 && !S.busy.has(r.agent)) || null
@@ -392,7 +379,7 @@
       const [mc, ms_] = motion(o, overlayId(o))
       return '<button type="button" class="bub' + (r.stale ? ' stale' : '') + (o.mini && !isSel ? ' mini' : '') + (isSel ? ' sel' : '') + mc +
         '" data-key="' + esc(r.key) + '" style="' + ms_ + 'left:' + o.x + 'px;top:' + o.y + 'px;--dx:' + o.dx + 'px"' +
-        ' aria-label="' + esc(r.agent + T(', ') + STATUS.running.fa + (r.stale ? T(', quiet') : '') + T(', ') + last) + '">' +
+        ' aria-label="' + esc(r.agent + T(', ') + STATUS.running.label + (r.stale ? T(', quiet') : '') + T(', ') + last) + '">' +
         '<span class="bh"><b>' + esc(r.agent) + '</b><i class="mdl ' + (isHeavy(r.modelKey) ? 'opus' : 'son') + '">' + esc(r.modelKey || '—') + '</i>' +
         (o.count > 1 ? '<span class="n2">×' + o.count + '</span>' : '') +
         '<span class="el"><span class="qg">◷ </span>▶ <span data-since="' + r.start + '">' + span(Date.now() - r.start) + '</span></span></span>' +
@@ -406,8 +393,8 @@
       const isSel = current && current.agent === o.agent && !current.live
       const [mc, ms_] = motion(o, overlayId(o))
       return '<button type="button" class="tag' + (o.mini ? ' mini' : '') + (isSel ? ' sel' : '') + mc + '" data-key="' + esc(l.key) + '" style="' + ms_ + 'left:' + o.x + 'px;top:' + (o.y - o.lead) + 'px;--lead:' + o.lead + 'px"' +
-        ' aria-label="' + esc(o.agent + T(', ready. Last task: ') + STATUS[st].fa) + '"><b>' + esc(o.agent) + '</b>' +
-        '<span class="g g-' + st + '" title="' + STATUS[st].fa + '">' + STATUS[st].g + '</span></button>'
+        ' aria-label="' + esc(o.agent + T(', ready. Last task: ') + STATUS[st].label) + '"><b>' + esc(o.agent) + '</b>' +
+        '<span class="g g-' + st + '" title="' + STATUS[st].label + '">' + STATUS[st].g + '</span></button>'
     }
     if (o.kind === 'boss') return '<span class="tag boss" style="left:' + o.x + 'px;top:' + o.y + 'px"><b' + (o.name && o.name !== 'supervisor' ? ' dir="ltr" class="mono"' : '') + '>' + (o.name && o.name !== 'supervisor' ? esc(o.name) : T('Supervisor')) + '</b></span>'
     if (o.kind === 'away') return '<button type="button" class="tag away" data-goto="office:' + esc(o.officeId) + '" style="left:' + o.x + 'px;top:' + o.y + 'px"><b dir="ltr">' + esc(o.agent) + '</b> ' + T('In ') + esc(CO ? CO.oname(CO.officeById(o.officeId)) : o.officeId) + ' →</button>'
@@ -419,8 +406,8 @@
       const st = stOf(r.status)
       const [mc, ms_] = motion(o, overlayId(o))
       return '<button type="button" class="bub hand g-' + st + mc + '" data-key="' + esc(r.key) + '" style="' + ms_ + 'left:' + o.x + 'px;top:' + o.y + 'px;--dx:-60px"' +
-        ' aria-label="' + esc(r.agent + T(' handed in a report: ') + STATUS[st].fa) + '">' +
-        '<span class="bh"><b>' + esc(r.agent) + '</b><span class="el"><span class="g g-' + st + '">' + STATUS[st].g + '</span> ' + STATUS[st].fa + ' · ' + hhmm(r.end) + '</span></span>' +
+        ' aria-label="' + esc(r.agent + T(' handed in a report: ') + STATUS[st].label) + '">' +
+        '<span class="bh"><b>' + esc(r.agent) + '</b><span class="el"><span class="g g-' + st + '">' + STATUS[st].g + '</span> ' + STATUS[st].label + ' · ' + hhmm(r.end) + '</span></span>' +
         '<span class="bt">' + esc(r.summary || cleanTask(r.task)) + '</span></button>'
     }
     if (o.kind === 'deleg') {

@@ -29,7 +29,7 @@ Commands
                                  --shop: a small shop with office packs and no developers
   log <mode> [json] [flags]      record agent activity; "arsenale log --help" lists the modes
   start | progress | finish | gate | decision | answers | inbox | dismiss | budget-check
-                                 | version-run | version-ledger
+                                 | version-run | version-ledger | campus
                                  short for "log --start", "log --progress", "log <json>" …
   init [--dir D] [--dry-run] [--yes] [--force]
                                  install agents, rules and skills; scaffold PROJECT.md, REVIEW.md, docs/specs
@@ -66,7 +66,7 @@ const ALIASES = {
   dismiss: '--dismiss', 'budget-check': '--budget-check', budget: '--budget', budgets: '--budgets', employee: '--employee',
   heartbeat: '--heartbeat', 'company-init': '--company-init', 'company-status': '--company-status',
   task: '--task', comment: '--comment', deliverable: '--deliverable', 'check-action': '--check-action',
-  'version-run': '--version-run', 'version-ledger': '--version-ledger',
+  campus: '--campus', 'version-run': '--version-run', 'version-ledger': '--version-ledger',
 }
 
 function flags(args) {
