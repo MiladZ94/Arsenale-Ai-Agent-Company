@@ -413,7 +413,37 @@ function createSession(opts) {
     try { return handle(parsed) } catch { return { jsonrpc: '2.0', id: parsed && parsed.id != null ? parsed.id : null, error: { code: -32603, message: 'Internal error' } } }
   }
 
-  return { handle, handleAny, state: s }
+  /** The task and job files the calls of a message will lock, so the HTTP
+   *  transport can take them first without blocking the dashboard server. A
+   *  file missed here is still locked by the call itself, only blocking. */
+  function locksFor(parsed) {
+    const Tk = require('./tasks.cjs')
+    const out = []
+    for (const m of Array.isArray(parsed) ? parsed : [parsed]) {
+      if (!m || m.method !== 'tools/call' || !m.params || typeof m.params !== 'object') continue
+      const a = m.params.arguments && typeof m.params.arguments === 'object' ? m.params.arguments : {}
+      try {
+        switch (String(m.params.name || '')) {
+          case 'log_step': out.push(L.activeFileFor(str(a.job_id, 80))); break
+          case 'finish_job': {
+            const run = L.readActive(str(a.job_id, 80))
+            if (run) out.push(L.activeFileFor(run.id), ...Tk.lockFilesOf(run.issue))
+            break
+          }
+          case 'start_job': case 'get_task': case 'update_task': out.push(...Tk.lockFilesOf(str(a.task_id, 20))); break
+          case 'get_inbox': {
+            // the tasks get_inbox marks seen: those of the unread lines
+            const fresh = readLinesOf(company().fileOf('inbox')).slice(Number(pointer(s.clientId).inboxLines) || 0)
+            out.push(...Tk.lockFilesOf(fresh.filter((l) => l && /^(task|comment)\./.test(l.type) && l.id).map((l) => l.id)))
+            break
+          }
+        }
+      } catch { /* the call itself answers what is wrong */ }
+    }
+    return out.filter((f) => fs.existsSync(f))
+  }
+
+  return { handle, handleAny, locksFor, state: s }
 }
 
 /** The stdio transport: newline-delimited JSON-RPC on stdin and stdout. */
@@ -524,9 +554,12 @@ function httpTransport() {
       entry = sessions.get(sid)
       if (!entry) return send(res, 404, { error: 'session expired: send initialize again' })
       entry.at = now
-      const out = entry.session.handleAny(parsed)
-      if (out === null) return send(res, 202)
-      return send(res, 200, out)
+      // a held task or job lock is waited for with timers (store.cjs): the
+      // dashboard keeps answering meanwhile
+      require('./store.cjs').withLockAsync(entry.session.locksFor(parsed), () => entry.session.handleAny(parsed)).then((out) => {
+        if (out === null) return send(res, 202)
+        send(res, 200, out)
+      }, (e) => send(res, 503, { error: String(e && e.message || e) }, { 'Retry-After': '1' }))
     })
   }
   return { handle, sessions }

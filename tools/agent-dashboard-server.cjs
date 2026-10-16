@@ -94,6 +94,12 @@ function start(opts = {}) {
   const COOKIE = LK.cookieName(port)
   const HOSTS = ['127.0.0.1:' + port, 'localhost:' + port]
   const ORIGINS = HOSTS.map((h) => 'http://' + h)
+  // One thread answers every page and agent: a request whose file is locked
+  // waits with timers (withLockAsync) and briefly, and a lock taken deeper
+  // down blocks for at most a second (store.cjs).
+  const S = require('./store.cjs')
+  S.configure({ syncWaitMs: 1000, asyncWaitMs: 5000 })
+  const companyFiles = (...ks) => { try { const C = require('./agent-company.cjs'); return ks.map((k) => C.fileOf(k)).filter((f) => fs.existsSync(f)) } catch { return [] } }
 
   const sameToken = (given) => LK.same(given, TOKEN)
   const hasKey = (req) => {
@@ -167,9 +173,9 @@ function start(opts = {}) {
   const mcpHttp = require('./mcp-server.cjs').httpTransport()
   // Board writes of the 1.0 screens: url -> [handler(body), body limit]
   const WRITES = {
-    '/api/task': [(b) => { const T = require('./tasks.cjs'); return b.op === 'update' ? T.updateTask(b, BOARD).task : T.createTask(b, BOARD) }, 32768],
+    '/api/task': [(b) => { const T = require('./tasks.cjs'); return b.op === 'update' ? S.withLockAsync(T.lockFilesOf(b.id), () => T.updateTask(b, BOARD).task) : T.createTask(b, BOARD) }, 32768],
     '/api/task-comment': [(b) => require('./tasks.cjs').addComment(String(b.id || ''), b.text, BOARD)],
-    '/api/team-member': [(b) => {
+    '/api/team-member': [(b) => S.withLockAsync(companyFiles('employees'), () => {
       const Tm = require('./team.cjs')
       if (b.op === 'edit') return Tm.edit(b, BOARD)
       if (b.op === 'retire') return Tm.retire(String(b.id || ''), BOARD)
@@ -177,8 +183,8 @@ function start(opts = {}) {
       if (b.op === 'restore') return Tm.restore(String(b.id || ''), String(b.backup || ''), BOARD)
       if (b.op === 'preview') return { text: Tm.fileText(Tm.cleanForm(b)) }
       return Tm.hire(b, BOARD)
-    }, 32768],
-    '/api/hire-decision': [(b) => require('./team.cjs').decideProposal(String(b.gate || ''), b.decision === 'decline' ? 'decline' : 'hire', b.edits, BOARD), 32768],
+    }), 32768],
+    '/api/hire-decision': [(b) => S.withLockAsync(companyFiles('employees'), () => require('./team.cjs').decideProposal(String(b.gate || ''), b.decision === 'decline' ? 'decline' : 'hire', b.edits, BOARD)), 32768],
     '/api/policy': [(b) => require('./policy.cjs').setPolicy(b, BOARD)],
     '/api/pack': [(b) => { const Pk = require('./packs.cjs'); return b.op === 'remove' ? Pk.uninstallPack(String(b.id || ''), BOARD) : b.op === 'update' ? Pk.updatePack(String(b.id || ''), BOARD) : Pk.installPack(String(b.id || ''), BOARD, { onConflict: b.onConflict }) }],
     '/api/onboard': [(b) => (b.op === 'preview' ? require('./onboard.cjs').preview(b) : require('./onboard.cjs').create(b, BOARD))],
@@ -259,7 +265,7 @@ function start(opts = {}) {
       if (url === '/api/budget') {
         if (req.method !== 'POST') return sendJson(res, 405, { error: 'POST only' })
         const C = require('./agent-company.cjs')
-        return postJson(req, res, (body) => {
+        return postJson(req, res, (body) => S.withLockAsync(companyFiles('company', 'offices', 'employees'), () => {
           const scope = String(body.scope || '')
           if (scope === 'master') return C.setBudgetsEnabled(body.enabled === true, 'board', 'dashboard')
           // ids end up compared with file contents, never used as a path; one
@@ -267,7 +273,7 @@ function start(opts = {}) {
           const id = String(body.id == null ? '' : body.id)
           if (id !== id.replace(/[^\w.-]/g, '')) { const e = new Error('bad id'); e.code = 400; throw e }
           return C.setBudget({ scope, id, budget: body.budget === undefined ? {} : body.budget, by: 'board' }, 'dashboard')
-        }, 'saved', fresh)
+        }), 'saved', fresh)
       }
       if (url === '/mcp') return mcpHttp.handle(req, res, ORIGINS)
       if (Object.hasOwn(WRITES, url) && req.method === 'POST') {

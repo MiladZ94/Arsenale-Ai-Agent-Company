@@ -166,26 +166,31 @@ function progressLocked(file, input, actor) {
 function finishRun(input, actor) {
   if (!input || !input.agent || !input.task) throw fail(400, 'an entry needs at least "agent" and "task"')
   fs.mkdirSync(ACTIVE, { recursive: true })
+  const activeFile = input.id ? activeFileFor(input.id) : ''
+  // The final record is written before the active file goes, both under the
+  // lock progress takes: a crash in between leaves the run twice (the
+  // dashboard shows the finished one), never nowhere.
+  const out = activeFile && fs.existsSync(activeFile) ? withLock(activeFile, () => finishLocked(input, actor, activeFile)) : finishLocked(input, actor, '')
+  if (out.record.issue) { try { require('./tasks.cjs').linkRun(out.record.issue, out.record.id, actor || cliActor({}), { finish: true }) } catch { /* not a task here */ } }
+  return out
+}
+function finishLocked(input, actor, activeFile) {
   const now = new Date()
   let startedAt = input.startedAt || ''
   let parent = parentOf(input)
   let steps = []
   let fromActive = null
-  if (input.id) {
-    const activeFile = activeFileFor(input.id)
-    if (fs.existsSync(activeFile)) withLock(activeFile, () => {
-      if (!fs.existsSync(activeFile)) return
-      try {
-        const run = JSON.parse(fs.readFileSync(activeFile, 'utf8'))
-        startedAt = startedAt || run.startedAt
-        parent = parent || run.parent || ''
-        // The log is what the user watched while the agent worked; without it a
-        // finished run can only be read from its summary.
-        if (Array.isArray(run.steps)) steps = run.steps
-        fromActive = run
-      } catch { /* keep going */ }
-      fs.unlinkSync(activeFile)
-    })
+  const hadActive = !!activeFile && fs.existsSync(activeFile)
+  if (hadActive) {
+    try {
+      const run = JSON.parse(fs.readFileSync(activeFile, 'utf8'))
+      startedAt = startedAt || run.startedAt
+      parent = parent || run.parent || ''
+      // The log is what the user watched while the agent worked; without it a
+      // finished run can only be read from its summary.
+      if (Array.isArray(run.steps)) steps = run.steps
+      fromActive = run
+    } catch { /* keep going */ }
   }
   const usage = input.usage && typeof input.usage === 'object' ? {
     tokens: Number(input.usage.tokens || input.usage.totalTokens) || 0,
@@ -241,7 +246,10 @@ function finishRun(input, actor) {
   fs.mkdirSync(RUNS, { recursive: true })
   const file = path.join(RUNS, stamp + '-' + safeAgent + '-' + Math.random().toString(36).slice(2, 6) + '.json')
   writeAtomic(file, JSON.stringify(record, null, 2))
-  if (record.issue) { try { require('./tasks.cjs').linkRun(record.issue, record.id, actor || cliActor({}), { finish: true }) } catch { /* not a task here */ } }
+  // the run is finished once its record is there: an active file that will
+  // not go (Windows, a reader holding it) is hidden by the dashboard, and
+  // must not make the caller finish the run a second time
+  if (hadActive) { try { fs.unlinkSync(activeFile) } catch (e) { if (e.code !== 'ENOENT') process.stderr.write('arsenale: could not remove ' + path.basename(activeFile) + ': ' + e.code + '\n') } }
   return { file, record }
 }
 
@@ -382,6 +390,6 @@ function updateEmployee(input, actor) { return company().updateEmployee(asBoard(
 
 module.exports = {
   OWNER_ONLY, fail, actorFor, cliActor, actorLabel, requireBoard, clipCp,
-  startRun, progress, finishRun, versionRun, versionLedger, noteIncidents, budgetCheck, readActive,
+  startRun, progress, finishRun, activeFileFor, versionRun, versionLedger, noteIncidents, budgetCheck, readActive,
   gate, decision, answer, dismiss, setBudget, setBudgetsEnabled, updateEmployee,
 }

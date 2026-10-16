@@ -561,13 +561,17 @@ function pinnedDesks(raw) {
 function collect() {
   const prices = readPrices()
   const seen = answersRead()
-  const active = readJsonDir(ACTIVE).map((a) => {
+  const runs = readJsonDir(RUNS)
+  // finishRun writes the final record before it removes the active file: a
+  // run in both places is finished
+  const done = new Set(runs.map((r) => r && r.id).filter(Boolean))
+  const active = readJsonDir(ACTIVE).filter((a) => !(a && a.id && done.has(a.id))).map((a) => {
     // a running agent's counts are read from its transcript as it grows
     const t = a.transcript && a.transcript.found ? a.transcript : transcriptFor(a.id, a.startedAt, a.transcriptPath, 10000)
     return describe(Object.assign({}, a, { transcript: t }), prices)
   })
   const state = {
-    runs: readJsonDir(RUNS).map((r) => describe(r, prices)).sort((a, b) => String(b.finishedAt).localeCompare(String(a.finishedAt))),
+    runs: runs.map((r) => describe(r, prices)).sort((a, b) => String(b.finishedAt).localeCompare(String(a.finishedAt))),
     active: active.sort((a, b) => String(a.startedAt).localeCompare(String(b.startedAt))),
     agents: readAgents(),
     gates: readJsonDir(GATES).map((g) => Object.assign(g, {

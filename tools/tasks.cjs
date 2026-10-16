@@ -46,6 +46,9 @@ function checkId(id) {
 // link to the same task at once (store.cjs). No file, no lock: the caller
 // then answers "no such task" as before.
 const lockTask = (id, fn) => (TASK_ID.test(String(id || '')) && fs.existsSync(fileOf(String(id))) ? withLock(fileOf(String(id)), fn) : fn())
+// the files lockTask would lock, for a server that takes them first without
+// blocking (store.cjs withLockAsync)
+const lockFilesOf = (ids) => (Array.isArray(ids) ? ids : [ids]).map((id) => String(id || '')).filter((id) => TASK_ID.test(id) && fs.existsSync(fileOf(id))).map(fileOf)
 
 function readTask(id) {
   try { return JSON.parse(fs.readFileSync(fileOf(checkId(id)), 'utf8')) } catch (e) { if (e.code === 400) throw e; return null }
@@ -353,5 +356,5 @@ function linkRunLocked(taskId, runId, actor, opts) {
 
 module.exports = {
   ISSUES, COMMENTS, STATUSES, MCP_STATUS, TASK_ID, LINK_BAD,
-  createTask, updateTask, addComment, readComments, listTasks, getTask, readTask, markSeen, linkRun, cleanDate, cleanLinks,
+  createTask, updateTask, addComment, readComments, listTasks, getTask, readTask, markSeen, linkRun, cleanDate, cleanLinks, lockFilesOf,
 }

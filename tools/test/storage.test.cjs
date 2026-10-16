@@ -9,7 +9,8 @@ const assert = require('node:assert/strict')
 const fs = require('fs')
 const path = require('path')
 const { spawn } = require('child_process')
-const { makeSandbox, SEED, track } = require('./helpers.cjs')
+const http = require('http')
+const { makeSandbox, SEED, track, startServer } = require('./helpers.cjs')
 
 function setup(t) {
   const sb = makeSandbox()
@@ -94,10 +95,19 @@ test('H2: a writer killed between its temp file and the rename leaves the old fi
   const L2 = sb.mod('runlog.cjs')
   L2.progress({ id, doing: 'after the crash' }, sup)
   assert.equal(sb.read('agent-runs/active/' + id + '.json').doing, 'after the crash')
-  // and the next start removes what the dead writer left
-  const removed = sb.mod('store.cjs').cleanStray([path.join(sb.runs, 'active')])
+  // and a later start removes what the dead writer left, once it is a minute
+  // old: a temp made a moment ago may belong to a writer just starting
+  const S = sb.mod('store.cjs')
+  const dir = path.join(sb.runs, 'active')
+  assert.deepEqual(S.cleanStray([dir]), [], 'a temp a moment old is left alone')
+  // a temp of a live process is kept however old it is
+  const live = path.join(dir, id + '.json.' + process.pid + '-abcdef.tmp')
+  fs.writeFileSync(live, 'x')
+  const past = new Date(Date.now() - 5 * 60000)
+  for (const n of fs.readdirSync(dir)) fs.utimesSync(path.join(dir, n), past, past)
+  const removed = S.cleanStray([dir])
   assert.ok(removed.some((n) => n.endsWith('.tmp')))
-  assert.deepEqual(fs.readdirSync(path.join(sb.runs, 'active')), [id + '.json'])
+  assert.deepEqual(fs.readdirSync(dir).sort(), [id + '.json', path.basename(live)].sort())
 })
 
 test('a lock held by a live process is waited for, not taken', async (t) => {
@@ -112,4 +122,150 @@ test('a lock held by a live process is waited for, not taken', async (t) => {
   assert.ok(Date.now() - t0 >= 300, 'the writer waited for the lock')
   assert.equal((await exit).code, 0)
   assert.equal(sb.read('company/employees.json').waiter.n, 1)
+})
+
+/** A child that holds the lock of `file` and, under it, adds `key` to the
+ *  JSON in it after `ms`: a read-change-write that loses an update when
+ *  another writer is let in meanwhile. Prints "held" once it holds. */
+const holder = (sb, name, file, key, ms) => child(sb, name, [
+  "const fs = require('fs')",
+  "const S = require(tools + '/store.cjs')",
+  'const f = ' + JSON.stringify(file),
+  'S.withLock(f, () => {',
+  "  const j = JSON.parse(fs.readFileSync(f, 'utf8'))",
+  "  process.stdout.write('held\\n')",
+  '  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ' + ms + ')',
+  '  j[' + JSON.stringify(key) + '] = { n: 1 }',
+  '  S.writeAtomic(f, JSON.stringify(j))',
+  '})',
+].join('\n'))
+const heldBy = (c) => new Promise((res) => { let out = ''; c.stdout.on('data', (d) => { out += d; if (/held/.test(out)) res() }) })
+
+test('a live writer that holds its lock longer than 30 s keeps it: the next writer waits, and neither update is lost', async (t) => {
+  const sb = setup(t)
+  const file = path.join(sb.company, 'employees.json')
+  const c = holder(sb, 'slow', file, 'slow-writer', 1500)
+  const exit = ended(c)
+  await heldBy(c)
+  // as if it had held the lock for 40 s: its PID is alive, so it is still its lock
+  const lock = file + '.lock'
+  const past = new Date(Date.now() - 40000)
+  for (const n of fs.readdirSync(lock)) fs.utimesSync(path.join(lock, n), past, past)
+  sb.mod('agent-company.cjs').writeOverlay('waiter', { n: 1 }, 'board')
+  assert.equal((await exit).code, 0)
+  const all = sb.read('company/employees.json')
+  assert.ok(all['slow-writer'], 'the update of the slow writer is kept')
+  assert.ok(all.waiter, 'the update of the waiter is kept')
+})
+
+/** A child whose lock attempt stops for 3 s right before it makes its owner
+ *  folder (the moment an older store left a lock with no owner), then writes
+ *  under the lock with a marker that tells whether anyone else is inside. */
+function slowMaker(sb, file, marker, inside) {
+  return child(sb, 'maker', [
+    "const fs = require('fs'), path = require('path')",
+    'const real = fs.mkdirSync',
+    'let paused = false',
+    'fs.mkdirSync = (p, o) => { if (!paused && /^\\d+-[0-9a-f]+$/.test(path.basename(String(p)))) { paused = true; fs.writeFileSync(' + JSON.stringify(marker) + ", 'x'); Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 3000) } return real(p, o) }",
+    "require(tools + '/store.cjs').withLock(" + JSON.stringify(file) + ', () => {',
+    '  try { fs.writeFileSync(' + JSON.stringify(inside) + ", 'maker', { flag: 'wx' }) } catch { process.stderr.write('two owners\\n'); process.exit(3) }",
+    '  fs.unlinkSync(' + JSON.stringify(inside) + ')',
+    '})',
+  ].join('\n'))
+}
+async function makerPaused(marker) {
+  for (let i = 0; i < 300 && !fs.existsSync(marker); i++) await sleep(20)
+  assert.ok(fs.existsSync(marker), 'the maker did not reach its owner folder')
+}
+
+test('two processes taking one lock never both hold it, even when one stops halfway through making it', async (t) => {
+  const sb = setup(t)
+  const file = path.join(sb.company, 'employees.json')
+  const marker = path.join(sb.base, 'paused'), inside = path.join(sb.base, 'inside')
+  const exit = ended(slowMaker(sb, file, marker, inside))
+  await makerPaused(marker)
+  // this one takes the lock while the other is stopped, and stays in for 2 s
+  sb.mod('store.cjs').withLock(file, () => {
+    fs.writeFileSync(inside, 'test', { flag: 'wx' })
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2000)
+    fs.unlinkSync(inside)
+  })
+  const r = await exit
+  assert.equal(r.code, 0, 'both held the lock at once: ' + r.err)
+})
+
+test('a lock taken over while its maker stopped halfway: the maker waits and gets it, no raw ENOENT', async (t) => {
+  const sb = setup(t)
+  const file = path.join(sb.company, 'employees.json')
+  const marker = path.join(sb.base, 'paused'), inside = path.join(sb.base, 'inside')
+  const exit = ended(slowMaker(sb, file, marker, inside))
+  await makerPaused(marker)
+  // in and out at once: the lock is free again by the time the maker goes on
+  sb.mod('store.cjs').withLock(file, () => {})
+  const r = await exit
+  assert.equal(r.code, 0, r.err)
+  assert.ok(!fs.existsSync(file + '.lock'), 'no lock is left')
+})
+
+test('the dashboard server keeps answering while a write it was sent waits for a lock', async (t) => {
+  const sb = setup(t)
+  const { port, child: server, cookie, token } = await startServer(sb)
+  t.after(() => server.kill())
+  const ask = (method, url, body) => new Promise((res, rej) => {
+    const t0 = Date.now()
+    const headers = Object.assign({ Host: '127.0.0.1:' + port, Cookie: cookie }, body ? { Origin: 'http://127.0.0.1:' + port, 'Content-Type': 'application/json', 'X-Dashboard-Token': token } : {})
+    const r = http.request({ host: '127.0.0.1', port, method, path: url, agent: false, headers }, (x) => {
+      let d = ''
+      x.on('data', (c) => { d += c })
+      x.on('end', () => res({ status: x.statusCode, ms: Date.now() - t0, text: d }))
+    })
+    r.on('error', rej)
+    if (body) r.write(JSON.stringify(body))
+    r.end()
+  })
+  const file = path.join(sb.company, 'company.json')
+  const c = holder(sb, 'holder', file, 'heldKey', 2500)
+  const exit = ended(c)
+  await heldBy(c)
+  const write = ask('POST', '/api/budget', { scope: 'company', budget: { monthlyTokens: 777 } })
+  await sleep(300)
+  const read = await ask('GET', '/api/company')
+  assert.equal(read.status, 200)
+  assert.ok(read.ms < 1000, 'a read waited ' + read.ms + ' ms behind the locked write')
+  const w = await write
+  assert.equal(w.status, 200, w.text)
+  assert.equal((await exit).code, 0)
+  const co = sb.read('company/company.json')
+  assert.ok(co.heldKey, 'the update of the holder is kept')
+  assert.equal(co.budget.monthlyTokens, 777, 'the waiting write is saved after it')
+})
+
+test('a writer killed in the middle of finishing a job loses nothing: before its final record the job is still active, after it the job is finished', async (t) => {
+  for (const at of ['record', 'unlink']) {
+    const sb = setup(t)
+    const L = sb.mod('runlog.cjs')
+    const { id } = L.startRun({ agent: 'implementer', task: 'invented finish', doing: 'step one' }, L.actorFor('cli', 'supervisor'))
+    const active = path.join(sb.runs, 'active', id + '.json')
+    const marker = path.join(sb.base, 'stopped')
+    const stop = '{ fs.writeFileSync(' + JSON.stringify(marker) + ", 'x'); Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0) }"
+    const c = child(sb, 'finisher', [
+      "const fs = require('fs'), path = require('path')",
+      'const runs = ' + JSON.stringify(sb.runs),
+      at === 'record'
+        ? 'const real = fs.renameSync; fs.renameSync = (a, b) => { if (path.dirname(String(b)) === runs) ' + stop + ' return real(a, b) }'
+        : 'const real = fs.unlinkSync; fs.unlinkSync = (p) => { if (String(p) === ' + JSON.stringify(active) + ') ' + stop + ' return real(p) }',
+      "const L = require(tools + '/runlog.cjs')",
+      'L.finishRun({ id: ' + JSON.stringify(id) + ", agent: 'implementer', task: 'invented finish', summary: 'done' }, L.actorFor('cli', 'supervisor'))",
+    ].join('\n'))
+    const exit = ended(c)
+    for (let i = 0; i < 300 && !fs.existsSync(marker); i++) await sleep(20)
+    assert.ok(fs.existsSync(marker), at + ': the finisher did not reach the stop')
+    c.kill()
+    await exit
+    const B = sb.mod('build-agent-dashboard.cjs').collect()
+    const finished = B.runs.find((r) => r.id === id), running = B.active.find((r) => r.id === id)
+    assert.equal(B.runs.filter((r) => r.id === id).length + B.active.filter((r) => r.id === id).length, 1, at + ': the job is shown once')
+    if (at === 'record') assert.equal(running && running.doing, 'step one', 'killed before its record: still active, with its step')
+    else assert.deepEqual(finished && finished.steps.map((s) => s.text), ['step one'], 'killed after its record: finished, with its steps')
+  }
 })
