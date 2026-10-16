@@ -264,8 +264,8 @@ const CR_STYLE = `
 .rail .hint{font-size:11.5px;color:var(--ink-dim);margin:0 0 8px}
 .rail .sect{display:flex;justify-content:space-between;align-items:baseline;margin:14px 0 6px}
 .rail .sect .src{font-weight:400;color:var(--ink-dim);font-size:11px}
-.wait{background:var(--warn-bg);border:1px solid var(--gate-line);border-inline-start:3px solid var(--gate);border-radius:3px;margin:0 0 7px}
-.wait.late{border-color:rgba(200,55,45,.5);border-inline-start-color:var(--bad);background:var(--bad-bg)}
+.wait{background:var(--warn-bg);border:1px solid var(--gate-line);border-radius:3px;margin:0 0 7px}
+.wait.late{border-color:rgba(200,55,45,.5);background:var(--bad-bg)}
 .wait.hl{box-shadow:0 0 0 2px #2563EB}
 .wait-go{display:block;width:100%;text-align:start;background:none;border:0;padding:7px 9px 5px;cursor:pointer;color:inherit;font:inherit}
 .wh{display:flex;gap:6px;align-items:center;font-size:12px;font-weight:700}

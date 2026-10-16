@@ -96,7 +96,7 @@ button.chip{cursor:pointer}
 .ev .tk.wtk{border-color:rgba(217,140,30,.65);background:linear-gradient(0deg,var(--warn-bg),var(--warn-bg)),var(--panel)}
 .ev .tk.dn{opacity:.85}
 .ev .tk .tt{color:var(--ink-hi);font-weight:700;font-size:14.5px;line-height:1.35;overflow-wrap:anywhere}
-.ev .tk .q{color:var(--ink-soft);font-size:13px;margin-top:6px;padding:6px 10px;border-inline-start:3px solid var(--warn);background:rgba(30,40,50,.1);border-radius:0 6px 6px 0}
+.ev .tk .q{color:var(--ink-soft);font-size:13px;margin-top:6px;padding:6px 10px;border:1px solid var(--line);background:rgba(30,40,50,.1);border-radius:6px}
 .ev .wb{display:inline-flex;gap:6px;align-items:center;margin-bottom:8px;font:700 11px var(--font-ui);color:#9A6206;text-transform:uppercase;letter-spacing:.05em}
 [dir=rtl] .ev .wb{letter-spacing:0;font-family:var(--font-ui);text-transform:none}
 .ev .list .lr{display:grid;grid-template-columns:1fr auto auto auto;gap:12px;align-items:center;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel);margin:0 0 6px;cursor:pointer;width:100%;text-align:start;font:13.5px var(--font-ui);color:var(--ink-soft)}
@@ -138,7 +138,7 @@ button.chip{cursor:pointer}
 [dir=rtl] .ev .rows>.more{padding:4px 60px 16px 18px}
 .ev .exp{font:700 10px var(--font-ui);color:var(--warn);border:1px solid rgba(217,140,30,.45);border-radius:3px;padding:0 4px;margin-inline-start:6px;vertical-align:1px;text-transform:uppercase}
 .ev .phone{background:var(--ground);border:1px solid var(--line);border-radius:12px;padding:14px}
-.ev .phone .n{background:var(--panel-raised);border-radius:10px;padding:12px 14px;border-inline-start:4px solid var(--warn)}
+.ev .phone .n{background:var(--panel-raised);border-radius:10px;padding:12px 14px;border:1px solid var(--line)}
 .ev .packs{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
 .ev .pk{padding:14px;text-align:start;font:inherit;color:inherit;cursor:pointer;display:block;width:100%}
 .ev .pk.off{border-style:dashed;background:transparent}

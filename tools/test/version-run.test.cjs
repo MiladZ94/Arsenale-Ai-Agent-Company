@@ -114,3 +114,15 @@ test('test 20: a gate of a version run lands in answers.jsonl with its run id; o
   // the supervisor reads it through the CLI
   assert.match(sb.cli('--answers').out, /yes/)
 })
+
+test('dry run S1: --reviews are stored cleaned and the page can show them; a decision may name its run as versionRun', (t) => {
+  const sb = box(t)
+  const r = sb.cli('--version-run', JSON.stringify({ id: 'app-x-1.2', reviews: [{ phase: 'P1', round: 1, findings: '3', confirmed: 2, rejected: 1, unclear: 'x', report: 'docs/specs/reviews/p1-r1.md' }] }))
+  assert.equal(r.code, 0, r.err)
+  const rec = sb.read('version-runs/app-x-1.2.json')
+  assert.deepEqual(rec.reviews, [{ phase: 'P1', round: 1, findings: 3, confirmed: 2, rejected: 1, unclear: null, report: 'docs/specs/reviews/p1-r1.md' }], 'numbers are numbers, an unreadable count is null (not recorded)')
+  assert.equal(sb.cli('--version-run', '{"id":"app-x-1.2","reviews":"all good"}').code, 1, 'a reviews value that is not a list is refused')
+  assert.equal(sb.read('version-runs/app-x-1.2.json').reviews.length, 1, 'the refused write changed nothing')
+  const d = sb.cli('--decision', '{"project":"app X","by":"supervisor","text":"Tabs, not spaces","versionRun":"app-x-1.2"}').out
+  assert.equal(sb.read('agent-runs/decisions/' + d + '.json').run, 'app-x-1.2', 'the decision is listed under its run')
+})

@@ -300,6 +300,11 @@ function versionRunLocked(id, input) {
       }
     })
   }
+  if (input.reviews !== undefined) {
+    if (!Array.isArray(input.reviews)) throw fail(400, '"reviews" must be a list')
+    const n = (v) => (v === undefined || v === null || v === '' || !Number.isFinite(Number(v)) ? null : Math.max(0, Math.round(Number(v))))
+    rec.reviews = input.reviews.slice(0, 200).map((v) => ({ phase: clipCp(v && v.phase, 20), round: n(v && v.round), findings: n(v && v.findings), confirmed: n(v && v.confirmed), rejected: n(v && v.rejected), unclear: n(v && v.unclear), report: clipCp(v && v.report, 300) }))
+  }
   rec.updatedAt = new Date().toISOString()
   writeAtomic(versionFile(id), JSON.stringify(rec, null, 2))
   return rec

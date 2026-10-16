@@ -364,3 +364,9 @@ every agent in such a run.
 10. **Budget.** The supervisor starts no new agent at 100 % of the version
     budget. A running agent finishes its current step, saves its work on its
     branch and reports.
+11. **Round cap.** A phase gets three fix rounds for a surviving Important
+    finding, never a fourth. After the third, the supervisor records a
+    "rethink" decision and starts a new set of three; if that fails too, the
+    phase is `blocked`, the owner is told, and independent phases go on.
+12. **Say what was skipped.** When the slow suite is skipped, the state file's
+    review log says "slow suite skipped, no stored data touched".

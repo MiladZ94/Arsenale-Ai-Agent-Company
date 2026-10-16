@@ -157,3 +157,17 @@ test('review nits: version names, literal template text, unique backup folder, h
   assert.match(r.out, /first commit failed/)
   assert.doesNotMatch(r.out, /  empty first commit/)
 })
+
+test('dry run S2: --dry-run lists every step without asking; a declined init creates nothing, not even docs/specs', (t) => {
+  const m = machine(t)
+  fs.writeFileSync(path.join(m.repo, 'package.json'), '{"name":"sample-app","scripts":{"test":"node t.js"}}')
+  const dry = m.run('init', '--dry-run')
+  assert.equal(dry.code, 0, dry.out)
+  assert.doesNotMatch(dry.out, /skipped/, 'a dry run shows the plan, it does not skip steps')
+  for (const w of ['agents', 'PROJECT.md', 'REVIEW.md', 'docs']) assert.match(dry.out, new RegExp('create.*' + w + '|add.*' + w), 'the plan names ' + w)
+  assert.deepEqual(fs.readdirSync(m.repo).filter((n) => n !== '.git'), ['package.json'], 'a dry run writes nothing')
+  assert.equal(m.run('init').code, 0) // no terminal, no --yes: declined
+  assert.deepEqual(fs.readdirSync(m.repo).filter((n) => n !== '.git'), ['package.json'], 'declined: nothing written, docs/specs included')
+  const real = m.run('init', '--yes')
+  assert.match(fs.readFileSync(path.join(m.repo, 'PROJECT.md'), 'utf8'), /Last checked against the code: \d{4}-\d\d-\d\d/, real.out)
+})

@@ -538,6 +538,8 @@ function saveDecision(input) {
     if (!input.text) throw new Error('a new decision needs "text"')
     d = { id, project: '', by: 'supervisor', text: '', reason: '', run: '', state: 'taken', closes: '', at: input.at || now }
   }
+  // a decision of an autonomous run may name its run as versionRun, like a gate does
+  if (input.run === undefined && input.versionRun !== undefined) input = Object.assign({}, input, { run: input.versionRun })
   for (const k of ['project', 'text', 'reason', 'run', 'closes']) if (input[k] !== undefined) d[k] = clip(input[k], k === 'text' || k === 'reason' ? 1000 : 300)
   if (input.by !== undefined) d.by = ['user', 'supervisor', 'agent'].includes(String(input.by)) ? String(input.by) : 'agent'
   if (input.agent !== undefined) d.agent = clip(input.agent, 60)

@@ -5,6 +5,7 @@ All notable changes are listed here. Versions follow
 
 ## Unreleased
 
+- **Dry-run fixes.** `arsenale init --dry-run` shows the whole plan and a declined `init` writes nothing (not even `docs/specs`); `arsenale campus --help` (and the other short modes) print the help; `--version-run` takes a `reviews` list for the Version run page; a gate or decision can name its run with `versionRun`; a supervisor campus change needs a reason and is listed under its run; the round cap and the slow-suite note are in the autonomous rules; waiting-question and phone callouts lose the thick left stripe.
 - **Campus builder and a calmer office (design C2).** The campus is a board of lots
   drawn in 3D from code: 12 building types, a Build mode with a hotbar (keys 1 to 9),
   move, rotate and archive tools, a ghost building and a "Lot taken" refusal. The

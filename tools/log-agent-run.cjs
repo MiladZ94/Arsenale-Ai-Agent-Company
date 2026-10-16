@@ -52,16 +52,17 @@ Autonomous version runs (the state file in the repo is the source; this is its m
   --version-run <json>     {"id":"app-x-1.2", optional "app","version","status","budget"
                       (positive whole tokens),"phases":[{"id","name","tier": low|medium|high,
                       "requests","dependsOn","status","percent"}],"stateFile",
-                      "integrationBranch"}: creates or updates <data>/version-runs/<id>.json
+                      "integrationBranch","reviews":[{"phase","round","findings","confirmed",
+                      "rejected","unclear","report" (a path, shown as text)}]}: creates or updates <data>/version-runs/<id>.json
   --version-ledger <json>  {"versionRun"} ("id" is accepted too): tokens per phase from the run log, as JSON
                       (null = not recorded, never 0)
 
 Gates and decisions
   --gate <json>       {"project","question", optional "kind": A|B|C|approval,"label",
-                      "choices":[...],"run"}: prints the gate id. With "id" and
+                      "choices":[...],"run","versionRun" (the run that asks)}: prints the gate id. With "id" and
                       "status": waiting|answered|expired it updates that gate
   --decision <json>   {"project","by": user|supervisor|agent,"text", optional
-                      "reason","run","agent","state":"open","closes"}
+                      "reason","run" or "versionRun","agent","state":"open","closes"}
   --answers [--peek|--all|--json]   answers given on the dashboard since the
                       last read (then marked read)
   --dismiss <gate id> [<gate id> ...]    close waiting gates without an answer

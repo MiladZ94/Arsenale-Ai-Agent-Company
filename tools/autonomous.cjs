@@ -33,8 +33,9 @@ function opt(args, name) {
 function flag(args, name) { const i = args.indexOf(name); if (i < 0) return false; args.splice(i, 1); return true }
 
 /** Asks on the terminal. With no terminal the answer is no, unless --yes. */
-function makeAsk(yes, out) {
+function makeAsk(yes, out, dry) {
   return (q) => {
+    if (dry) { out(q + ' [dry run: would ask]'); return true }
     if (yes) { out(q + ' [y/N] y (--yes)'); return true }
     if (!process.stdin.isTTY) { out(q + ' [y/N] no terminal to ask on: skipped (use --yes to accept)'); return false }
     process.stdout.write(q + ' [y/N] ')
@@ -77,6 +78,8 @@ function installTree(srcRoot, dstRoot, rec, o) {
 
 /* ------------------------------------------------------------------ init */
 
+const localDate = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') }
+
 function sectionOf(text, heading) {
   const re = new RegExp('^## ' + heading.replace(/[()]/g, '\\$&') + '[ \\t]*$', 'm')
   const m = re.exec(text)
@@ -94,7 +97,7 @@ function init(argv, out) {
   const dir = path.resolve(opt(args, '--dir') || process.cwd())
   const claudeDir = path.resolve(opt(args, '--claude-dir') || process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'))
   const data = home()
-  const ask = makeAsk(yes, out)
+  const ask = makeAsk(yes, out, dry)
   const o = { dry, force, log: out, backups: path.join(data, 'backups', 'init-' + new Date().toISOString().replace(/\D/g, '').slice(0, 17) + '-' + process.pid) }
   out('Arsenale init' + (dry ? ' (dry run: nothing is changed)' : '') + '\n  project: ' + dir + '\n  agent folder: ' + claudeDir)
   if (!fs.existsSync(dir)) { out('The folder does not exist: ' + dir); return 1 }
@@ -119,7 +122,7 @@ function init(argv, out) {
   const g = git(dir, ['rev-parse', '--git-dir'])
   if (g === null) out('git was not found: install it, worktrees need it.')
   else if (g.status !== 0) {
-    if (ask('This folder is not a git repo. Run git init?')) { if (!dry) git(dir, ['init']); out('  git init') }
+    if (ask('This folder is not a git repo. Run git init?')) { if (!dry) git(dir, ['init']); out(dry ? '  would run git init' : '  git init') }
     else out('  not a git repo: autonomous runs need one.')
   } else if (git(dir, ['rev-parse', '--verify', 'HEAD']).status !== 0) {
     if (ask('The repo has no commit yet (worktrees need one). Make an empty first commit?')) {
@@ -139,7 +142,7 @@ function init(argv, out) {
   const projectMd = path.join(dir, 'PROJECT.md')
   if (!fs.existsSync(projectMd)) {
     if (ask('Create PROJECT.md from the template?')) {
-      let t = tpl.replace('<app name>', () => name + ' (to confirm)').replace('<YYYY-MM-DD>', () => new Date().toISOString().slice(0, 10))
+      let t = tpl.replace('<app name>', () => name + ' (to confirm)').replace('<YYYY-MM-DD>', () => localDate())
       if (pkg.scripts && pkg.scripts.test) t = t.replace('| Full | <e.g. `npm test`> |', '| Full | `npm test` (to confirm) |')
       out('  create   ' + projectMd); if (!dry) atomicWrite(projectMd, t)
     }
@@ -162,7 +165,7 @@ function init(argv, out) {
     if (!dry) atomicWrite(reviewMd, fs.readFileSync(path.join(ROOT, 'agents', 'REVIEW.template.md'), 'utf8').replace('<app name>', () => name))
   }
   const specs = path.join(dir, 'docs', 'specs')
-  if (!fs.existsSync(specs)) {
+  if (!fs.existsSync(specs) && ask('Create docs/specs for the version lists?')) {
     out('  create   ' + specs)
     if (!dry) { fs.mkdirSync(specs, { recursive: true }); fs.writeFileSync(path.join(specs, '.gitkeep'), '') }
   }

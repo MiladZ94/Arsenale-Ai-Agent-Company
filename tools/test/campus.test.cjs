@@ -157,3 +157,14 @@ test('the CLI: arsenale campus list / place / remove, as the board', (t) => {
   assert.equal(nope.code, 1)
   assert.match(nope.err, /agent cannot/)
 })
+
+test('dry run S4: a supervisor campus change needs a reason, and its decision is listed under the live version run', (t) => {
+  const { sb, K } = world(t)
+  fs.mkdirSync(path.join(sb.root, 'version-runs'), { recursive: true })
+  fs.writeFileSync(path.join(sb.root, 'version-runs', 'x-1.json'), JSON.stringify({ id: 'x-1', status: 'running' }))
+  assert.throws(() => K.apply({ op: 'place', type: 'docs', name: 'Docs', x: 5, y: 3 }, sup, 'cli'), (e) => e.code === 400 && /reason/.test(e.message))
+  assert.equal(fs.existsSync(path.join(sb.root, 'company', 'campus.json')), false, 'nothing was placed, no campus file made')
+  K.apply({ op: 'place', type: 'docs', name: 'Docs', x: 5, y: 3, reason: 'room for the docs work' }, sup, 'cli')
+  const dec = fs.readdirSync(path.join(sb.runs, 'decisions')).map((n) => JSON.parse(fs.readFileSync(path.join(sb.runs, 'decisions', n), 'utf8')))
+  assert.ok(dec.some((d) => d.project === 'campus' && d.run === 'x-1'), 'the decision carries the version run id')
+})

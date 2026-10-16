@@ -142,17 +142,18 @@ function freshOfficeId(name, co) {
  *  autonomous version run is going. An agent: never. */
 function allowed(actor) {
   const role = actor && actor.role
-  if (role === 'board') return
+  if (role === 'board') return ''
   if (role === 'agent') throw fail(403, 'an agent cannot change the campus')
   const dir = P.VERSION_RUNS
-  let live = false
+  let live = ''
   try {
     for (const f of fs.readdirSync(dir)) {
       const r = readJson(path.join(dir, f), null)
-      if (r && ['planning', 'running', 'waiting for owner', 'blocked'].includes(r.status)) { live = true; break }
+      if (r && ['planning', 'running', 'waiting for owner', 'blocked'].includes(r.status)) { live = r.id || f.replace(/\.json$/, ''); break }
     }
   } catch { /* no version runs */ }
   if (!live) throw fail(403, 'the supervisor changes the campus in an autonomous run only; ask the owner or use the dashboard')
+  return live
 }
 
 const label = (b, o) => (o ? o.name : b.officeId)
@@ -162,7 +163,8 @@ const label = (b, o) => (o ? o.name : b.officeId)
 function apply(input, actor, via) {
   const op = String(input && input.op || '')
   if (!['place', 'move', 'rotate', 'remove'].includes(op)) throw fail(400, 'op must be place, move, rotate or remove')
-  allowed(actor)
+  const liveRun = allowed(actor)
+  if (actor.role !== 'board' && !clip(input.reason, 400).trim()) throw fail(400, 'a supervisor campus change needs a "reason": it is logged as a decision')
   const C = company()
   const out = withLock(FILE(), () => {
     const co = C.readCompany()
@@ -237,7 +239,7 @@ function apply(input, actor, via) {
   C.activity({ actor: actor.role === 'board' ? 'board' : 'supervisor', action: 'campus.' + out.op, entityType: 'office', entityId: out.office, officeId: out.office, summary: out.summary, via: via || 'cli' })
   if (actor.role !== 'board') {
     // every supervisor change is a decision the owner can read and overrule (A4)
-    require('./build-agent-dashboard.cjs').saveDecision({ project: 'campus', by: 'supervisor', text: out.summary, reason: clip(input.reason, 400) })
+    require('./build-agent-dashboard.cjs').saveDecision({ project: 'campus', by: 'supervisor', text: out.summary, reason: clip(input.reason, 400), run: liveRun })
   }
   return { summary: out.summary, building: out.building, office: out.office }
 }

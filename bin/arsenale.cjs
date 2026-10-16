@@ -187,7 +187,7 @@ else if (cmd === 'init' || cmd === 'autonomous' || cmd === 'awake') {
   process.exitCode = A[cmd](args, console.log)
 } else if (cmd === 'mcp') require(path.join(TOOLS, 'mcp-server.cjs')).runStdio()
 else if (cmd === 'finish') log(args)
-else if (Object.hasOwn(ALIASES, cmd)) log([ALIASES[cmd], ...args])
+else if (Object.hasOwn(ALIASES, cmd)) log(args.length === 1 && ['--help', '-h'].includes(args[0]) ? ['--help'] : [ALIASES[cmd], ...args])
 else if (cmd === 'build') {
   const B = require(path.join(TOOLS, 'build-agent-dashboard.cjs'))
   const n = B.build()
