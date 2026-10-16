@@ -76,6 +76,8 @@ function makeSandbox(opts = {}) {
   const tools = path.join(root, 'tools')
   fs.mkdirSync(tools, { recursive: true })
   for (const f of fs.readdirSync(TOOLS)) if (f.endsWith('.cjs')) { try { fs.linkSync(path.join(TOOLS, f), path.join(tools, f)) } catch { fs.copyFileSync(path.join(TOOLS, f), path.join(tools, f)) } }
+  // the page builders' modules and fragments (tools/pages)
+  linkTree(path.join(TOOLS, 'pages'), path.join(tools, 'pages'))
   // the 3D office's pinned three.js and its default character (office-world.cjs); opts.flat leaves them out
   if (!opts.flat) for (const d of ['vendor', 'characters']) if (fs.existsSync(path.join(TOOLS, d))) linkTree(path.join(TOOLS, d), path.join(tools, d))
   fs.writeFileSync(path.join(root, 'model-prices.json'), JSON.stringify({ models: opts.prices || {} }))

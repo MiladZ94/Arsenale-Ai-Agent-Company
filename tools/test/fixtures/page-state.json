@@ -1,0 +1,2284 @@
+{
+ "state": {
+  "runs": [
+   {
+    "agent": "code-reviewer",
+    "task": "invented task alpha three",
+    "status": "findings",
+    "finishedAt": "2026-10-02T10:00:00.000Z",
+    "startedAt": "2026-10-02T09:00:00.000Z",
+    "project": "democalc",
+    "model": "Mystery 9",
+    "transcript": {
+     "found": true,
+     "tokensNew": 5000,
+     "tokens": {
+      "input": 5000,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite5m": 0,
+      "cacheWrite1h": 0
+     },
+     "models": {
+      "Mystery 9": {
+       "input": 5000,
+       "output": 0,
+       "cacheRead": 0,
+       "cacheWrite5m": 0,
+       "cacheWrite1h": 0
+      }
+     },
+     "toolCounts": {},
+     "files": []
+    },
+    "findings": [
+     "finding sample"
+    ],
+    "projectKey": "democalc",
+    "modelKey": "Mystery 9",
+    "durMs": 3600000,
+    "parentId": "",
+    "tokTotal": 5000,
+    "tokSrc": "transcript",
+    "costUsd": null,
+    "costWhy": "prices"
+   },
+   {
+    "agent": "implementer",
+    "task": "typed task sample",
+    "status": "ok",
+    "finishedAt": "2026-10-02T10:00:00.000Z",
+    "startedAt": "2026-10-02T09:00:00.000Z",
+    "project": "tide",
+    "model": "Sonnet 5.5",
+    "transcript": {
+     "found": true,
+     "tokensNew": 130000,
+     "tokens": {
+      "input": 130000,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite5m": 0,
+      "cacheWrite1h": 0
+     },
+     "models": {
+      "Sonnet 5.5": {
+       "input": 130000,
+       "output": 0,
+       "cacheRead": 0,
+       "cacheWrite5m": 0,
+       "cacheWrite1h": 0
+      }
+     },
+     "toolCounts": {},
+     "files": []
+    },
+    "projectKey": "tide",
+    "modelKey": "Sonnet 5.5",
+    "durMs": 3600000,
+    "parentId": "",
+    "tokTotal": 130000,
+    "tokSrc": "transcript",
+    "costUsd": 0.26,
+    "costWhy": ""
+   },
+   {
+    "agent": "implementer",
+    "task": "invented task alpha two",
+    "status": "ok",
+    "finishedAt": "2026-10-02T10:00:00.000Z",
+    "startedAt": "2026-10-02T09:00:00.000Z",
+    "project": "sample project",
+    "model": "Sonnet 5.5",
+    "transcript": {
+     "found": true,
+     "tokensNew": 20000,
+     "tokens": {
+      "input": 20000,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite5m": 0,
+      "cacheWrite1h": 0
+     },
+     "models": {
+      "Sonnet 5.5": {
+       "input": 20000,
+       "output": 0,
+       "cacheRead": 0,
+       "cacheWrite5m": 0,
+       "cacheWrite1h": 0
+      }
+     },
+     "toolCounts": {},
+     "files": []
+    },
+    "projectKey": "sample project",
+    "modelKey": "Sonnet 5.5",
+    "durMs": 3600000,
+    "parentId": "",
+    "tokTotal": 20000,
+    "tokSrc": "transcript",
+    "costUsd": 0.04,
+    "costWhy": ""
+   },
+   {
+    "agent": "stranger-agent",
+    "task": "invented task alpha four",
+    "status": "ok",
+    "finishedAt": "2026-10-02T10:00:00.000Z",
+    "startedAt": "2026-10-02T09:00:00.000Z",
+    "project": "democalc",
+    "model": "Sonnet 5.5",
+    "transcript": {
+     "found": true,
+     "tokensNew": 7000,
+     "tokens": {
+      "input": 7000,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite5m": 0,
+      "cacheWrite1h": 0
+     },
+     "models": {
+      "Sonnet 5.5": {
+       "input": 7000,
+       "output": 0,
+       "cacheRead": 0,
+       "cacheWrite5m": 0,
+       "cacheWrite1h": 0
+      }
+     },
+     "toolCounts": {},
+     "files": []
+    },
+    "projectKey": "democalc",
+    "modelKey": "Sonnet 5.5",
+    "durMs": 3600000,
+    "parentId": "",
+    "tokTotal": 7000,
+    "tokSrc": "transcript",
+    "costUsd": 0.014,
+    "costWhy": ""
+   },
+   {
+    "agent": "tester",
+    "task": "invented task alpha five",
+    "status": "failed",
+    "finishedAt": "2026-10-02T10:00:00.000Z",
+    "startedAt": "2026-10-02T09:00:00.000Z",
+    "project": "no-such-project",
+    "model": "Sonnet 5.5",
+    "transcript": {
+     "found": true,
+     "tokensNew": 900,
+     "tokens": {
+      "input": 900,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite5m": 0,
+      "cacheWrite1h": 0
+     },
+     "models": {
+      "Sonnet 5.5": {
+       "input": 900,
+       "output": 0,
+       "cacheRead": 0,
+       "cacheWrite5m": 0,
+       "cacheWrite1h": 0
+      }
+     },
+     "toolCounts": {},
+     "files": []
+    },
+    "projectKey": "no-such-project",
+    "modelKey": "Sonnet 5.5",
+    "durMs": 3600000,
+    "parentId": "",
+    "tokTotal": 900,
+    "tokSrc": "transcript",
+    "costUsd": 0.0018,
+    "costWhy": ""
+   },
+   {
+    "agent": "tester",
+    "task": "invented task alpha",
+    "status": "ok",
+    "finishedAt": "2026-10-02T10:00:00.000Z",
+    "startedAt": "2026-10-02T09:00:00.000Z",
+    "project": "democalc",
+    "model": "Sonnet 5.5",
+    "transcript": {
+     "found": true,
+     "tokensNew": 2400000,
+     "tokens": {
+      "input": 2400000,
+      "output": 0,
+      "cacheRead": 0,
+      "cacheWrite5m": 0,
+      "cacheWrite1h": 0
+     },
+     "models": {
+      "Sonnet 5.5": {
+       "input": 2400000,
+       "output": 0,
+       "cacheRead": 0,
+       "cacheWrite5m": 0,
+       "cacheWrite1h": 0
+      }
+     },
+     "toolCounts": {},
+     "files": []
+    },
+    "projectKey": "democalc",
+    "modelKey": "Sonnet 5.5",
+    "durMs": 3600000,
+    "parentId": "",
+    "tokTotal": 2400000,
+    "tokSrc": "transcript",
+    "costUsd": 4.8,
+    "costWhy": ""
+   }
+  ],
+  "active": [
+   {
+    "id": "2026-10-16T21-12-39-661Z-dopo",
+    "agent": "ui-designer",
+    "model": "sonnet",
+    "effort": "",
+    "project": "tide",
+    "task": "invented task alpha ui-designer",
+    "parent": "",
+    "doing": "",
+    "steps": [],
+    "startedAt": "2026-10-16T20:32:42.415Z",
+    "transcript": {
+     "found": false,
+     "reason": "no-roots"
+    },
+    "projectKey": "tide",
+    "modelKey": "Sonnet",
+    "durMs": 0,
+    "parentId": "",
+    "tokTotal": 0,
+    "tokSrc": "",
+    "toolTotal": 0,
+    "costUsd": null,
+    "costWhy": "nodata",
+    "projectId": "tide-app",
+    "officeId": "studio",
+    "employeeId": "ui-designer"
+   },
+   {
+    "id": "2026-10-16T21-12-38-895Z-r082",
+    "agent": "tester",
+    "model": "sonnet",
+    "effort": "",
+    "project": "democalc",
+    "task": "invented task alpha tester",
+    "parent": "",
+    "doing": "step sample one",
+    "steps": [
+     {
+      "at": "2026-10-16T21:12:39.395Z",
+      "text": "step sample one"
+     }
+    ],
+    "startedAt": "2026-10-16T21:12:38.895Z",
+    "budgetWarned": true,
+    "budgetLevel": "stop",
+    "transcript": {
+     "found": false,
+     "reason": "no-roots"
+    },
+    "projectKey": "democalc",
+    "modelKey": "Sonnet",
+    "durMs": 0,
+    "parentId": "",
+    "tokTotal": 0,
+    "tokSrc": "",
+    "toolTotal": 0,
+    "costUsd": null,
+    "costWhy": "nodata",
+    "projectId": "demo-calc",
+    "officeId": "engineering",
+    "employeeId": "tester"
+   },
+   {
+    "id": "2026-10-16T21-12-39-986Z-ao90",
+    "agent": "implementer",
+    "model": "sonnet",
+    "effort": "",
+    "project": "democalc",
+    "task": "invented task alpha implementer",
+    "parent": "",
+    "doing": "",
+    "steps": [],
+    "startedAt": "2026-10-16T21:12:39.986Z",
+    "budgetWarned": true,
+    "budgetLevel": "stop",
+    "transcript": {
+     "found": false,
+     "reason": "no-roots"
+    },
+    "projectKey": "democalc",
+    "modelKey": "Sonnet",
+    "durMs": 0,
+    "parentId": "",
+    "tokTotal": 0,
+    "tokSrc": "",
+    "toolTotal": 0,
+    "costUsd": null,
+    "costWhy": "nodata",
+    "projectId": "demo-calc",
+    "officeId": "engineering",
+    "employeeId": "implementer"
+   },
+   {
+    "id": "2026-10-16T21-12-40-304Z-5ax1",
+    "agent": "guest-one",
+    "model": "sonnet",
+    "effort": "",
+    "project": "democalc",
+    "task": "invented task alpha guest-one",
+    "parent": "",
+    "doing": "",
+    "steps": [],
+    "startedAt": "2026-10-16T21:12:40.304Z",
+    "budgetWarned": true,
+    "budgetLevel": "stop",
+    "transcript": {
+     "found": false,
+     "reason": "no-roots"
+    },
+    "projectKey": "democalc",
+    "modelKey": "Sonnet",
+    "durMs": 0,
+    "parentId": "",
+    "tokTotal": 0,
+    "tokSrc": "",
+    "toolTotal": 0,
+    "costUsd": null,
+    "costWhy": "nodata",
+    "projectId": "demo-calc",
+    "officeId": "engineering",
+    "employeeId": "guest-one"
+   },
+   {
+    "id": "2026-10-16T21-12-40-646Z-cupx",
+    "agent": "guest-two",
+    "model": "sonnet",
+    "effort": "",
+    "project": "democalc",
+    "task": "invented task alpha guest-two",
+    "parent": "",
+    "doing": "",
+    "steps": [],
+    "startedAt": "2026-10-16T21:12:40.646Z",
+    "budgetWarned": true,
+    "budgetLevel": "stop",
+    "transcript": {
+     "found": false,
+     "reason": "no-roots"
+    },
+    "projectKey": "democalc",
+    "modelKey": "Sonnet",
+    "durMs": 0,
+    "parentId": "",
+    "tokTotal": 0,
+    "tokSrc": "",
+    "toolTotal": 0,
+    "costUsd": null,
+    "costWhy": "nodata",
+    "projectId": "demo-calc",
+    "officeId": "engineering",
+    "employeeId": "guest-two"
+   },
+   {
+    "id": "2026-10-16T21-12-41-083Z-tj1u",
+    "agent": "guest-three",
+    "model": "sonnet",
+    "effort": "",
+    "project": "democalc",
+    "task": "invented task alpha guest-three",
+    "parent": "",
+    "doing": "",
+    "steps": [],
+    "startedAt": "2026-10-16T21:12:41.083Z",
+    "budgetWarned": true,
+    "budgetLevel": "stop",
+    "transcript": {
+     "found": false,
+     "reason": "no-roots"
+    },
+    "projectKey": "democalc",
+    "modelKey": "Sonnet",
+    "durMs": 0,
+    "parentId": "",
+    "tokTotal": 0,
+    "tokSrc": "",
+    "toolTotal": 0,
+    "costUsd": null,
+    "costWhy": "nodata",
+    "projectId": "demo-calc",
+    "officeId": "engineering",
+    "employeeId": "guest-three"
+   },
+   {
+    "id": "2026-10-16T21-12-41-478Z-ul5b",
+    "agent": "guest-four",
+    "model": "sonnet",
+    "effort": "",
+    "project": "democalc",
+    "task": "invented task alpha guest-four",
+    "parent": "",
+    "doing": "",
+    "steps": [],
+    "startedAt": "2026-10-16T21:12:41.478Z",
+    "budgetWarned": true,
+    "budgetLevel": "stop",
+    "transcript": {
+     "found": false,
+     "reason": "no-roots"
+    },
+    "projectKey": "democalc",
+    "modelKey": "Sonnet",
+    "durMs": 0,
+    "parentId": "",
+    "tokTotal": 0,
+    "tokSrc": "",
+    "toolTotal": 0,
+    "costUsd": null,
+    "costWhy": "nodata",
+    "projectId": "demo-calc",
+    "officeId": "engineering",
+    "employeeId": "guest-four"
+   },
+   {
+    "id": "2026-10-16T21-12-42-148Z-qgqd",
+    "agent": "tester",
+    "model": "sonnet",
+    "effort": "",
+    "project": "orphan-project",
+    "task": "invented task alpha tester",
+    "parent": "",
+    "doing": "",
+    "steps": [],
+    "startedAt": "2026-10-16T21:12:42.148Z",
+    "budgetWarned": true,
+    "budgetLevel": "stop",
+    "transcript": {
+     "found": false,
+     "reason": "no-roots"
+    },
+    "projectKey": "orphan-project",
+    "modelKey": "Sonnet",
+    "durMs": 0,
+    "parentId": "",
+    "tokTotal": 0,
+    "tokSrc": "",
+    "toolTotal": 0,
+    "costUsd": null,
+    "costWhy": "nodata",
+    "projectId": "",
+    "officeId": "engineering",
+    "employeeId": "tester"
+   }
+  ],
+  "agents": [
+   {
+    "name": "code-reviewer",
+    "title": "",
+    "description": "invented test agent",
+    "descriptionEn": "invented test agent",
+    "model": "sonnet",
+    "effort": "medium",
+    "tools": "Read",
+    "color": "blue",
+    "dept": ""
+   },
+   {
+    "name": "engineering-lead",
+    "title": "",
+    "description": "invented test agent",
+    "descriptionEn": "invented test agent",
+    "model": "sonnet",
+    "effort": "medium",
+    "tools": "Read",
+    "color": "blue",
+    "dept": ""
+   },
+   {
+    "name": "faq-writer",
+    "title": "",
+    "description": "\"Writes clear FAQs and short help articles from the policies and past questions the user provides. Use it to answer repeated questions once, in one place, in the brand tone.\"",
+    "descriptionEn": "\"Writes clear FAQs and short help articles from the policies and past questions the user provides. Use it to answer repeated questions once, in one place, in the brand tone.\"",
+    "model": "sonnet",
+    "effort": "medium",
+    "tools": "Read, Glob, Grep, Write",
+    "color": "cyan",
+    "dept": "docs"
+   },
+   {
+    "name": "feedback-summariser",
+    "title": "",
+    "description": "\"Summarises customer feedback from reviews, surveys and messages the user provides: themes, counts, representative short quotes and suggested actions. Use it monthly or after a launch.\"",
+    "descriptionEn": "\"Summarises customer feedback from reviews, surveys and messages the user provides: themes, counts, representative short quotes and suggested actions. Use it monthly or after a launch.\"",
+    "model": "sonnet",
+    "effort": "medium",
+    "tools": "Read, Glob, Grep, Write",
+    "color": "purple",
+    "dept": "build"
+   },
+   {
+    "name": "implementer",
+    "title": "",
+    "description": "invented test agent",
+    "descriptionEn": "invented test agent",
+    "model": "sonnet",
+    "effort": "medium",
+    "tools": "Read",
+    "color": "blue",
+    "dept": ""
+   },
+   {
+    "name": "product-lead",
+    "title": "",
+    "description": "invented test agent",
+    "descriptionEn": "invented test agent",
+    "model": "sonnet",
+    "effort": "medium",
+    "tools": "Read",
+    "color": "blue",
+    "dept": ""
+   },
+   {
+    "name": "reply-drafter",
+    "title": "",
+    "description": "\"Drafts replies to customer messages in the brand tone from the policies the user provides. Use it for questions, complaints and requests. It never sends; the user reviews and sends each reply.\"",
+    "descriptionEn": "\"Drafts replies to customer messages in the brand tone from the policies the user provides. Use it for questions, complaints and requests. It never sends; the user reviews and sends each reply.\"",
+    "model": "sonnet",
+    "effort": "medium",
+    "tools": "Read, Glob, Grep, Write",
+    "color": "green",
+    "dept": "docs"
+   },
+   {
+    "name": "support-lead",
+    "title": "",
+    "description": "\"Leads the customer support office: turns a support goal into tasks for the team by name, tracks them and reports. Use it first for clearing a backlog, building a help centre or reviewing feedback.\"",
+    "descriptionEn": "\"Leads the customer support office: turns a support goal into tasks for the team by name, tracks them and reports. Use it first for clearing a backlog, building a help centre or reviewing feedback.\"",
+    "model": "sonnet",
+    "effort": "medium",
+    "tools": "Read, Glob, Grep, Write",
+    "color": "blue",
+    "dept": "lead"
+   },
+   {
+    "name": "tester",
+    "title": "",
+    "description": "invented test agent",
+    "descriptionEn": "invented test agent",
+    "model": "sonnet",
+    "effort": "medium",
+    "tools": "Read",
+    "color": "blue",
+    "dept": ""
+   },
+   {
+    "name": "ticket-triager",
+    "title": "",
+    "description": "\"Sorts and tags exported support tickets by topic, urgency and sentiment, and lists the most common problems. Use it on a backlog before anyone starts answering. It only reads the export.\"",
+    "descriptionEn": "\"Sorts and tags exported support tickets by topic, urgency and sentiment, and lists the most common problems. Use it on a backlog before anyone starts answering. It only reads the export.\"",
+    "model": "haiku",
+    "effort": "low",
+    "tools": "Read, Glob, Grep, Write",
+    "color": "orange",
+    "dept": "review"
+   },
+   {
+    "name": "ui-designer",
+    "title": "",
+    "description": "invented test agent",
+    "descriptionEn": "invented test agent",
+    "model": "opus",
+    "effort": "medium",
+    "tools": "Read",
+    "color": "blue",
+    "dept": ""
+   }
+  ],
+  "gates": [
+   {
+    "id": "g-2026-10-16T21-12-42-918Z-b8ok",
+    "project": "democalc",
+    "kind": "approval",
+    "question": "invented approval question?",
+    "label": "",
+    "choices": [],
+    "round": "",
+    "status": "waiting",
+    "answer": "",
+    "by": "",
+    "run": "2026-10-16T21-12-38-895Z-r082",
+    "askedBy": "supervisor",
+    "askedAt": "2026-10-16T18:12:43.042Z",
+    "answeredAt": "",
+    "history": [
+     {
+      "at": "2026-10-16T21:12:42.914Z",
+      "status": "waiting",
+      "via": "log"
+     }
+    ],
+    "updatedAt": "2026-10-16T21:12:42.914Z",
+    "projectKey": "democalc",
+    "seen": false,
+    "projectId": "demo-calc",
+    "officeId": "engineering"
+   },
+   {
+    "id": "g-2026-10-16T21-12-43-261Z-jqkw",
+    "project": "tide",
+    "kind": "A",
+    "question": "invented choice question?",
+    "label": "",
+    "choices": [
+     "option one",
+     "option two"
+    ],
+    "round": "",
+    "status": "waiting",
+    "answer": "",
+    "by": "",
+    "run": "",
+    "askedBy": "supervisor",
+    "askedAt": "2026-10-16T21:12:43.251Z",
+    "answeredAt": "",
+    "history": [
+     {
+      "at": "2026-10-16T21:12:43.251Z",
+      "status": "waiting",
+      "via": "log"
+     }
+    ],
+    "updatedAt": "2026-10-16T21:12:43.251Z",
+    "projectKey": "tide",
+    "seen": false,
+    "projectId": "tide-app",
+    "officeId": "studio"
+   },
+   {
+    "id": "g-2026-10-16T21-12-43-816Z-v8aw",
+    "project": "tide",
+    "kind": "B",
+    "question": "invented answered question?",
+    "label": "",
+    "choices": [],
+    "round": "",
+    "status": "answered",
+    "answer": "option two",
+    "by": "user",
+    "run": "",
+    "askedBy": "supervisor",
+    "askedAt": "2026-10-16T21:12:43.811Z",
+    "answeredAt": "2026-10-16T21:12:44.053Z",
+    "history": [
+     {
+      "at": "2026-10-16T21:12:43.811Z",
+      "status": "waiting",
+      "via": "log"
+     },
+     {
+      "at": "2026-10-16T21:12:44.053Z",
+      "status": "answered",
+      "answer": "option two",
+      "by": "user",
+      "via": "log"
+     }
+    ],
+    "updatedAt": "2026-10-16T21:12:44.053Z",
+    "projectKey": "tide",
+    "seen": false,
+    "projectId": "tide-app",
+    "officeId": "studio"
+   },
+   {
+    "id": "g-2026-10-16T21-12-45-859Z-qn76",
+    "project": "",
+    "kind": "approval",
+    "question": "Hire Sample Person as sample title in support? sample reason",
+    "label": "Hire sample-person",
+    "choices": [],
+    "round": "",
+    "status": "waiting",
+    "answer": "",
+    "by": "",
+    "run": "",
+    "askedBy": "supervisor",
+    "askedAt": "2026-10-16T21:12:45.859Z",
+    "answeredAt": "",
+    "history": [
+     {
+      "at": "2026-10-16T21:12:45.859Z",
+      "status": "waiting",
+      "via": "mcp"
+     }
+    ],
+    "approvalType": "hire",
+    "officeId": "support",
+    "askedVia": "mcp",
+    "clientId": "invented-client",
+    "subject": {
+     "type": "employee",
+     "id": "sample-person"
+    },
+    "payload": {
+     "id": "sample-person",
+     "name": "Sample Person",
+     "title": "sample title",
+     "officeId": "support",
+     "description": "drafts sample replies for the tests",
+     "instructions": "sample instructions",
+     "tier": "standard",
+     "reportsTo": "",
+     "why": "sample reason"
+    },
+    "updatedAt": "2026-10-16T21:12:45.859Z",
+    "projectKey": "",
+    "seen": false,
+    "projectId": ""
+   },
+   {
+    "id": "g-2026-10-16T21-12-45-892Z-wba3",
+    "project": "",
+    "kind": "approval",
+    "question": "Send a message (reply-drafter): send sample reply — sample customer",
+    "label": "Send a message",
+    "choices": [],
+    "round": "",
+    "status": "waiting",
+    "answer": "",
+    "by": "",
+    "run": "",
+    "askedBy": "supervisor",
+    "askedAt": "2026-10-16T21:12:45.892Z",
+    "answeredAt": "",
+    "history": [
+     {
+      "at": "2026-10-16T21:12:45.892Z",
+      "status": "waiting",
+      "via": "mcp"
+     }
+    ],
+    "approvalType": "action",
+    "askedVia": "mcp",
+    "clientId": "invented-client",
+    "action": {
+     "category": "message.send",
+     "target": "sample customer",
+     "summary": "send sample reply",
+     "member": "reply-drafter"
+    },
+    "updatedAt": "2026-10-16T21:12:45.892Z",
+    "projectKey": "",
+    "seen": false,
+    "projectId": "",
+    "officeId": "unassigned"
+   }
+  ],
+  "answers": {
+   "unread": 0,
+   "through": ""
+  },
+  "decisions": [
+   {
+    "id": "d-2026-10-16T21-12-44-337Z-3j19",
+    "project": "democalc",
+    "by": "user",
+    "text": "typed decision sample",
+    "reason": "",
+    "run": "",
+    "state": "taken",
+    "closes": "",
+    "at": "2026-10-16T21:12:44.329Z",
+    "updatedAt": "2026-10-16T21:12:44.329Z",
+    "projectKey": "democalc"
+   },
+   {
+    "id": "d-2026-10-16T21-12-44-657Z-s95m",
+    "project": "democalc",
+    "by": "supervisor",
+    "text": "decision sample alpha",
+    "reason": "",
+    "run": "",
+    "state": "open",
+    "closes": "",
+    "at": "2026-10-16T21:12:44.651Z",
+    "updatedAt": "2026-10-16T21:12:44.651Z",
+    "projectKey": "democalc"
+   },
+   {
+    "id": "d-2026-10-16T21-12-44-957Z-ttkz",
+    "project": "tide",
+    "by": "agent",
+    "text": "decision sample alpha two",
+    "reason": "",
+    "run": "",
+    "state": "taken",
+    "closes": "",
+    "at": "2026-10-16T21:12:44.950Z",
+    "agent": "tester",
+    "updatedAt": "2026-10-16T21:12:44.950Z",
+    "projectKey": "tide"
+   }
+  ],
+  "prices": {
+   "file": "model-prices.json",
+   "set": true
+  },
+  "heavy": [
+   "Opus"
+  ],
+  "desks": {},
+  "builtAt": "2026-01-01T00:00:00.000Z"
+ },
+ "company": {
+  "configured": true,
+  "readOnly": false,
+  "schemaVersion": 1,
+  "problems": [],
+  "company": {
+   "id": "co-main",
+   "name": "Northwind Labs",
+   "mission": "",
+   "issuePrefix": "NW",
+   "ceoEmployeeId": "supervisor",
+   "budgetsEnabled": true,
+   "budget": {
+    "enabled": true,
+    "period": "monthly",
+    "monthlyTokens": 9000000,
+    "monthlyUsd": 100,
+    "softAlertPct": 80,
+    "hardStop": false
+   },
+   "payModel": "unknown",
+   "assistants": []
+  },
+  "themes": {
+   "teal": "#2FA98A",
+   "blue": "#4E8BD4",
+   "violet": "#8C78C8",
+   "coral": "#D9785A",
+   "amber": "#C9A63A",
+   "slate": "#8A97A6",
+   "cyan": "#4FB0BC",
+   "pink": "#D9739F",
+   "green": "#5FB878"
+  },
+  "offices": [
+   {
+    "id": "engineering",
+    "name": "Engineering",
+    "leadEmployeeId": "engineering-lead",
+    "profile": "",
+    "layout": "standard",
+    "theme": "blue",
+    "order": 0,
+    "budget": {
+     "enabled": true,
+     "period": "monthly",
+     "monthlyTokens": 150000,
+     "monthlyUsd": null,
+     "softAlertPct": 50,
+     "hardStop": true
+    },
+    "archived": false,
+    "builtIn": false,
+    "color": "#4E8BD4",
+    "standing": {
+     "spend": {
+      "runs": 11,
+      "measured": 4,
+      "unmeasured": 7,
+      "live": 7,
+      "tokens": 2412900,
+      "opusTokens": 0,
+      "usd": 4.8158,
+      "usdRuns": 3,
+      "usdMissing": 1,
+      "usdStatus": "partial"
+     },
+     "budget": {
+      "set": true,
+      "enabled": true,
+      "on": true,
+      "level": "stop",
+      "pct": 1608.6,
+      "softAlertPct": 50,
+      "hardStop": true,
+      "tokens": {
+       "limit": 150000,
+       "used": 2412900,
+       "pct": 1608.6
+      },
+      "usd": null
+     }
+    }
+   },
+   {
+    "id": "studio",
+    "name": "Software Studio",
+    "leadEmployeeId": "product-lead",
+    "profile": "",
+    "layout": "standard",
+    "theme": "teal",
+    "order": 1,
+    "budget": {
+     "enabled": true,
+     "period": "monthly",
+     "monthlyTokens": 9000000,
+     "monthlyUsd": 40,
+     "softAlertPct": 80,
+     "hardStop": false
+    },
+    "archived": false,
+    "builtIn": false,
+    "color": "#2FA98A",
+    "standing": {
+     "spend": {
+      "runs": 3,
+      "measured": 2,
+      "unmeasured": 1,
+      "live": 1,
+      "tokens": 150000,
+      "opusTokens": 0,
+      "usd": 0.3,
+      "usdRuns": 2,
+      "usdMissing": 0,
+      "usdStatus": "ok"
+     },
+     "budget": {
+      "set": true,
+      "enabled": true,
+      "on": true,
+      "level": "ok",
+      "pct": 1.6666666666666667,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": {
+       "limit": 9000000,
+       "used": 150000,
+       "pct": 1.6666666666666667
+      },
+      "usd": {
+       "limit": 40,
+       "used": 0.3,
+       "pct": 0.75,
+       "status": "ok"
+      }
+     }
+    }
+   },
+   {
+    "id": "hq",
+    "name": "Headquarters",
+    "leadEmployeeId": "supervisor",
+    "profile": "",
+    "layout": "standard",
+    "theme": "coral",
+    "order": 2,
+    "budget": null,
+    "archived": false,
+    "builtIn": false,
+    "color": "#D9785A",
+    "standing": {
+     "spend": {
+      "runs": 0,
+      "measured": 0,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    }
+   },
+   {
+    "id": "ops",
+    "name": "Operations",
+    "leadEmployeeId": "",
+    "profile": "",
+    "layout": "standard",
+    "theme": "violet",
+    "order": 3,
+    "budget": null,
+    "archived": false,
+    "builtIn": false,
+    "color": "#8C78C8",
+    "standing": {
+     "spend": {
+      "runs": 0,
+      "measured": 0,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    }
+   },
+   {
+    "id": "support",
+    "name": "Customer support",
+    "leadEmployeeId": "support-lead",
+    "profile": "support",
+    "layout": "standard",
+    "theme": "cyan",
+    "order": 4,
+    "budget": null,
+    "archived": false,
+    "builtIn": false,
+    "color": "#4FB0BC",
+    "standing": {
+     "spend": {
+      "runs": 0,
+      "measured": 0,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    }
+   },
+   {
+    "id": "unassigned",
+    "name": "Unassigned work",
+    "leadEmployeeId": "",
+    "profile": "",
+    "layout": "standard",
+    "theme": "slate",
+    "order": 1000000000,
+    "budget": null,
+    "archived": false,
+    "builtIn": true,
+    "color": "#8A97A6",
+    "standing": {
+     "spend": {
+      "runs": 0,
+      "measured": 0,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    }
+   }
+  ],
+  "projects": [
+   {
+    "id": "demo-calc",
+    "name": "Demo Calc",
+    "key": "DCALC",
+    "officeId": "engineering",
+    "status": "active",
+    "aliases": [
+     "democalc",
+     "Demo Calc"
+    ],
+    "standing": {
+     "spend": {
+      "runs": 9,
+      "measured": 3,
+      "unmeasured": 6,
+      "live": 6,
+      "tokens": 2412000,
+      "opusTokens": 0,
+      "usd": 4.814,
+      "usdRuns": 2,
+      "usdMissing": 1,
+      "usdStatus": "partial"
+     }
+    }
+   },
+   {
+    "id": "tide-app",
+    "name": "Tide app",
+    "key": "TIDE",
+    "officeId": "studio",
+    "status": "active",
+    "aliases": [
+     "tide",
+     "sample project"
+    ],
+    "standing": {
+     "spend": {
+      "runs": 3,
+      "measured": 2,
+      "unmeasured": 1,
+      "live": 1,
+      "tokens": 150000,
+      "opusTokens": 0,
+      "usd": 0.3,
+      "usdRuns": 2,
+      "usdMissing": 0,
+      "usdStatus": "ok"
+     }
+    }
+   }
+  ],
+  "employees": [
+   {
+    "id": "code-reviewer",
+    "kind": "employee",
+    "title": "Code reviewer",
+    "name": "",
+    "skills": [],
+    "look": 0,
+    "homeOfficeId": "hq",
+    "zone": "review",
+    "reportsTo": "supervisor",
+    "status": "paused",
+    "pauseReason": "pause sample",
+    "tier": "",
+    "managed": false,
+    "createdBy": "",
+    "model": "Sonnet",
+    "effort": "medium",
+    "color": "blue",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 1,
+      "measured": 1,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 5000,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 1,
+      "usdStatus": "na"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 1
+   },
+   {
+    "id": "engineering-lead",
+    "kind": "employee",
+    "title": "Engineering lead",
+    "name": "",
+    "skills": [],
+    "look": 0,
+    "homeOfficeId": "engineering",
+    "zone": "lead",
+    "reportsTo": "supervisor",
+    "status": "active",
+    "pauseReason": "",
+    "tier": "",
+    "managed": false,
+    "createdBy": "",
+    "model": "Sonnet",
+    "effort": "medium",
+    "color": "blue",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 0,
+      "measured": 0,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 0
+   },
+   {
+    "id": "faq-writer",
+    "kind": "employee",
+    "title": "FAQ Writer",
+    "name": "",
+    "skills": [],
+    "look": 0,
+    "homeOfficeId": "support",
+    "zone": "docs",
+    "reportsTo": "support-lead",
+    "status": "active",
+    "pauseReason": "",
+    "tier": "standard",
+    "managed": true,
+    "createdBy": "pack:customer-support",
+    "model": "Sonnet",
+    "effort": "medium",
+    "color": "cyan",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 0,
+      "measured": 0,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 0
+   },
+   {
+    "id": "feedback-summariser",
+    "kind": "employee",
+    "title": "Feedback Summariser",
+    "name": "",
+    "skills": [],
+    "look": 0,
+    "homeOfficeId": "support",
+    "zone": "build",
+    "reportsTo": "support-lead",
+    "status": "active",
+    "pauseReason": "",
+    "tier": "standard",
+    "managed": true,
+    "createdBy": "pack:customer-support",
+    "model": "Sonnet",
+    "effort": "medium",
+    "color": "purple",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 0,
+      "measured": 0,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 0
+   },
+   {
+    "id": "ghost-agent",
+    "kind": "retired",
+    "title": "Ghost agent",
+    "name": "",
+    "skills": [],
+    "look": 0,
+    "homeOfficeId": "engineering",
+    "zone": "guest",
+    "reportsTo": "engineering-lead",
+    "status": "active",
+    "pauseReason": "",
+    "tier": "",
+    "managed": false,
+    "createdBy": "",
+    "model": "",
+    "effort": "",
+    "color": "",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 0,
+      "measured": 0,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 0
+   },
+   {
+    "id": "guest-four",
+    "kind": "contractor",
+    "title": "",
+    "homeOfficeId": "",
+    "zone": "guest",
+    "reportsTo": "",
+    "status": "active",
+    "pauseReason": "",
+    "model": "",
+    "effort": "",
+    "color": "",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 1,
+      "measured": 0,
+      "unmeasured": 1,
+      "live": 1,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 1
+   },
+   {
+    "id": "guest-one",
+    "kind": "contractor",
+    "title": "",
+    "homeOfficeId": "",
+    "zone": "guest",
+    "reportsTo": "",
+    "status": "active",
+    "pauseReason": "",
+    "model": "",
+    "effort": "",
+    "color": "",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 1,
+      "measured": 0,
+      "unmeasured": 1,
+      "live": 1,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 1
+   },
+   {
+    "id": "guest-three",
+    "kind": "contractor",
+    "title": "",
+    "homeOfficeId": "",
+    "zone": "guest",
+    "reportsTo": "",
+    "status": "active",
+    "pauseReason": "",
+    "model": "",
+    "effort": "",
+    "color": "",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 1,
+      "measured": 0,
+      "unmeasured": 1,
+      "live": 1,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 1
+   },
+   {
+    "id": "guest-two",
+    "kind": "contractor",
+    "title": "",
+    "homeOfficeId": "",
+    "zone": "guest",
+    "reportsTo": "",
+    "status": "active",
+    "pauseReason": "",
+    "model": "",
+    "effort": "",
+    "color": "",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 1,
+      "measured": 0,
+      "unmeasured": 1,
+      "live": 1,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 1
+   },
+   {
+    "id": "implementer",
+    "kind": "employee",
+    "title": "Implementer",
+    "name": "",
+    "skills": [],
+    "look": 0,
+    "homeOfficeId": "studio",
+    "zone": "build",
+    "reportsTo": "product-lead",
+    "status": "active",
+    "pauseReason": "",
+    "tier": "",
+    "managed": false,
+    "createdBy": "",
+    "model": "Sonnet",
+    "effort": "medium",
+    "color": "blue",
+    "aliases": [],
+    "budget": {
+     "enabled": true,
+     "period": "monthly",
+     "monthlyTokens": 160000,
+     "monthlyUsd": null,
+     "softAlertPct": 80,
+     "hardStop": false
+    },
+    "standing": {
+     "spend": {
+      "runs": 3,
+      "measured": 2,
+      "unmeasured": 1,
+      "live": 1,
+      "tokens": 150000,
+      "opusTokens": 0,
+      "usd": 0.3,
+      "usdRuns": 2,
+      "usdMissing": 0,
+      "usdStatus": "ok"
+     },
+     "budget": {
+      "set": true,
+      "enabled": true,
+      "on": true,
+      "level": "soft",
+      "pct": 93.75,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": {
+       "limit": 160000,
+       "used": 150000,
+       "pct": 93.75
+      },
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 3
+   },
+   {
+    "id": "product-lead",
+    "kind": "employee",
+    "title": "Product lead",
+    "name": "",
+    "skills": [],
+    "look": 0,
+    "homeOfficeId": "studio",
+    "zone": "lead",
+    "reportsTo": "supervisor",
+    "status": "active",
+    "pauseReason": "",
+    "tier": "",
+    "managed": false,
+    "createdBy": "",
+    "model": "Sonnet",
+    "effort": "medium",
+    "color": "blue",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 0,
+      "measured": 0,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 0
+   },
+   {
+    "id": "reply-drafter",
+    "kind": "employee",
+    "title": "Reply Drafter",
+    "name": "",
+    "skills": [],
+    "look": 0,
+    "homeOfficeId": "support",
+    "zone": "docs",
+    "reportsTo": "support-lead",
+    "status": "active",
+    "pauseReason": "",
+    "tier": "standard",
+    "managed": true,
+    "createdBy": "pack:customer-support",
+    "model": "Sonnet",
+    "effort": "medium",
+    "color": "green",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 0,
+      "measured": 0,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 0
+   },
+   {
+    "id": "stranger-agent",
+    "kind": "contractor",
+    "title": "",
+    "homeOfficeId": "",
+    "zone": "guest",
+    "reportsTo": "",
+    "status": "active",
+    "pauseReason": "",
+    "model": "",
+    "effort": "",
+    "color": "",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 1,
+      "measured": 1,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 7000,
+      "opusTokens": 0,
+      "usd": 0.014,
+      "usdRuns": 1,
+      "usdMissing": 0,
+      "usdStatus": "ok"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 1
+   },
+   {
+    "id": "supervisor",
+    "kind": "ceo",
+    "title": "Supervisor · CEO",
+    "name": "",
+    "skills": [],
+    "look": 0,
+    "homeOfficeId": "hq",
+    "zone": "lead",
+    "reportsTo": "board",
+    "status": "active",
+    "pauseReason": "",
+    "tier": "",
+    "managed": false,
+    "createdBy": "",
+    "model": "",
+    "effort": "",
+    "color": "",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 0,
+      "measured": 0,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 0
+   },
+   {
+    "id": "support-lead",
+    "kind": "employee",
+    "title": "Support Lead",
+    "name": "",
+    "skills": [],
+    "look": 0,
+    "homeOfficeId": "support",
+    "zone": "lead",
+    "reportsTo": "supervisor",
+    "status": "active",
+    "pauseReason": "",
+    "tier": "standard",
+    "managed": true,
+    "createdBy": "pack:customer-support",
+    "model": "Sonnet",
+    "effort": "medium",
+    "color": "blue",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 0,
+      "measured": 0,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 0
+   },
+   {
+    "id": "tester",
+    "kind": "employee",
+    "title": "Tester",
+    "name": "",
+    "skills": [],
+    "look": 0,
+    "homeOfficeId": "engineering",
+    "zone": "build",
+    "reportsTo": "engineering-lead",
+    "status": "active",
+    "pauseReason": "",
+    "tier": "",
+    "managed": false,
+    "createdBy": "",
+    "model": "Sonnet",
+    "effort": "medium",
+    "color": "blue",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 4,
+      "measured": 2,
+      "unmeasured": 2,
+      "live": 2,
+      "tokens": 2400900,
+      "opusTokens": 0,
+      "usd": 4.8018,
+      "usdRuns": 2,
+      "usdMissing": 0,
+      "usdStatus": "ok"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 4
+   },
+   {
+    "id": "ticket-triager",
+    "kind": "employee",
+    "title": "Ticket Triager",
+    "name": "",
+    "skills": [],
+    "look": 0,
+    "homeOfficeId": "support",
+    "zone": "review",
+    "reportsTo": "support-lead",
+    "status": "active",
+    "pauseReason": "",
+    "tier": "light",
+    "managed": true,
+    "createdBy": "pack:customer-support",
+    "model": "Haiku",
+    "effort": "low",
+    "color": "orange",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 0,
+      "measured": 0,
+      "unmeasured": 0,
+      "live": 0,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 0
+   },
+   {
+    "id": "ui-designer",
+    "kind": "employee",
+    "title": "UI designer",
+    "name": "",
+    "skills": [],
+    "look": 0,
+    "homeOfficeId": "studio",
+    "zone": "design",
+    "reportsTo": "product-lead",
+    "status": "active",
+    "pauseReason": "",
+    "tier": "",
+    "managed": false,
+    "createdBy": "",
+    "model": "Opus",
+    "effort": "medium",
+    "color": "blue",
+    "aliases": [],
+    "budget": null,
+    "standing": {
+     "spend": {
+      "runs": 1,
+      "measured": 0,
+      "unmeasured": 1,
+      "live": 1,
+      "tokens": 0,
+      "opusTokens": 0,
+      "usd": 0,
+      "usdRuns": 0,
+      "usdMissing": 0,
+      "usdStatus": "none"
+     },
+     "budget": {
+      "set": false,
+      "enabled": false,
+      "on": false,
+      "level": "none",
+      "pct": null,
+      "softAlertPct": 80,
+      "hardStop": false,
+      "tokens": null,
+      "usd": null
+     }
+    },
+    "runsThisPeriod": 1
+   }
+  ],
+  "periodKey": "2026-10",
+  "standing": {
+   "spend": {
+    "runs": 14,
+    "measured": 6,
+    "unmeasured": 8,
+    "live": 8,
+    "tokens": 2562900,
+    "opusTokens": 0,
+    "usd": 5.1158,
+    "usdRuns": 5,
+    "usdMissing": 1,
+    "usdStatus": "partial"
+   },
+   "budget": {
+    "set": true,
+    "enabled": true,
+    "on": true,
+    "level": "ok",
+    "pct": 28.476666666666667,
+    "softAlertPct": 80,
+    "hardStop": false,
+    "tokens": {
+     "limit": 9000000,
+     "used": 2562900,
+     "pct": 28.476666666666667
+    },
+    "usd": {
+     "limit": 100,
+     "used": 5.1158,
+     "pct": 5.1158,
+     "status": "partial"
+    }
+   }
+  },
+  "unmapped": {
+   "no-such-project": 1,
+   "orphan-project": 1
+  },
+  "heartbeat": {
+   "lastSeenAt": "2026-10-16T21:12:36.607Z",
+   "session": ""
+  },
+  "activity": [
+   {
+    "at": "2026-10-16T21:12:36.301Z",
+    "actor": "board",
+    "action": "company.init",
+    "entityType": "company",
+    "entityId": "co-main",
+    "officeId": "",
+    "summary": "4 offices, 2 projects, 7 employees",
+    "via": "cli"
+   },
+   {
+    "at": "2026-10-16T21:12:36.833Z",
+    "actor": "board",
+    "action": "budget.set",
+    "entityType": "office",
+    "entityId": "engineering",
+    "officeId": "",
+    "summary": "office engineering budget: 150000 tokens/month, hard stop, alert at 50%",
+    "via": "cli"
+   },
+   {
+    "at": "2026-10-16T21:12:37.148Z",
+    "actor": "board",
+    "action": "budget.set",
+    "entityType": "office",
+    "entityId": "studio",
+    "officeId": "",
+    "summary": "office studio budget: 9000000 tokens + $40/month, alert at 80%",
+    "via": "cli"
+   },
+   {
+    "at": "2026-10-16T21:12:37.435Z",
+    "actor": "board",
+    "action": "budget.set",
+    "entityType": "employee",
+    "entityId": "implementer",
+    "officeId": "",
+    "summary": "employee implementer budget: 160000 tokens/month, alert at 80%",
+    "via": "cli"
+   },
+   {
+    "at": "2026-10-16T21:12:37.918Z",
+    "actor": "board",
+    "action": "budget.set",
+    "entityType": "company",
+    "entityId": "company",
+    "officeId": "",
+    "summary": "company budget: 9000000 tokens + $100/month, alert at 80%",
+    "via": "cli"
+   },
+   {
+    "at": "2026-10-16T21:12:38.259Z",
+    "actor": "board",
+    "action": "employee.paused",
+    "entityType": "employee",
+    "entityId": "code-reviewer",
+    "officeId": "",
+    "summary": "code-reviewer: pauseReason=pause sample, status=paused",
+    "via": "cli"
+   },
+   {
+    "at": "2026-10-16T21:12:39.033Z",
+    "actor": "supervisor",
+    "action": "budget.violation",
+    "entityType": "employee",
+    "entityId": "tester",
+    "officeId": "engineering",
+    "summary": "tester started despite stop: stop office:engineering 2412900/150000",
+    "via": "cli"
+   },
+   {
+    "at": "2026-10-16T21:12:40.058Z",
+    "actor": "supervisor",
+    "action": "budget.violation",
+    "entityType": "employee",
+    "entityId": "implementer",
+    "officeId": "engineering",
+    "summary": "implementer started despite stop: stop office:engineering 2412900/150000",
+    "via": "cli"
+   },
+   {
+    "at": "2026-10-16T21:12:40.399Z",
+    "actor": "supervisor",
+    "action": "budget.violation",
+    "entityType": "employee",
+    "entityId": "guest-one",
+    "officeId": "engineering",
+    "summary": "guest-one started despite stop: stop office:engineering 2412900/150000",
+    "via": "cli"
+   },
+   {
+    "at": "2026-10-16T21:12:40.771Z",
+    "actor": "supervisor",
+    "action": "budget.violation",
+    "entityType": "employee",
+    "entityId": "guest-two",
+    "officeId": "engineering",
+    "summary": "guest-two started despite stop: stop office:engineering 2412900/150000",
+    "via": "cli"
+   },
+   {
+    "at": "2026-10-16T21:12:41.188Z",
+    "actor": "supervisor",
+    "action": "budget.violation",
+    "entityType": "employee",
+    "entityId": "guest-three",
+    "officeId": "engineering",
+    "summary": "guest-three started despite stop: stop office:engineering 2412900/150000",
+    "via": "cli"
+   },
+   {
+    "at": "2026-10-16T21:12:41.665Z",
+    "actor": "supervisor",
+    "action": "budget.violation",
+    "entityType": "employee",
+    "entityId": "guest-four",
+    "officeId": "engineering",
+    "summary": "guest-four started despite stop: stop office:engineering 2412900/150000",
+    "via": "cli"
+   },
+   {
+    "at": "2026-10-16T21:12:42.257Z",
+    "actor": "supervisor",
+    "action": "budget.violation",
+    "entityType": "employee",
+    "entityId": "tester",
+    "officeId": "engineering",
+    "summary": "tester started despite stop: stop office:engineering 2412900/150000",
+    "via": "cli"
+   },
+   {
+    "at": "2026-10-16T21:12:45.406Z",
+    "actor": "board",
+    "action": "office.added",
+    "entityType": "office",
+    "entityId": "support",
+    "officeId": "",
+    "summary": "office support added",
+    "via": "dashboard"
+   },
+   {
+    "at": "2026-10-16T21:12:45.589Z",
+    "actor": "board",
+    "action": "pack.installed",
+    "entityType": "pack",
+    "entityId": "customer-support",
+    "officeId": "",
+    "summary": "Customer support 1.0.0: 5 members",
+    "via": "dashboard"
+   },
+   {
+    "at": "2026-10-16T21:12:45.623Z",
+    "actor": "system",
+    "action": "policy.changed",
+    "entityType": "policy",
+    "entityId": "defaults",
+    "officeId": "",
+    "summary": "safety rules created with defaults: every outside action asks first",
+    "via": "cli"
+   },
+   {
+    "at": "2026-10-16T21:12:45.681Z",
+    "actor": "board",
+    "action": "task.created",
+    "entityType": "task",
+    "entityId": "NW-1",
+    "officeId": "",
+    "summary": "NW-1 created: invented task alpha six",
+    "via": "dashboard"
+   },
+   {
+    "at": "2026-10-16T21:12:45.694Z",
+    "actor": "board",
+    "action": "comment.added",
+    "entityType": "task",
+    "entityId": "NW-1",
+    "officeId": "",
+    "summary": "NW-1: comment sample",
+    "via": "dashboard"
+   },
+   {
+    "at": "2026-10-16T21:12:45.718Z",
+    "actor": "supervisor",
+    "action": "task.created",
+    "entityType": "task",
+    "entityId": "NW-2",
+    "officeId": "",
+    "summary": "NW-2 created: typed task sample",
+    "via": "mcp"
+   },
+   {
+    "at": "2026-10-16T21:12:45.791Z",
+    "actor": "supervisor",
+    "action": "deliverable.added",
+    "entityType": "deliverable",
+    "entityId": "dl-2026-10-16T21-12-45-775Z-vpmn",
+    "officeId": "",
+    "summary": "deliverable sample",
+    "via": "mcp"
+   },
+   {
+    "at": "2026-10-16T21:12:45.798Z",
+    "actor": "supervisor",
+    "action": "deliverable.added",
+    "entityType": "deliverable",
+    "entityId": "dl-2026-10-16T21-12-45-794Z-4dzp",
+    "officeId": "",
+    "summary": "link sample (link only)",
+    "via": "mcp"
+   },
+   {
+    "at": "2026-10-16T21:12:45.897Z",
+    "actor": "supervisor",
+    "action": "policy.asked",
+    "entityType": "employee",
+    "entityId": "reply-drafter",
+    "officeId": "",
+    "summary": "message.send asked for reply-drafter: send sample reply",
+    "via": "mcp"
+   }
+  ],
+  "pricesSet": true
+ }
+}
