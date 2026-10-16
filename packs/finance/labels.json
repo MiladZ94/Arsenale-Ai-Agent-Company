@@ -1,0 +1,18 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs or design.",
+  "finance-lead": {
+    "dept": "lead"
+  },
+  "bookkeeping-assistant": {
+    "dept": "build"
+  },
+  "invoice-drafter": {
+    "dept": "docs"
+  },
+  "budget-analyst": {
+    "dept": "build"
+  },
+  "expense-checker": {
+    "dept": "review"
+  }
+}

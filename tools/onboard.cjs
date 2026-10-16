@@ -51,7 +51,6 @@ function create(answers, actor) {
   const mission = clipCp(String(a.mission || '').trim(), 300)
   const payModel = PAY.includes(a.payModel) ? a.payModel : 'unknown'
   const assistants = (Array.isArray(a.assistants) ? a.assistants : []).filter((x) => ASSISTANTS.includes(x))
-  const lang = a.lang === 'fa' ? 'fa' : 'en'
   const packIds = Array.isArray(a.packs) ? [...new Set(a.packs.map(String))] : []
   if (!packIds.length) throw fail(400, 'Choose at least one office')
   const C = require('./agent-company.cjs')
@@ -76,8 +75,8 @@ function create(answers, actor) {
   const employees = {}
   for (const d of done) Object.assign(employees, Pk.employeesOf(d.p, d.copied))
   const seed = {
-    company: { name, nameFa: lang === 'fa' ? name : '', mission, missionFa: lang === 'fa' ? mission : '', issuePrefix: prefixOf(name), budget, budgetsEnabled: payModel === 'api' ? true : !!budget, payModel, assistants },
-    offices: done.map((d, i) => ({ id: d.p.office.id, name: d.p.office.name, nameFa: d.p.office.nameFa, leadEmployeeId: d.copied.rename[d.p.office.lead] || d.p.office.lead, profile: d.p.office.profile, theme: d.p.office.theme, order: i })),
+    company: { name, mission, issuePrefix: prefixOf(name), budget, budgetsEnabled: payModel === 'api' ? true : !!budget, payModel, assistants },
+    offices: done.map((d, i) => ({ id: d.p.office.id, name: d.p.office.name, leadEmployeeId: d.copied.rename[d.p.office.lead] || d.p.office.lead, profile: d.p.office.profile, theme: d.p.office.theme, order: i })),
     projects: [],
     employees,
   }

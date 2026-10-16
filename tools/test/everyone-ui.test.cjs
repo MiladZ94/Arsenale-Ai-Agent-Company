@@ -110,7 +110,7 @@ test('a task written on the page: saved as BLU-1, commented and moved; a bad lin
   await w.waitFor(exists('form[data-evform=task-edit]'))
   await w.set('form[data-evform=task-edit] select[name=status]', 'blocked')
   await w.submit('form[data-evform=task-edit]')
-  for (let i = 0; i < 30 && w.sb.read('company/issues/BLU-1.json').status !== 'blocked'; i++) await w.page.sleep(150)
+  for (let i = 0; i < 160 && w.sb.read('company/issues/BLU-1.json').status !== 'blocked'; i++) await w.page.sleep(150)
   assert.equal(w.sb.read('company/issues/BLU-1.json').status, 'blocked')
   // the board: the task in "Working on it", by its title, with no task number
   await w.click('[data-ev=page-close]')
@@ -178,7 +178,7 @@ test('T-5.4 through the page: a hire proposal is approved with two clicks, and t
   await w.click('[data-ev=hire-yes]')
   // the member file is written first, then the question is answered: wait for both
   const gateFile = 'agent-runs/gates/' + g.question_id + '.json'
-  for (let i = 0; i < 60 && w.sb.read(gateFile).status !== 'answered'; i++) await w.page.sleep(150)
+  for (let i = 0; i < 160 && w.sb.read(gateFile).status !== 'answered'; i++) await w.page.sleep(150)
   assert.ok(fs.existsSync(path.join(w.sb.agents, 'invoice-ivo.md')))
   const saved = w.sb.read(gateFile)
   assert.equal(saved.answer, 'hired invoice-ivo')

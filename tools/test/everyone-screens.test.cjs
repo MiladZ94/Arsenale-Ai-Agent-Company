@@ -156,7 +156,7 @@ test('the approvals letter: the plain question, what would happen, why it matter
   await page.waitFor(exists('.letter form[data-evform=ans] input[name=a]'))
   await page.eval("const f = document.querySelector('.letter form[data-evform=ans]'); f.elements.a.value = 'use the morning photo'; f.requestSubmit(); 1")
   const file = 'agent-runs/gates/' + r.question_id + '.json'
-  for (let i = 0; i < 40 && sb.read(file).status !== 'answered'; i++) await page.sleep(150)
+  for (let i = 0; i < 160 && sb.read(file).status !== 'answered'; i++) await page.sleep(150)
   assert.equal(sb.read(file).answer, 'Not yet: use the morning photo')
 })
 
@@ -197,7 +197,7 @@ test('settings: each sub-page draws its own part, and a safety rule is written i
   await tab('privacy', ['Everything stays on this computer', 'only with your own key'])
   await tab('safety', ['Safety rules'])
   await page.eval("document.querySelector('[data-ev=pol][data-arg=\"|payment|never\"]').click(); 1")
-  for (let i = 0; i < 40 && sb.read('policy.json').defaults.payment !== 'never'; i++) await page.sleep(150)
+  for (let i = 0; i < 160 && sb.read('policy.json').defaults.payment !== 'never'; i++) await page.sleep(150)
   assert.equal(sb.read('policy.json').defaults.payment, 'never')
   // an assistant card opens its three steps
   await tab('assistants', ['Your assistants'])

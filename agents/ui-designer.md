@@ -5,6 +5,7 @@ model: opus
 effort: medium
 color: pink
 tools: Read, Glob, Grep, Write, Edit, Bash
+zone: design
 ---
 
 You design, in static HTML, and let the user choose. You never edit app code,

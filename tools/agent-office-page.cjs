@@ -648,7 +648,7 @@ function controlRoom(h) {
     const closed = (g) => (g.status === 'answered' ? ms(g.answeredAt) : g.status === 'expired' ? ms(g.expiredAt || g.updatedAt) : NaN)
     const list = gatesOf().filter((g) => !isNaN(closed(g))).sort((a, b) => closed(b) - closed(a))
     if (!list.length) return '<p class="none">' + T('Nothing answered or dismissed yet.') + '</p>'
-    const day = (t) => (t >= S.dayStart ? '' : new Date(t).toLocaleDateString(LANG === 'fa' ? 'fa-IR' : 'en-GB', { day: 'numeric', month: 'short' }) + ' ')
+    const day = (t) => (t >= S.dayStart ? '' : new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' ')
     return '<ul class="given">' + list.slice(0, 15).map((g) => {
       const t = closed(g)
       const own = (g.history || []).some((x) => x.via === 'dashboard')
@@ -666,8 +666,8 @@ function controlRoom(h) {
     const elsewhere = waiting().length - w.length
     let html = '<h2 id="rail-h">' + T('Waiting for you') + ' <b>' + fa(w.length) + '</b><button type="button" class="x" data-railclose="1">' + T('Close ✕') + '</button></h2>'
     html += '<p class="hint">' + (canAnswer() ? T('Answer here, or reply to the supervisor in the chat. Oldest first.')
-      : LIVE ? T('Answer the supervisor in the chat. To answer from here, restart the dashboard server once.')
-        : T('Answer the supervisor in the chat. Answering from here only works while the page is open from the local server.')) + '</p>'
+      : LIVE ? T('Answer in the chat; this page must be open.')
+        : T('Answer in the chat; this page must be open.')) + '</p>'
     // an answered gate leaves the list at once; say so where it was
     st.sent = st.sent.filter((x) => S.now - x.at < 20000)
     html += st.sent.map((x) => '<p class="ansmsg ok" role="status">' + (x.dismissed ? esc(clip(x.shown, 40)) + T(' dismissed.') : '«' + esc(clip(x.shown, 40)) + T('” recorded. The supervisor picks it up from answers.jsonl.')) + '</p>').join('')
@@ -748,7 +748,7 @@ function controlRoom(h) {
     html += swim(S, inProj)
     html += '<div class="tbl-wrap" id="dtbl">'
     if (!rows.length) {
-      html += '<p class="empty">' + (all.length ? T('Nothing matches this filter.') : T('No decision or gate logged today. The supervisor logs them with <code dir="ltr">--decision</code> and <code dir="ltr">--gate</code>.')) + '</p></div>'
+      html += '<p class="empty">' + (all.length ? T('Nothing matches this filter.') : T('No decision or gate logged today.')) + '</p></div>'
       return html
     }
     html += '<table class="dt"><thead><tr><th scope="col">' + T('Time') + '</th><th scope="col">' + T('Who') + '</th><th scope="col">' + T('Decision and reason') + '</th><th scope="col">' + T('Run') + '</th><th scope="col">' + T('Status') + '</th></tr></thead><tbody>' +
@@ -993,7 +993,6 @@ function controlRoom(h) {
       body: JSON.stringify(payload),
     })
     const body = await res.json().catch(() => ({}))
-    // errTxt gives the Persian text where the message is shown
     if (res.status === 401 || (res.status === 403 && (body.error === 'token' || body.error === 'origin'))) throw new Error('This page lost its key. Open the dashboard again with arsenale open.')
     // a server started before this page code existed does not know the route
     if (res.status === 405 && body.error === 'GET only') throw new Error('restart the dashboard server once to turn this on')
@@ -1060,11 +1059,10 @@ function officeClient() {
   const $ = (id) => document.getElementById(id)
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
   const fa = (n) => String(n) // the page's numbers; English only, so the digits stay as they are
-  // date locales: 'fa-IR' gives the Persian calendar; the English ones are
-  // the same ones the pre-i18n English-only page used (en-CA for the short
+  // date locales: the same ones the pre-i18n English-only page used (en-CA for the short
   // y-m-d dates, en-GB for the header's long weekday/day/month/year date).
-  const SHORT_LOCALE = LANG === 'fa' ? 'fa-IR' : 'en-CA'
-  const HDR_LOCALE = LANG === 'fa' ? 'fa-IR' : 'en-GB'
+  const SHORT_LOCALE = 'en-CA'
+  const HDR_LOCALE = 'en-GB'
   const ms = (iso) => { const t = new Date(iso).getTime(); return isNaN(t) ? NaN : t }
   const hhmm = (t) => { const d = new Date(t); return isNaN(d) ? '' : String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') }
   const span = (v) => {
@@ -2095,7 +2093,7 @@ function officeClient() {
         if (omenuOpen) {
           const r = $('omenu-' + omenuOpen).getBoundingClientRect()
           menu.style.top = (r.bottom + 4) + 'px'
-          menu.style.left = Math.max(8, (LANG === 'fa' ? r.left : r.right - 220)) + 'px'
+          menu.style.left = Math.max(8, (r.right - 220)) + 'px'
           menu.innerHTML = omenuOpen === 'legacy'
             ? '<button type="button" data-view="org" aria-current="' + (mode === 'org') + '">' + T('Org chart') + '</button><button type="button" data-view="dec" aria-current="' + (mode === 'dec') + '">' + T('Decisions & gates') + '</button><button type="button" data-view="use" aria-current="' + (mode === 'use') + '">' + T('Details: tools & usage') + '</button><button type="button" data-view="set" aria-current="' + (mode === 'set') + '">' + T('Settings') + '</button>'
             : CO.officeList().filter((x) => !x.builtIn || CO.counts(S_FULL, x.id).today || CO.counts(S_FULL, x.id).working).map((x) => '<button type="button" data-goto="office:' + esc(x.id) + '" aria-current="' + (x.id === officeId) + '"><span class="sq" style="background:' + esc(x.color) + '"></span>' + esc(CO.oname(x)) + '</button>').join('')

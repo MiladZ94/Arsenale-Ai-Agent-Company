@@ -64,15 +64,13 @@ function readJsonDir(dir) {
 /** The agents that exist, from their definition files. Only the frontmatter is
  *  read — the body is the agent's own instructions, not something to show. */
 function readAgents() {
-  // The page shows each agent's own English frontmatter description in
-  // English mode. labels.fa.json (optional, in any agent folder: a Persian
-  // title and one-line "what" per agent) supplies the card text in Persian
-  // mode, and `dept` (which desk an agent takes) in both. A `zone:` line in
-  // the frontmatter places the desk too, and wins.
+  // labels.json (optional, in any agent folder: { "<agent>": { "dept" } })
+  // says which desk an agent takes. A `zone:` line in the frontmatter places
+  // the desk too, and wins.
   const labels = {}
   for (const dir of P.AGENT_DIRS.slice().reverse()) {
     try {
-      const j = JSON.parse(P.stripBom(fs.readFileSync(path.join(dir, 'labels.fa.json'), 'utf8')))
+      const j = JSON.parse(P.stripBom(fs.readFileSync(path.join(dir, 'labels.json'), 'utf8')))
       for (const [k, v] of Object.entries(j)) if (v && typeof v === 'object') labels[k] = v
     } catch { /* no labels there: English text, desk from the name */ }
   }
@@ -87,22 +85,18 @@ function readAgents() {
       return m ? m[1].trim() : ''
     }
     const agentName = field('name') || name
-    const fa = Object.hasOwn(labels, agentName) ? labels[agentName] : {}
+    const lab = Object.hasOwn(labels, agentName) ? labels[agentName] : {}
     const descriptionEn = field('description')
     out.push({
       name: agentName,
       title: '',
       description: descriptionEn,
       descriptionEn,
-      titleFa: fa.title || '',
-      descriptionFa: fa.what || descriptionEn,
-      hasFa: !!fa.what,
-      persian: false,
       model: field('model'),
       effort: field('effort'),
       tools: field('tools'),
       color: field('color'),
-      dept: field('zone') || fa.dept || '', // optional: which department's desk the agent takes
+      dept: field('zone') || lab.dept || '', // optional: which department's desk the agent takes
     })
   }
   return out.sort((a, b) => a.name.localeCompare(b.name))
@@ -853,7 +847,6 @@ const STYLE = `
   }
   .agent-title { font-weight: 700; font-size: 0.88rem; margin-bottom: 4px; color: var(--ink); }
   .agent-desc { color: var(--ink-soft); font-size: 0.82rem; direction: ltr; text-align: left; }
-  .agent-desc.fa { direction:rtl; text-align:right; }
 
   .empty { background: var(--panel); border: 1px dashed var(--line); border-radius: 8px; padding: 30px; text-align: center; color: var(--ink-dim); }
   .empty code { background: var(--panel-raised); padding: 2px 6px; border-radius: 4px; direction: ltr; display: inline-block; color: var(--cyan); }
@@ -875,9 +868,9 @@ const STATUS = {
 const STATUS_CODE = { ok: T('OK'), findings: T('FINDINGS'), failed: T('FAILED'), stopped: T('STOPPED') };
 const el = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const when = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString(LANG === 'fa' ? 'fa-IR' : 'en-GB'); };
+const when = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-GB'); };
 // digits with a thousands separator (155,703).
-const fmt = (n) => (n || 0).toLocaleString(LANG === 'fa' ? 'fa-IR' : 'en-US');
+const fmt = (n) => (n || 0).toLocaleString('en-US');
 
 function took(ms) {
   if (!ms) return '';
@@ -951,7 +944,7 @@ function computeStats(runs) {
     const tokens = runs
       .filter((r) => { const t = new Date(r.finishedAt).getTime(); return t >= start.getTime() && t < end.getTime(); })
       .reduce((a, r) => a + (r.tokens || 0), 0);
-    days.push({ label: start.toLocaleDateString(LANG === 'fa' ? 'fa-IR' : 'en-CA', { month: '2-digit', day: '2-digit' }), tokens });
+    days.push({ label: start.toLocaleDateString('en-CA', { month: '2-digit', day: '2-digit' }), tokens });
   }
 
   return { totalTokens, todayTokens, agents, models, projects, days };
@@ -1147,8 +1140,7 @@ function agentCards() {
       + '</div>'
       + '<div class="agent-flags">--model ' + esc(a.model || '—') + (a.effort ? ' --effort ' + esc(a.effort) : '') + '</div>'
       + (a.title ? '<div class="agent-title">' + esc(a.title) + '</div>' : '')
-      + (LANG === 'fa' && a.titleFa ? '<div class="agent-title">' + esc(a.titleFa) + '</div>' : '')
-      + '<div class="agent-desc' + (LANG === 'fa' && a.hasFa ? ' fa' : '') + '">' + esc(LANG === 'fa' ? a.descriptionFa : a.descriptionEn) + '</div></div>').join('')
+      + '<div class="agent-desc">' + esc(a.descriptionEn) + '</div></div>').join('')
     : '<div class="empty">' + T('No agent is defined yet.') + '</div>';
 }
 
@@ -1303,7 +1295,7 @@ ${refresh}
   <h2>${T('Running right now')}</h2>
   <div id="live"></div>
   <p class="note">${live
-    ? T('This page asks the local server for fresh state every 1.5 seconds; it does not move until something actually changes.')
+    ? T('Refreshes every 1.5 seconds.')
     : T('This page refreshes itself every few seconds and is rebuilt on every logged event.')}</p>
 
   <h2>${T('Runs done')}</h2>
@@ -1324,7 +1316,7 @@ ${refresh}
 
   <h2>${T('Agents defined')}</h2>
   <div class="agents" id="agents"></div>
-  <p class="note">${T('Each agent is defined in a Markdown file in the agent folders, and their shared rules are in <code>AGENT-RULES.md</code>. Agents can build a new agent themselves, under the same rules.')}</p>
+  <p class="note">${T('Agents are Markdown files; shared rules are in <code>AGENT-RULES.md</code>.')}</p>
 </div>
 
 <script>

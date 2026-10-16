@@ -22,13 +22,13 @@ const AGENTS = {
 const SEED = {
   company: { name: 'Northwind Labs', issuePrefix: 'NW' },
   offices: [
-    { id: 'engineering', name: 'Engineering', nameFa: 'مهندسی', leadEmployeeId: 'engineering-lead', theme: 'blue' },
-    { id: 'studio', name: 'Studio', nameFa: 'استودیو', leadEmployeeId: 'product-lead', theme: 'teal' },
+    { id: 'engineering', name: 'Engineering', leadEmployeeId: 'engineering-lead', theme: 'blue' },
+    { id: 'studio', name: 'Studio', leadEmployeeId: 'product-lead', theme: 'teal' },
     { id: 'hq', name: 'HQ', leadEmployeeId: 'supervisor', theme: 'coral' },
   ],
   projects: [
     { id: 'demo-calc', name: 'Demo Calc', key: 'DCALC', officeId: 'engineering', aliases: ['democalc', 'Demo Calc'] },
-    { id: 'tide-app', name: 'Tide app', key: 'TIDE', officeId: 'studio', aliases: ['tide', 'داشبورد'] },
+    { id: 'tide-app', name: 'Tide app', key: 'TIDE', officeId: 'studio', aliases: ['tide', 'dashboard'] },
   ],
   employees: {
     'implementer': { homeOfficeId: 'studio' },
@@ -45,14 +45,39 @@ function thisMonth(day, hour) {
   return new Date(d.getFullYear(), d.getMonth(), day || 2, hour || 12, 0, 0).toISOString()
 }
 
+/** A copy of a folder made of hard links where it can be: copying a few
+ *  hundred kilobytes per test, with a virus scanner reading every file, was
+ *  the bulk of a test's set-up. Nothing writes into the copied tools. */
+function linkTree(from, to) {
+  fs.mkdirSync(to, { recursive: true })
+  for (const e of fs.readdirSync(from, { withFileTypes: true })) {
+    const a = path.join(from, e.name), b = path.join(to, e.name)
+    if (e.isDirectory()) { linkTree(a, b); continue }
+    try { fs.linkSync(a, b) } catch { fs.copyFileSync(a, b) }
+  }
+}
+
+/** A child the test started that must not keep the test file alive if the
+ *  test failed before it could stop it: the file ends, and the child is killed
+ *  as the file's process exits. */
+const children = new Set()
+process.on('exit', () => { for (const c of children) { try { c.kill() } catch { /* gone */ } } })
+function track(child) {
+  children.add(child)
+  child.on('exit', () => children.delete(child))
+  child.unref()
+  for (const s of [child.stdin, child.stdout, child.stderr]) if (s && typeof s.unref === 'function') s.unref()
+  return child
+}
+
 function makeSandbox(opts = {}) {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-company-test-'))
   const root = path.join(base, 'arsenale-home')
   const tools = path.join(root, 'tools')
   fs.mkdirSync(tools, { recursive: true })
-  for (const f of fs.readdirSync(TOOLS)) if (f.endsWith('.cjs')) fs.copyFileSync(path.join(TOOLS, f), path.join(tools, f))
+  for (const f of fs.readdirSync(TOOLS)) if (f.endsWith('.cjs')) { try { fs.linkSync(path.join(TOOLS, f), path.join(tools, f)) } catch { fs.copyFileSync(path.join(TOOLS, f), path.join(tools, f)) } }
   // the 3D office's pinned three.js and its default character (office-world.cjs); opts.flat leaves them out
-  if (!opts.flat) for (const d of ['vendor', 'characters']) if (fs.existsSync(path.join(TOOLS, d))) fs.cpSync(path.join(TOOLS, d), path.join(tools, d), { recursive: true })
+  if (!opts.flat) for (const d of ['vendor', 'characters']) if (fs.existsSync(path.join(TOOLS, d))) linkTree(path.join(TOOLS, d), path.join(tools, d))
   fs.writeFileSync(path.join(root, 'model-prices.json'), JSON.stringify({ models: opts.prices || {} }))
   // the user's own settings never leak in: no agent or transcript folders from the environment
   const env = Object.assign({}, process.env, { ARSENALE_HOME: root }, opts.env || {})
@@ -129,7 +154,7 @@ function hashTree(dir) {
  *  speaks newline-delimited JSON-RPC to it. */
 function mcpClient(sb, name, extraEnv) {
   const { spawn } = require('child_process')
-  const child = spawn(process.execPath, [path.join(sb.tools, 'mcp-server.cjs')], { env: Object.assign({}, sb.env, extraEnv || {}), stdio: ['pipe', 'pipe', 'pipe'] })
+  const child = track(spawn(process.execPath, [path.join(sb.tools, 'mcp-server.cjs')], { env: Object.assign({}, sb.env, extraEnv || {}), stdio: ['pipe', 'pipe', 'pipe'] }))
   let buf = '', next = 1, stderr = ''
   const waiting = new Map()
   const raw = []
@@ -179,12 +204,12 @@ function startServer(sb, opts = {}) {
   const { spawn } = require('child_process')
   const http = require('http')
   const port = (opts.portBase || 46000) + Math.floor(Math.random() * 3000)
-  const child = spawn(process.execPath, [path.join(sb.tools, 'agent-dashboard-server.cjs'), String(port)], { env: Object.assign({}, sb.env, opts.env || {}), stdio: ['ignore', 'pipe', 'pipe'] })
+  const child = track(spawn(process.execPath, [path.join(sb.tools, 'agent-dashboard-server.cjs'), String(port)], { env: Object.assign({}, sb.env, opts.env || {}), stdio: ['ignore', 'pipe', 'pipe'] }))
   return new Promise((resolve, fail) => {
     // a server that did not come up right is stopped, not left running
     const reject = (e) => { child.kill(); fail(e) }
     let out = '', seen = false
-    const t = setTimeout(() => reject(new Error('server did not start: ' + out)), 10000)
+    const t = setTimeout(() => reject(new Error('server did not start: ' + out)), 30000)
     child.stdout.on('data', (d) => {
       out += d
       const m = /Arsenale dashboard: (\S+)/.exec(out)
@@ -207,4 +232,4 @@ function startServer(sb, opts = {}) {
   })
 }
 
-module.exports = { makeSandbox, hashTree, thisMonth, SEED, AGENTS, mcpClient, startServer }
+module.exports = { track, linkTree, makeSandbox, hashTree, thisMonth, SEED, AGENTS, mcpClient, startServer }

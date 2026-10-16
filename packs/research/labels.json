@@ -1,0 +1,15 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs or design.",
+  "research-lead": {
+    "dept": "lead"
+  },
+  "desk-researcher": {
+    "dept": "build"
+  },
+  "market-analyst": {
+    "dept": "build"
+  },
+  "fact-checker": {
+    "dept": "review"
+  }
+}

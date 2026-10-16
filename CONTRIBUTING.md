@@ -37,9 +37,8 @@ shape before you build it.
   new field is optional.
 - **Everything shown is escaped.** Use `esc()` for any text from a file.
 - **No real data** in tests, fixtures or screenshots: invented names only.
-- **Two languages in the page.** New interface text goes through `T('…')`,
-  with a Persian entry in `tools/dashboard-strings.cjs`; the language tests
-  check that each page is in one language.
+- **English only.** New interface text goes through `T('…')`, which returns
+  the English key; the language tests check no other script appears.
 - Match the style around your change; comments say why, not what.
 
 - **One write path.** Every write goes through `tools/runlog.cjs` and the
@@ -76,9 +75,6 @@ open an issue with the label `help wanted` and the area's name.
   other trades (HR and Finance texts need a qualified reviewer).
 - **Claude Code hook enforcement** of the safety rules (block a known sending
   or paying tool unless approved), as an opt-in.
-- **A Persian (Jalali) date picker** for the task due date; today the browser's
-  own date field is used, and the task shows its due date in the Persian
-  calendar.
 - **Update checks** (opt-in, GitHub Releases only) once there is a desktop app.
 - **A Linux desktop package.**
 

@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: green
 tools: Read, Glob, Grep, Write, Bash
+zone: lead
 ---
 
 You are the head of the **Product** office. Your office id is `product` and its

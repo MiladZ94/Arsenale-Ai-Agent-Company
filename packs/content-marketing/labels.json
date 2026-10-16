@@ -1,0 +1,18 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs or design.",
+  "marketing-lead": {
+    "dept": "lead"
+  },
+  "copywriter": {
+    "dept": "docs"
+  },
+  "social-media-planner": {
+    "dept": "docs"
+  },
+  "seo-specialist": {
+    "dept": "build"
+  },
+  "newsletter-editor": {
+    "dept": "docs"
+  }
+}

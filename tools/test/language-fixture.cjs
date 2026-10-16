@@ -9,15 +9,14 @@ const { makeSandbox } = require('./helpers.cjs')
 const SEED = {
   company: { name: 'Northwind Labs', issuePrefix: 'NW' },
   offices: [
-    { id: 'engineering', name: 'Engineering', nameFa: 'مهندسی', leadEmployeeId: 'engineering-lead', theme: 'blue' },
-    { id: 'studio', name: 'Software Studio', nameFa: 'استودیوی نرم‌افزار', leadEmployeeId: 'product-lead', theme: 'teal' },
-    { id: 'hq', name: 'Headquarters', nameFa: 'دفتر مرکزی', leadEmployeeId: 'supervisor', theme: 'coral' },
-    // no Persian name: the Persian page falls back to the English one
+    { id: 'engineering', name: 'Engineering', leadEmployeeId: 'engineering-lead', theme: 'blue' },
+    { id: 'studio', name: 'Software Studio', leadEmployeeId: 'product-lead', theme: 'teal' },
+    { id: 'hq', name: 'Headquarters', leadEmployeeId: 'supervisor', theme: 'coral' },
     { id: 'ops', name: 'Operations', leadEmployeeId: '', theme: 'violet' },
   ],
   projects: [
     { id: 'demo-calc', name: 'Demo Calc', key: 'DCALC', officeId: 'engineering', aliases: ['democalc', 'Demo Calc'] },
-    { id: 'tide-app', name: 'Tide app', key: 'TIDE', officeId: 'studio', aliases: ['tide', 'پروژهٔ نمونه'] },
+    { id: 'tide-app', name: 'Tide app', key: 'TIDE', officeId: 'studio', aliases: ['tide', 'sample project'] },
   ],
   employees: {
     'implementer': { homeOfficeId: 'studio' },
@@ -29,12 +28,12 @@ const SEED = {
   },
 }
 
-// invented text a person typed: it stays as written in both languages
-const FA_TASK = 'کار نمونهٔ فارسی'
-const FA_DECISION = 'تصمیم نمونهٔ فارسی'
+// invented text a person typed: it stays as written
+const TYPED_TASK = 'typed task sample'
+const TYPED_DECISION = 'typed decision sample'
 const EN_DECISION = 'decision sample alpha'
 const EN_TASK = 'invented task alpha'
-const DATA_FA = [FA_TASK, FA_DECISION, 'پروژهٔ نمونه']
+const DATA_TYPED = [TYPED_TASK, TYPED_DECISION, 'sample project']
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -47,8 +46,8 @@ function fixture() {
   assert.equal(sb.cli('--company-init', '--seed', sb.seed(SEED)).code, 0)
   sb.cli('--heartbeat')
   sb.measured('tester', 'democalc', 2400000, { task: EN_TASK })
-  sb.measured('implementer', 'tide', 130000, { task: FA_TASK })
-  sb.measured('implementer', 'پروژهٔ نمونه', 20000, { task: EN_TASK + ' two' })
+  sb.measured('implementer', 'tide', 130000, { task: TYPED_TASK })
+  sb.measured('implementer', 'sample project', 20000, { task: EN_TASK + ' two' })
   sb.measured('code-reviewer', 'democalc', 5000, { model: 'Mystery 9', task: EN_TASK + ' three', status: 'findings', findings: ['finding sample'] })
   sb.measured('stranger-agent', 'democalc', 7000, { task: EN_TASK + ' four' })
   sb.measured('tester', 'no-such-project', 900, { task: EN_TASK + ' five', status: 'failed' })
@@ -80,7 +79,7 @@ function fixture() {
   sb.cli('--gate', JSON.stringify({ project: 'tide', kind: 'A', question: 'invented choice question?', choices: ['option one', 'option two'] }))
   const done = sb.cli('--gate', JSON.stringify({ project: 'tide', kind: 'B', question: 'invented answered question?' })).out
   sb.cli('--gate', JSON.stringify({ id: done, status: 'answered', answer: 'option two', by: 'user' }))
-  sb.cli('--decision', JSON.stringify({ project: 'democalc', by: 'user', text: FA_DECISION }))
+  sb.cli('--decision', JSON.stringify({ project: 'democalc', by: 'user', text: TYPED_DECISION }))
   sb.cli('--decision', JSON.stringify({ project: 'democalc', by: 'supervisor', text: EN_DECISION, state: 'open' }))
   sb.cli('--decision', JSON.stringify({ project: 'tide', by: 'agent', agent: 'tester', text: EN_DECISION + ' two' }))
   // the 1.0 screens: an office pack, a task with a comment, deliverables, and a
@@ -92,7 +91,7 @@ function fixture() {
   const T = sb.mod('tasks.cjs')
   const task = T.createTask({ title: EN_TASK + ' six', description: 'task details sample', assignee: 'reply-drafter', dueDate: '2026-01-15', links: [{ url: 'https://example.org/sample' }, { path: 'C:\\work\\sample.docx' }], needsSignOff: true }, board)
   T.addComment(task.id, 'comment sample', board)
-  T.createTask({ title: FA_TASK }, sup)
+  T.createTask({ title: TYPED_TASK }, sup)
   const D = sb.mod('deliverables.cjs')
   D.addDeliverable({ title: 'deliverable sample', kind: 'text', mime: 'text/plain', content: 'deliverable text sample', team_member: 'reply-drafter', task_id: task.id }, sup)
   D.addDeliverable({ title: 'link sample', kind: 'link', url: 'https://example.org/sample', team_member: 'faq-writer' }, sup)
@@ -110,4 +109,4 @@ function serve(port) {
   process.on('SIGINT', () => { child.kill(); sb.cleanup(); process.exit(0) })
 }
 
-module.exports = { SEED, FA_TASK, FA_DECISION, EN_DECISION, EN_TASK, DATA_FA, fixture, serve }
+module.exports = { SEED, TYPED_TASK, TYPED_DECISION, EN_DECISION, EN_TASK, DATA_TYPED, fixture, serve }

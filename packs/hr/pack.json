@@ -4,14 +4,11 @@
   "id": "hr",
   "version": "1.0.0",
   "name": "HR",
-  "nameFa": "منابع انسانی",
   "description": "Draft job ads, interview question sets and scorecards, first-week onboarding plans and handbook sections, all as drafts for a qualified person to check.",
-  "descriptionFa": "پیش‌نویس آگهی شغلی، پرسش‌های مصاحبه و برگه‌ی امتیازدهی، برنامه‌ی هفته‌ی اول ورود کارکنان و بخش‌هایی از راهنمای کارکنان؛ همه برای بررسی یک فرد صلاحیت‌دار.",
   "minArsenale": "1.0.0",
   "office": {
     "id": "people",
     "name": "HR",
-    "nameFa": "منابع انسانی",
     "theme": "pink",
     "profile": "people",
     "lead": "people-lead"
@@ -22,7 +19,6 @@
       "id": "people-lead",
       "zone": "lead",
       "title": "People Lead",
-      "titleFa": "مدیر منابع انسانی",
       "tier": "standard"
     },
     {
@@ -30,7 +26,6 @@
       "id": "job-ad-writer",
       "zone": "docs",
       "title": "Job Ad Writer",
-      "titleFa": "نویسنده‌ی آگهی شغلی",
       "tier": "standard"
     },
     {
@@ -38,7 +33,6 @@
       "id": "interview-planner",
       "zone": "docs",
       "title": "Interview Planner",
-      "titleFa": "برنامه‌ریز مصاحبه",
       "tier": "standard"
     },
     {
@@ -46,7 +40,6 @@
       "id": "onboarding-planner",
       "zone": "docs",
       "title": "Onboarding Planner",
-      "titleFa": "برنامه‌ریز ورود کارکنان",
       "tier": "standard"
     },
     {
@@ -54,7 +47,6 @@
       "id": "policy-drafter",
       "zone": "docs",
       "title": "Policy Drafter",
-      "titleFa": "نویسنده‌ی خط‌مشی‌ها",
       "tier": "standard"
     }
   ],

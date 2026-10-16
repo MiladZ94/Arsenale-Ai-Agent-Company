@@ -1,0 +1,18 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs or design.",
+  "design-lead": {
+    "dept": "lead"
+  },
+  "brand-designer": {
+    "dept": "design"
+  },
+  "layout-designer": {
+    "dept": "design"
+  },
+  "image-brief-writer": {
+    "dept": "design"
+  },
+  "design-reviewer": {
+    "dept": "review"
+  }
+}
