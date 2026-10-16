@@ -45,7 +45,8 @@
   /** "Operations, Research, Design: not set up": the packs not installed yet. */
   function notSetUp() {
     load('packs', 'api/packs', false, 60000)
-    const left = ((st.data.packs && st.data.packs.packs) || []).filter((p) => !p.installed)
+    // an office that exists is set up, whether a pack or the seed made it
+    const left = ((st.data.packs && st.data.packs.packs) || []).filter((p) => !p.installed && !offices().some((o) => p.office && o.id === p.office.id))
     return left.length ? left.map((p) => p.name).join(T(', ')) + T(': not set up') : ''
   }
   function monthRuns(id) {

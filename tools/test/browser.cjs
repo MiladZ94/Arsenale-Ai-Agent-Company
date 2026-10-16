@@ -54,25 +54,34 @@ process.on('exit', killShared)
 
 async function sharedBrowser() {
   if (shared) return shared.ready
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-company-browser-'))
-  const child = spawn(findBrowser(), [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-    '--remote-debugging-port=0', '--user-data-dir=' + profile, '--window-size=1600,950', 'about:blank',
-  ], { stdio: 'ignore' })
-  child.unref()
-  const me = { child, profile, idle: [] }
+  const me = { idle: [] }
   me.ready = (async () => {
-    const portFile = path.join(profile, 'DevToolsActivePort')
-    let port = 0
-    for (let i = 0; i < 300 && !port; i++) {
-      try { port = Number(fs.readFileSync(portFile, 'utf8').split('\n')[0]) || 0 } catch { /* not written yet */ }
-      if (!port) await sleep(100)
+    // a Chrome that does not open its port in time under load is started once
+    // more before the test fails (spec autonomous-mode 16, rule 3)
+    for (let attempt = 1; ; attempt++) {
+      const port = await startBrowser(me)
+      if (port) return port
+      try { me.child.kill() } catch { /* gone */ }
+      try { fs.rmSync(me.profile, { recursive: true, force: true }) } catch { /* Windows may still hold it */ }
+      if (attempt >= 2) { if (shared === me) shared = null; throw new Error('the browser did not open a DevTools port') }
     }
-    if (!port) { if (shared === me) killShared(); throw new Error('the browser did not open a DevTools port') }
-    return port
   })()
   shared = me
   return me.ready
+}
+async function startBrowser(me) {
+  me.profile = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-company-browser-'))
+  me.child = spawn(findBrowser(), [
+    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    '--remote-debugging-port=0', '--user-data-dir=' + me.profile, '--window-size=1600,950', 'about:blank',
+  ], { stdio: 'ignore' })
+  me.child.unref()
+  const portFile = path.join(me.profile, 'DevToolsActivePort')
+  for (let i = 0; i < 300; i++) {
+    try { const port = Number(fs.readFileSync(portFile, 'utf8').split('\n')[0]) || 0; if (port) return port } catch { /* not written yet */ }
+    await sleep(100)
+  }
+  return 0
 }
 
 /** One protocol call on the browser itself, over a socket that is closed again. */

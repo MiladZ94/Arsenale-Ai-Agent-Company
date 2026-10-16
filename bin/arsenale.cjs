@@ -144,6 +144,11 @@ async function demo(opts) {
   delete process.env.ARSENALE_AGENT_DIRS
   delete process.env.ARSENALE_TRANSCRIPT_ROOTS
   const { seedCompany, seedEveryone, seedShop, simulate } = require(path.join(TOOLS, 'demo.cjs'))
+  // The address first, then the seed (seconds on a busy machine), then the
+  // browser: a script reading the output gets the key URL at once. The seed
+  // runs in one synchronous stretch, so a request that arrives meanwhile
+  // waits for it and never sees half the invented company.
+  const s = await serve({ port: opts.port || 4311, open: false }, 'Arsenale demo (invented data)')
   let stop = () => {}
   if (shop) seedShop(home)
   else {
@@ -151,7 +156,8 @@ async function demo(opts) {
     try { seedEveryone() } catch (e) { console.error('demo: the 1.0 screens have no data (' + e.message + ')') }
     stop = simulate(home)
   }
-  const s = await serve({ port: opts.port || 4311, open: opts.open }, 'Arsenale demo (invented data)')
+  require(path.join(TOOLS, 'build-agent-dashboard.cjs')).invalidate()
+  if (opts.open) openBrowser(s.keyUrl)
   const cleanup = () => {
     stop()
     try { s.server.close() } catch { /* already closed */ }

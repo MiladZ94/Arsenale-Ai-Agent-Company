@@ -33,6 +33,7 @@ const crypto = require('crypto')
 const { projectKey, modelKey, writeAtomic } = require('./build-agent-dashboard.cjs')
 const { homeDesks } = require('./agent-office-page.cjs')
 const P = require('./paths.cjs')
+const { withLock } = require('./store.cjs')
 
 const COMPANY = P.COMPANY
 // ids come from files and requests: only own keys count, so "constructor" or
@@ -536,9 +537,18 @@ const fmtBudget = (b) => !b ? 'no budget' : (b.enabled ? '' : 'off · ') + [b.mo
 
 /** Sets the budget of the company, an office or an employee. `budget: null`
  *  removes it (no limit). */
+// Every read-change-write of a company file holds that file's lock
+// (store.cjs): agents in parallel would otherwise lose each other's update.
+// The checks come first, outside it: the lock is held only for the file.
+const locked = (k, fn) => withLock(fileOf(k), fn)
+const LOCKED_SCOPE = { company: 'company', office: 'offices', employee: 'employees' }
 function setBudget(input, via) {
   checkBy(input.by)
   const co = needCompany(true)
+  const k = Object.hasOwn(LOCKED_SCOPE, String(input.scope)) ? LOCKED_SCOPE[input.scope] : ''
+  return k ? locked(k, () => setBudgetLocked(input, via, co)) : setBudgetLocked(input, via, co)
+}
+function setBudgetLocked(input, via, co) {
   const scope = String(input.scope || '')
   const id = String(input.id == null ? '' : input.id)
   const budget = validateBudget(input.budget === undefined ? {} : input.budget)
@@ -576,6 +586,9 @@ function setBudget(input, via) {
 function setBudgetsEnabled(on, by, via) {
   checkBy(by)
   needCompany(true)
+  return locked('company', () => setBudgetsEnabledLocked(on, via))
+}
+function setBudgetsEnabledLocked(on, via) {
   const c = readJson(fileOf('company'), {})
   c.budgetsEnabled = !!on; c.updatedAt = new Date().toISOString()
   writeAtomic(fileOf('company'), JSON.stringify(c, null, 2))
@@ -590,6 +603,9 @@ function setBudgetsEnabled(on, by, via) {
 function updateEmployee(input, via) {
   checkBy(input.by)
   const co = needCompany(true)
+  return locked('employees', () => updateEmployeeLocked(input, via, co))
+}
+function updateEmployeeLocked(input, via, co) {
   const id = String(input.id || '')
   if (!AGENT_ID.test(id) || id.replace(/[^\w.-]/g, '') !== id) throw fail(400, 'bad employee id')
   const all = readJson(fileOf('employees'), {})
@@ -647,6 +663,9 @@ function updateEmployee(input, via) {
 function addOffice(o, by, via) {
   checkBy(by)
   needCompany(true)
+  return locked('offices', () => addOfficeLocked(o, via))
+}
+function addOfficeLocked(o, via) {
   if (!o || !OFFICE_ID.test(String(o.id)) || o.id === UNASSIGNED) throw fail(400, 'bad office id')
   const list = readJson(fileOf('offices'), [])
   const all = Array.isArray(list) ? list : []
@@ -665,6 +684,9 @@ function addOffice(o, by, via) {
 function archiveOffice(id, by, via) {
   checkBy(by)
   needCompany(true)
+  return locked('offices', () => archiveOfficeLocked(id, via))
+}
+function archiveOfficeLocked(id, via) {
   const list = readJson(fileOf('offices'), [])
   const o = Array.isArray(list) && list.find((x) => x && x.id === id)
   if (!o) throw fail(404, 'no such office: ' + id)
@@ -678,6 +700,9 @@ function archiveOffice(id, by, via) {
 function writeOverlay(id, fields, by) {
   checkBy(by)
   needCompany(true)
+  return locked('employees', () => writeOverlayLocked(id, fields))
+}
+function writeOverlayLocked(id, fields) {
   if (!AGENT_ID.test(id) || id.replace(/[^\w.-]/g, '') !== id) throw fail(400, 'bad employee id')
   const all = readJson(fileOf('employees'), {})
   all[id] = Object.assign({}, own(all, id), fields)
@@ -717,6 +742,9 @@ function noteIncidents(state, co) {
 
 function stampHeartbeat(session) {
   if (!fs.existsSync(COMPANY)) return false
+  return locked('heartbeat', () => stampHeartbeatLocked(session))
+}
+function stampHeartbeatLocked(session) {
   const hb = readJson(fileOf('heartbeat'), {}) || {}
   hb.supervisor = { lastSeenAt: new Date().toISOString() }
   if (session) hb.supervisor.session = clip(session, 60)
@@ -726,6 +754,9 @@ function stampHeartbeat(session) {
 
 /** The Board's dashboard changes not read yet, oldest first. */
 function unreadInbox(mark) {
+  return mark && fs.existsSync(COMPANY) ? locked('inboxRead', () => unreadInboxNow(mark)) : unreadInboxNow(mark)
+}
+function unreadInboxNow(mark) {
   const all = readLines(fileOf('inbox'))
   const seen = readJson(fileOf('inboxRead'), {}) || {}
   const lines = Number(seen.lines) || 0

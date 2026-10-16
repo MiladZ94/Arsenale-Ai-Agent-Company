@@ -210,6 +210,8 @@
       const names = [...new Set(need.map((t) => { const g = taskGate(t); return nameOf(g ? askerOf(g) : whoId(t)) }))]
       html += '<div class="banner" role="status"><span style="color:var(--warn)">' + ic('bell', 22) + '</span><div><b class="hi">' + fa(need.length) + ' ' + T(need.length === 1 ? 'task needs you' : 'tasks need you') + '</b> <span class="soft">' + esc(names.length > 1 ? names.slice(0, -1).join(T(', ')) + T(' and ') + names[names.length - 1] : names[0]) + ' ' + T(names.length === 1 ? 'is waiting for a yes or no.' : 'are waiting for a yes or no.') + '</span></div><button type="button" class="b sm" data-ev="goto" data-arg="appr" style="margin-inline-start:auto">' + T('Go to Approvals') + '</button></div>'
     }
+    // before the first answer an empty list means "not loaded", not "no tasks"
+    if (!list.length && !st.data.tasks && !st.err.tasks) return html + '<p class="empty" role="status">' + T('Loading…') + '</p>'
     if (!list.length) {
       html += '<p class="empty">' + T('No tasks yet. Write one, and your assistant will see it next time.') + '</p>'
       const samples = samplesOf()

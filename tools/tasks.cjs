@@ -19,6 +19,7 @@ const fs = require('fs')
 const path = require('path')
 const P = require('./paths.cjs')
 const { writeAtomic } = require('./build-agent-dashboard.cjs')
+const { withLock } = require('./store.cjs')
 const { fail, OWNER_ONLY, clipCp, actorLabel } = require('./runlog.cjs')
 
 const ISSUES = path.join(P.COMPANY, 'issues')
@@ -40,6 +41,11 @@ function checkId(id) {
   if (!TASK_ID.test(s)) throw fail(400, 'bad task id: ' + clipCp(s, 20))
   return s
 }
+
+// A read-change-write of one task holds its lock: jobs of several agents
+// link to the same task at once (store.cjs). No file, no lock: the caller
+// then answers "no such task" as before.
+const lockTask = (id, fn) => (TASK_ID.test(String(id || '')) && fs.existsSync(fileOf(String(id))) ? withLock(fileOf(String(id)), fn) : fn())
 
 function readTask(id) {
   try { return JSON.parse(fs.readFileSync(fileOf(checkId(id)), 'utf8')) } catch (e) { if (e.code === 400) throw e; return null }
@@ -187,6 +193,9 @@ const MCP_STATUS = { in_progress: 'in_progress', waiting_for_you: 'in_review', b
 
 /** Changes a task. Each actor has its own allowed moves (R-6.6). */
 function updateTask(input, actor) {
+  return lockTask(input && input.id, () => updateTaskLocked(input, actor))
+}
+function updateTaskLocked(input, actor) {
   const C = company()
   const co = C.readCompany()
   if (!co.configured) throw fail(409, 'Set up your company first: tasks belong to a company')
@@ -312,19 +321,22 @@ function getTask(id, opts) {
 function markSeen(ids, clientId) {
   const key = String(clientId || '').replace(/[^\w.-]/g, '').slice(0, 60)
   if (!key) return
-  for (const id of ids) {
+  for (const id of ids) lockTask(id, () => {
     const t = readTask(id)
-    if (!t) continue
+    if (!t) return
     t.seenBy = t.seenBy && typeof t.seenBy === 'object' ? t.seenBy : {}
     t.seenBy[key] = new Date().toISOString()
     writeAtomic(fileOf(t.id), JSON.stringify(t, null, 2))
-  }
+  })
 }
 
 /** A job started or finished for this task (R-6.10): the job is linked, and
  *  a task still "to do" moves to "in progress", never backwards. */
 function linkRun(taskId, runId, actor, opts) {
   if (!TASK_ID.test(String(taskId)) || !runId) return null
+  return lockTask(taskId, () => linkRunLocked(taskId, runId, actor, opts))
+}
+function linkRunLocked(taskId, runId, actor, opts) {
   const t = readTask(taskId)
   if (!t) return null
   t.runIds = Array.isArray(t.runIds) ? t.runIds : []

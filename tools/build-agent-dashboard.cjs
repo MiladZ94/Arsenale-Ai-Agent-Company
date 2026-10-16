@@ -40,13 +40,9 @@ const { renderOffice } = require('./agent-office-page.cjs')
 const { renderArchive } = require('./pages/archive/render.cjs')
 const { langFromRequest } = require('./dashboard-strings.cjs')
 
-/** Other agents log while the server reads, so a file is never seen half
- *  written: write a temp file next to it, then rename over. */
-function writeAtomic(file, text) {
-  const tmp = file + '.' + process.pid + '-' + Math.random().toString(36).slice(2, 8) + '.tmp'
-  fs.writeFileSync(tmp, text)
-  fs.renameSync(tmp, file)
-}
+// Other agents log while the server reads, so a file is never seen half
+// written: a temp file next to it, then a rename (store.cjs).
+const { writeAtomic } = require('./store.cjs')
 
 function readJsonDir(dir) {
   if (!fs.existsSync(dir)) return []
