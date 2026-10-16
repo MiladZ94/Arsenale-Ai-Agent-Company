@@ -175,10 +175,16 @@ test('T-5.4 through the page: a hire proposal is approved with two clicks, and t
   await w.click('[data-ev=hire-yes]')
   await w.waitFor("/Click again to confirm/.test(document.querySelector('[data-ev=hire-yes]').textContent)")
   assert.equal(fs.existsSync(path.join(w.sb.agents, 'invoice-ivo.md')), false, 'one click does nothing')
-  await w.click('[data-ev=hire-yes]')
-  // the member file is written first, then the question is answered: wait for both
+  // The first click arms the button for 6 s and then it disarms by itself; on a
+  // loaded machine the second click can arrive after that and only arm it again,
+  // so no hire happens and the gate stays empty. Click whenever the button
+  // shows the confirm text, and wait for the gate to be answered, not for time.
   const gateFile = 'agent-runs/gates/' + g.question_id + '.json'
-  for (let i = 0; i < 160 && w.sb.read(gateFile).status !== 'answered'; i++) await w.page.sleep(150)
+  const answered = () => { try { return w.sb.read(gateFile).status === 'answered' } catch { return false } }
+  for (let i = 0; i < 400 && !answered(); i++) {
+    if (await w.page.eval("/Click again to confirm/.test((document.querySelector('[data-ev=hire-yes]') || {}).textContent || '')")) await w.click('[data-ev=hire-yes]')
+    await w.page.sleep(150)
+  }
   assert.ok(fs.existsSync(path.join(w.sb.agents, 'invoice-ivo.md')))
   const saved = w.sb.read(gateFile)
   assert.equal(saved.answer, 'hired invoice-ivo', JSON.stringify(saved))
