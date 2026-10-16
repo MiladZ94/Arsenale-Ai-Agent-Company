@@ -985,3 +985,13 @@ All seven recommendations accepted: Q1 A (mirrored JSON in the data folder, the 
 
 ### Owner rule (2026-10-16): English only, minimal text
 Arsenale must contain NO Persian text (remove `agents/labels.fa.json`, any Persian strings in tools, pages, docs and agent files, and any setting that switches the UI to Persian) and its UI and docs must be minimal: short labels, no explanatory paragraphs on screens, docs trimmed to what a new user needs. Planned as a cleanup phase of pilot 2 (after phase 1), with visual-qa on every page.
+
+### Owner direction (2026-10-16 night): full Arsenale review and redesign scope
+- Full review of Arsenale (look, structure, data), the supervisor reviews its own work too.
+- Visual design: the office view and especially the CAMPUS buildings look wrong (buildings look like a shop). Use public, free-licensed assets (e.g. CC0 isometric packs; licence recorded per asset) instead of hand-made shapes.
+- City-builder style campus: the user (and the supervisor) can ADD buildings/offices like in a building game; more office types than the current four.
+- An agent type with N parallel tasks = N separate figures (distinct schematic per run), never one figure; avatars far less busy (simple, readable at a glance).
+- Agent packs per task type (new packs for different kinds of work), all usable in autonomous runs.
+- Archive / database: correct structure, NO Persian in stored data; LTR/RTL alignment correct and consistent with the design.
+- Add anything else that helps reach reliable autonomous development and avoids future problems.
+Plan: review pass → spec addendum + one batch of owner questions → autonomous phases (after the current phase 2a/2b).
