@@ -86,6 +86,10 @@ function makeSandbox(opts = {}) {
   delete env.ARSENALE_AGENT_DIRS
   delete env.ARSENALE_TRANSCRIPT_ROOTS
   if (opts.env) Object.assign(env, opts.env)
+  // the owner's launch key, so a CLI call saying "by":"board" can prove it (tests of the refusal use cliWithoutKey)
+  const boardKey = crypto.randomBytes(32).toString('hex')
+  fs.writeFileSync(path.join(root, 'launch-key'), boardKey + '\n')
+  env.ARSENALE_BOARD_TOKEN = boardKey
   const agents = path.join(root, 'agents')
   fs.mkdirSync(agents)
   for (const [name, model] of Object.entries(AGENTS)) {
@@ -129,6 +133,14 @@ function makeSandbox(opts = {}) {
       const r = spawnSync(process.execPath, [path.join(tools, 'log-agent-run.cjs'), ...args], { encoding: 'utf8', cwd: base, env, input: sb.stdin })
       return { code: r.status, out: r.stdout.trim(), err: r.stderr.trim() }
     },
+    /** The CLI as a process that does not hold the owner's key (an agent with a shell). */
+    cliWithoutKey(...args) {
+      const bare = Object.assign({}, env)
+      delete bare.ARSENALE_BOARD_TOKEN
+      const r = spawnSync(process.execPath, [path.join(tools, 'log-agent-run.cjs'), ...args], { encoding: 'utf8', cwd: base, env: bare, input: sb.stdin })
+      return { code: r.status, out: r.stdout.trim(), err: r.stderr.trim() }
+    },
+    boardKey,
     /** Fresh copies of the modules, bound to this sandbox. */
     mod(name) {
       for (const k of Object.keys(require.cache)) if (k.startsWith(tools)) delete require.cache[k]

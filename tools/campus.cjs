@@ -138,6 +138,16 @@ function freshOfficeId(name, co) {
   throw fail(409, 'no free office id')
 }
 
+/** A record left in an active status by a crashed run must not keep campus
+ *  edits open: its process is alive, or it was updated in the last 30 minutes. */
+const LIVE_MS = 30 * 60 * 1000
+function isLive(r) {
+  const pid = Number(r.pid)
+  if (Number.isInteger(pid) && pid > 0) { try { process.kill(pid, 0); return true } catch (e) { if (e.code === 'EPERM') return true } }
+  const t = Date.parse(r.updatedAt || '')
+  return !isNaN(t) && Date.now() - t < LIVE_MS
+}
+
 /** Who may do this. The board: always. The supervisor: only while an
  *  autonomous version run is going. An agent: never. */
 function allowed(actor) {
@@ -149,7 +159,7 @@ function allowed(actor) {
   try {
     for (const f of fs.readdirSync(dir)) {
       const r = readJson(path.join(dir, f), null)
-      if (r && ['planning', 'running', 'waiting for owner', 'blocked'].includes(r.status)) { live = r.id || f.replace(/\.json$/, ''); break }
+      if (r && ['planning', 'running', 'waiting for owner', 'blocked'].includes(r.status) && isLive(r)) { live = r.id || f.replace(/\.json$/, ''); break }
     }
   } catch { /* no version runs */ }
   if (!live) throw fail(403, 'the supervisor changes the campus in an autonomous run only; ask the owner or use the dashboard')

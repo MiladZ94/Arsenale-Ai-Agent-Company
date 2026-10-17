@@ -104,3 +104,10 @@ section 10 and `agents/WORKFLOW.md` "Autonomous mode".
 28. The final report states what was delivered, decisions taken, gates passed,
     findings and their fate, tokens used against the budget, what was not done,
     and the owner's next actions.
+
+## Board actions from the command line
+
+`"by":"board"` on the CLI is accepted only with the owner's launch key
+(`ARSENALE_BOARD_TOKEN`, or `--board-token`). The supervisor never has it: it
+acts as the supervisor, and board-only actions (budgets, approvals, gate
+answers, the campus outside a live run) are the owner's, on the dashboard.

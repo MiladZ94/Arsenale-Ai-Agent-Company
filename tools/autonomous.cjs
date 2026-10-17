@@ -57,6 +57,10 @@ function installTree(srcRoot, dstRoot, rec, o) {
     const dst = path.join(dstRoot, path.relative(srcRoot, f))
     const body = fs.readFileSync(f)
     const h = sha(body)
+    // A symlink at the destination would carry the write to wherever it points.
+    let link = false
+    try { link = fs.lstatSync(dst).isSymbolicLink() } catch { /* nothing there yet */ }
+    if (link) { o.log('  skip     ' + dst + ' (a symbolic link: not written through)'); res.kept.push(dst); continue }
     if (!fs.existsSync(dst)) {
       o.log('  add      ' + dst); res.added++
       if (!o.dry) { fs.mkdirSync(path.dirname(dst), { recursive: true }); fs.writeFileSync(dst, body); rec[dst] = h }

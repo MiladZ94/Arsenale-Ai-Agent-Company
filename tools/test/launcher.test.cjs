@@ -124,6 +124,7 @@ test('H6: demo --no-open with stdout in a file writes the key URL within 5 s, be
 test('arsenale open: prints the address with the data folder\'s key; with no key yet it says to serve first', (t) => {
   const sb = makeSandbox()
   t.after(() => sb.cleanup())
+  fs.rmSync(path.join(sb.root, 'launch-key'), { force: true }) // the sandbox makes one for the CLI board tests
   const none = run(['open', '--no-open'], sb.env)
   assert.equal(none.status, 1)
   assert.match(none.stderr, /arsenale serve/)

@@ -38,8 +38,24 @@ function actorFor(door, role, extra) {
   const r = role === 'board' || role === 'agent' ? role : 'supervisor'
   return Object.assign({ door: door || 'cli', role: r, name: '' }, extra || {})
 }
-/** The CLI's actor comes from the JSON it was given, as before 1.0. */
-const cliActor = (input) => actorFor('cli', input && String(input.by || '') === 'board' ? 'board' : input && /^agent/.test(String(input.by || '')) ? 'agent' : 'supervisor')
+/** True when `token` is the owner's launch key (<data>/launch-key), the secret
+ *  the dashboard's own board actions rest on. Only a process that can read the
+ *  owner's data folder holds it; it is never printed or logged. */
+function boardProven(token) {
+  if (!token) return false
+  const LK = require('./launch-key.cjs')
+  const key = LK.readKey()
+  return !!key && LK.same(token, key)
+}
+/** The CLI's actor. The JSON's "by" alone proved nothing (any agent with a
+ *  shell could write {"by":"board"}), so "board" now needs the owner's key in
+ *  ARSENALE_BOARD_TOKEN (or --board-token); without it the caller is an agent. */
+const cliActor = (input, token) => {
+  const by = String(input && input.by || '')
+  const proof = token === undefined ? process.env.ARSENALE_BOARD_TOKEN : token
+  if (by === 'board') return actorFor('cli', boardProven(proof) ? 'board' : 'agent', boardProven(proof) ? {} : { claimedBoard: true })
+  return actorFor('cli', /^agent/.test(by) ? 'agent' : 'supervisor')
+}
 /** How the company files spell an actor ("board", "supervisor", "agent:tester"). */
 const actorLabel = (a) => (a.role === 'agent' ? 'agent:' + (a.name || 'agent') : a.role)
 
@@ -432,7 +448,7 @@ function updateEmployee(input, actor) { return company().updateEmployee(asBoard(
 function campus(input, actor) { return require('./campus.cjs').apply(input, actor, actor.door) }
 
 module.exports = {
-  campus, OWNER_ONLY, fail, actorFor, cliActor, actorLabel, requireBoard, clipCp,
+  campus, OWNER_ONLY, fail, actorFor, cliActor, boardProven, actorLabel, requireBoard, clipCp,
   startRun, heavyActive, pidAlive, progress, finishRun, activeFileFor, versionRun, versionLedger, noteIncidents, budgetCheck, readActive,
   gate, decision, answer, dismiss, setBudget, setBudgetsEnabled, updateEmployee,
 }

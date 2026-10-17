@@ -89,7 +89,7 @@ test('who may change the campus: the board, the supervisor in an autonomous run 
   assert.throws(() => K.apply({ op: 'remove', id: 'b-hq' }, agent), (e) => e.code === 403)
   assert.throws(() => K.apply({ op: 'place', type: 'docs', x: 5, y: 3 }, sup), (e) => e.code === 403 && /autonomous/.test(e.message))
   fs.mkdirSync(path.join(sb.root, 'version-runs'), { recursive: true })
-  fs.writeFileSync(path.join(sb.root, 'version-runs', 'x-1.json'), JSON.stringify({ id: 'x-1', status: 'running' }))
+  fs.writeFileSync(path.join(sb.root, 'version-runs', 'x-1.json'), JSON.stringify({ id: 'x-1', status: 'running', updatedAt: new Date().toISOString() }))
   K.apply({ op: 'place', type: 'docs', name: 'Docs', x: 5, y: 3, reason: 'the docs work needs a home' }, sup, 'cli')
   const dec = fs.readdirSync(path.join(sb.runs, 'decisions')).map((n) => JSON.parse(fs.readFileSync(path.join(sb.runs, 'decisions', n), 'utf8')))
   assert.ok(dec.some((d) => d.by === 'supervisor' && d.project === 'campus' && /placed Docs/.test(d.text) && /needs a home/.test(d.reason)), 'a decision names the placement and the reason')
@@ -161,10 +161,38 @@ test('the CLI: arsenale campus list / place / remove, as the board', (t) => {
 test('dry run S4: a supervisor campus change needs a reason, and its decision is listed under the live version run', (t) => {
   const { sb, K } = world(t)
   fs.mkdirSync(path.join(sb.root, 'version-runs'), { recursive: true })
-  fs.writeFileSync(path.join(sb.root, 'version-runs', 'x-1.json'), JSON.stringify({ id: 'x-1', status: 'running' }))
+  fs.writeFileSync(path.join(sb.root, 'version-runs', 'x-1.json'), JSON.stringify({ id: 'x-1', status: 'running', updatedAt: new Date().toISOString() }))
   assert.throws(() => K.apply({ op: 'place', type: 'docs', name: 'Docs', x: 5, y: 3 }, sup, 'cli'), (e) => e.code === 400 && /reason/.test(e.message))
   assert.equal(fs.existsSync(path.join(sb.root, 'company', 'campus.json')), false, 'nothing was placed, no campus file made')
   K.apply({ op: 'place', type: 'docs', name: 'Docs', x: 5, y: 3, reason: 'room for the docs work' }, sup, 'cli')
   const dec = fs.readdirSync(path.join(sb.runs, 'decisions')).map((n) => JSON.parse(fs.readFileSync(path.join(sb.runs, 'decisions', n), 'utf8')))
   assert.ok(dec.some((d) => d.project === 'campus' && d.run === 'x-1'), 'the decision carries the version run id')
+})
+
+test('a stale version-run record (dead or no pid, not updated for 30 minutes) does not open campus edits to the supervisor', (t) => {
+  const { sb, K } = world(t)
+  fs.mkdirSync(path.join(sb.root, 'version-runs'), { recursive: true })
+  const rec = path.join(sb.root, 'version-runs', 'x-1.json')
+  const old = new Date(Date.now() - 31 * 60 * 1000).toISOString()
+  fs.writeFileSync(rec, JSON.stringify({ id: 'x-1', status: 'running', updatedAt: old }))
+  assert.throws(() => K.apply({ op: 'place', type: 'docs', x: 5, y: 3, reason: 'r' }, sup), (e) => e.code === 403 && /autonomous/.test(e.message))
+  fs.writeFileSync(rec, JSON.stringify({ id: 'x-1', status: 'running', updatedAt: old, pid: process.pid }))
+  K.apply({ op: 'place', type: 'docs', name: 'Docs', x: 5, y: 3, reason: 'r' }, sup, 'cli')
+})
+
+test('the CLI: "by":"board" without the owner\'s key is an agent; with the key (env or --board-token) it is the board', (t) => {
+  const { sb } = world(t)
+  const key = sb.boardKey
+  const place = '{"by":"board","op":"place","type":"security","name":"Sec","x":4,"y":2}'
+  const no = sb.cliWithoutKey('--campus', place)
+  assert.equal(no.code, 1)
+  assert.match(no.err, /board token/)
+  assert.equal(fs.existsSync(path.join(sb.company, 'campus.json')), false, 'nothing was written')
+  const wrong = sb.cliWithoutKey('--board-token', 'f'.repeat(64), '--campus', place)
+  assert.equal(wrong.code, 1)
+  const viaFlag = sb.cliWithoutKey('--board-token', key, '--campus', place)
+  assert.equal(viaFlag.code, 0, viaFlag.err)
+  assert.doesNotMatch(viaFlag.out + viaFlag.err, new RegExp(key))
+  const budget = sb.cliWithoutKey('--budgets', 'off', '{"by":"board"}')
+  assert.equal(budget.code, 1)
 })

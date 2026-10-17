@@ -217,3 +217,16 @@ test('the autonomous rules are shipped as a short digest, and nothing installed 
   assert.deepEqual(bad, [])
   assert.match(fs.readFileSync(path.join(ROOT, 'agents', 'WORKFLOW.md'), 'utf8'), /autonomous\/RULES\.md/)
 })
+
+test('init skips a symlinked agent file instead of writing through it', (t) => {
+  const m = machine(t)
+  const dir = path.join(m.homeDir, '.claude', 'agents')
+  fs.mkdirSync(dir, { recursive: true })
+  const target = path.join(m.base, 'precious.md')
+  fs.writeFileSync(target, 'keep me\n')
+  try { fs.symlinkSync(target, path.join(dir, 'tester.md'), 'file') } catch (e) { t.skip('symlinks cannot be made here: ' + e.code); return }
+  const r = m.run('init', '--yes', '--force')
+  assert.match(r.out, /symbolic link/)
+  assert.equal(fs.readFileSync(target, 'utf8'), 'keep me\n')
+  assert.ok(fs.lstatSync(path.join(dir, 'tester.md')).isSymbolicLink())
+})
