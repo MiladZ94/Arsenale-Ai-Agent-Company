@@ -221,11 +221,13 @@ of its zone, and a free area beside it with a sofa and chairs. A run is a figure
 initials on it, a number badge above (a circle for working, a triangle for quiet, a
 diamond for waiting, a square for failed, a ring for done). The name, the step and
 the state are in the side list under the same number, and a small label over the
-figure says "name · step". Two runs of one agent are two figures at two desks
-("Implementer · run 1", "run 2"), and a run keeps its figure, number and desk for
+figure says its short name (at most 14 characters, never cut with an ellipsis; "Release mgr"
+for "Release manager"); the step and the full name show as a tip when you hover or focus the figure or
+its label. Two runs of one agent are two figures at two desks ("Implementer 1", "Implementer 2";
+"run 1", "run 2" in the list), and a run keeps its figure, number and desk for
 its whole life. Idle people are not at desks: they sit together in the free area,
-under an "N idle" label, and are in the list. A label takes the nearest free slot,
-shrinks, and then disappears rather than cover a figure or another label. Wheel to zoom, drag to pan, **Fit** (or Esc) for the
+under an "N idle" label, and are in the list. A label stands clear above the head
+(or, when the figure behind leaves no room, on its desk tile) and never covers a figure, a badge or another label. Wheel to zoom, drag to pan, **Fit** (or Esc) for the
 whole office; the camera stays where you left it through every redraw. Without
 WebGL, and in the built file, the office stays the flat isometric one and the
 campus is a flat grid of tiles.

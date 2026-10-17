@@ -17,9 +17,10 @@
  *    "Title x N" chip; a run keeps its desk for its whole life;
  *  - idle people are not working figures: they sit together in the free area,
  *    with an "N idle" label, and are listed in the list;
- *  - labels are placed one at a time on the nearest free slot, shrink to a
- *    short form and then disappear rather than cover an avatar or another
- *    label; the list always has the full text.
+ *  - above each desk stands ONE short name (<= 14 characters, never cut with
+ *    an ellipsis), clear of the head, the badges and other labels; the step
+ *    and the full name are in the side list and in a tip on hover or focus of
+ *    the figure or its label.
  *
  * Desks, chairs, the free area's sofa and plants come from the manifest's furniture
  * models when they loaded, else from shapes (kit.cjs).
@@ -40,7 +41,7 @@ function office3d(h) {
   const PAL = WORLD_PALETTE
   // the desk pitch is chosen so that two figures diagonal to each other (one column and one row apart) never stand above one another on the screen:
   // on the 45 degree camera that needs |CELL_X - CELL_Z| of about 1.1 or more
-  const CELL_X = 1.8, CELL_Z = 2.9, FREE_W = 3.4, FREE_GAP = 1.0, MAX_SEATED = 5
+  const CELL_X = 2.4, CELL_Z = 3.6, FREE_W = 3.4, FREE_GAP = 1.0, MAX_SEATED = 5
   const role = (z) => PAL.ROLE[z] || PAL.ROLE.guest
   const tint = (z) => PAL.TINT[z] || PAL.TINT.guest
   const stateOf = (s) => PAL.STATE[s] || PAL.STATE.quiet
@@ -200,6 +201,11 @@ function office3d(h) {
         const tag = document.createElement('div')
         tag.className = 'o3t'
         ov.append(el, tag)
+        for (const t of [el, tag]) {
+          t.addEventListener('mouseenter', () => tip(f.id, t)); t.addEventListener('mouseleave', hideTip)
+          if (t === el) { t.addEventListener('focus', () => tip(f.id, t)); t.addEventListener('blur', hideTip) }
+        }
+        tag.addEventListener('click', () => el.click())
         o = { g, ring, el, tag, color, model, top }
         figs.set(f.id, o)
       }
@@ -238,6 +244,44 @@ function office3d(h) {
     }
     s += '</ol><div class="o3key" aria-label="State shapes">' + ['working', 'waiting', 'failed', 'quiet', 'done'].map((k) => '<span>' + shapeSvg(stateOf(k).shape, stateOf(k).fill, '') + stateOf(k).word + '</span>').join('') + '</div><p class="note">The number on a figure is its number in this list.</p>'
     side.innerHTML = s
+  }
+
+  // the full name and step of a run, shown on hover or focus of its figure or short name
+  const tipEl = document.createElement('div')
+  tipEl.className = 'o3tip'; tipEl.setAttribute('role', 'tooltip'); tipEl.style.visibility = 'hidden'
+  ov.appendChild(tipEl)
+  function tip(id, anchor) {
+    const f = model && model.figures.find((x) => x.id === id)
+    if (!f) return
+    tipEl.innerHTML = '<b dir="auto">' + esc(f.label) + '</b>' + (f.step ? '<span dir="auto">' + esc(f.step) + '</span>' : '')
+    tipEl.style.visibility = 'hidden'; tipEl.style.left = '0px'; tipEl.style.top = '0px'
+    const r = anchor.getBoundingClientRect(), o = eng.host.getBoundingClientRect(), w = tipEl.offsetWidth, hh = tipEl.offsetHeight
+    const x = Math.max(4, Math.min(eng.W - w - 4, r.left - o.left + r.width / 2 - w / 2))
+    const y = r.top - o.top - hh - 6 < 4 ? r.bottom - o.top + 6 : r.top - o.top - hh - 6
+    tipEl.style.left = x + 'px'; tipEl.style.top = y + 'px'; tipEl.style.visibility = ''
+  }
+  function hideTip() { tipEl.style.visibility = 'hidden' }
+
+  // ---------- the short name above a desk: the display name when it fits 14 characters, else its words abbreviated, else the first words that fit; never cut mid-word with a dot
+  // words that may be shortened, only when the whole name would not fit
+  const ABBR = { manager: 'mgr', reviewer: 'rev', validator: 'valid', builder: 'build', engineer: 'eng', engineering: 'eng', specialist: 'spec', architecture: 'arch', architect: 'arch', developer: 'dev', assistant: 'asst', director: 'dir', coordinator: 'coord', administrator: 'admin', documentation: 'docs', migration: 'migr' }
+  function shortName(title, run) {
+    const suffix = run ? ' ' + fa(run) : ''
+    const max = 14 - Array.from(suffix).length
+    const len = (w) => Array.from(w.join(' ')).length
+    const words = String(title || '').trim().split(/\s+/).filter(Boolean)
+    // 1. the name as it is; 2. its longest shortenable words shortened one at a time; 3. fewer words; 4. the first letters (never an ellipsis)
+    const ab = words.slice()
+    const order = ab.map((w, i) => i).sort((x, y) => ab[y].length - ab[x].length)
+    for (const i of order) {
+      if (len(ab) <= max) break
+      const short = ABBR[ab[i].toLowerCase()]
+      if (short) ab[i] = ab[i][0] === ab[i][0].toUpperCase() ? short[0].toUpperCase() + short.slice(1) : short
+    }
+    while (len(ab) > max && ab.length > 1) ab.pop()
+    let cur = ab.join(' ')
+    if (len(ab) > max) cur = Array.from(cur).slice(0, max).join('').trim()
+    return (cur || 'Agent') + suffix
   }
 
   // ---------- labels: placed one at a time, never over an avatar or another label
@@ -328,35 +372,30 @@ function office3d(h) {
     }
     // candidate centres: the anchor, then rings of 8 points round it, nearest first
     const ring = (cx, cy, n, r) => { const out = [[cx, cy]]; for (let k = 1; k <= n; k++) for (let a = 0; a < 8; a++) out.push([cx + Math.cos(a * Math.PI / 4) * r * k, cy + Math.sin(a * Math.PI / 4) * r * k]); return out }
-    // every run has its own desk and its own label: "name · step", cut short, else the name alone, else a short name; the label sits above the person
-    const cut = (t, n) => { const a = Array.from(t); return a.length > n ? a.slice(0, n - 1).join('') + '…' : t }
+    // every run has its own desk and one SHORT name above the person (<= 14 characters, never an ellipsis); the step lives in the list and in the hover/focus tip
     const order = model.figures.slice().sort((a, b) => (model.selected === b.key) - (model.selected === a.key) || a.n - b.n)
+    const GAP = 8   // clear distance above the badges; heads keep 6px of air from a label, labels 3px from each other
+    const grow = (b, m) => ({ l: b.l - m, r: b.r + m, t: b.t - m, b: b.b + m })
+    const clear = (b) => !obstacles.some((q) => hit(q, grow(b, 6))) && !deskBoxes.some((q) => hit(q, b)) && !placed.some((q) => hit(q, grow(b, 3)))
     for (const f of order) {
       const o = figs.get(f.id)
       const tag = o.tag
-      const who = f.runCount > 1 ? f.label : f.title
+      const text = shortName(f.title, f.runCount > 1 ? f.runN : 0)
       let ok = false
-      // in front of its own desk first, in every form; only then beside it
-      const forms = [['', cut(who + (f.step ? ' · ' + f.step : ''), 28)], ['', cut(who, 22)], ['short', cut(f.tag, 8)]]
-      for (const side of [false, true]) {
-        for (const [mode, text] of forms) {
-          tag.className = 'o3t' + (mode ? ' short' : '')
-          tag.textContent = text
-          tag.dir = 'auto'
-          tag.style.borderBottomColor = role(f.zone) // the colour of its desk tile
-          tag.style.visibility = 'hidden'; tag.style.left = '0px'; tag.style.top = '0px'
-          const w = tag.offsetWidth, hh = tag.offsetHeight
-          // over the person at the desk (above the badges), else on the tile in front of the desk, else beside it
-          const cx = (o.box.l + o.box.r) / 2
-          const spots = side ? [[o.desk.x + w / 2 + 10, o.desk.y + 4], [o.desk.x - w / 2 - 10, o.desk.y + 4], [cx + w / 2 - 8, o.box.t - 3 - hh / 2 - 12], [cx - w / 2 + 8, o.box.t - 3 - hh / 2 - 12]]
-            : [[cx, o.box.t - 3 - hh / 2], [o.desk.x, o.desk.y + 2 + hh / 2], [o.desk.x, o.desk.y + 8 + hh / 2], [o.desk.x, o.desk.y + 14 + hh / 2]]
-          for (const [px, py] of spots) {
-            const b = { l: px - w / 2, r: px + w / 2, t: py - hh / 2, b: py + hh / 2 }
-            if (inside(b) && free(b)) { tag.style.left = b.l + 'px'; tag.style.top = b.t + 'px'; tag.style.visibility = ''; placed.push(b); ok = true; break }
-          }
-          if (ok) break
-        }
-        if (ok) break
+      tag.className = 'o3t'
+      tag.textContent = text
+      tag.dir = 'auto'
+      tag.style.borderBottomColor = role(f.zone) // the colour of its desk tile
+      tag.style.visibility = 'hidden'; tag.style.left = '0px'; tag.style.top = '0px'
+      const w = tag.offsetWidth, hh = tag.offsetHeight
+      const cx = (o.box.l + o.box.r) / 2
+      // straight above the badges first, then raised higher and nudged sideways (still above the head), and only then on the tile in front of the desk
+      const spots = []
+      for (const up of [0, 14, 28]) for (const dx of [0, 14, -14]) spots.push([cx + dx, o.box.t - GAP - up - hh / 2])
+      spots.push([o.desk.x, o.desk.y + 4 + hh / 2], [o.desk.x, o.desk.y + 12 + hh / 2])
+      for (const [px, py] of spots) {
+        const b = { l: px - w / 2, r: px + w / 2, t: py - hh / 2, b: py + hh / 2 }
+        if (inside(b) && clear(b)) { tag.style.left = b.l + 'px'; tag.style.top = b.t + 'px'; tag.style.visibility = ''; placed.push(b); ok = true; break }
       }
       if (!ok) { tag.style.visibility = 'hidden'; tag.className = 'o3t gone' }
     }
@@ -433,7 +472,7 @@ function office3d(h) {
       const o0 = () => eng.host.getBoundingClientRect()
       const rect = (el) => { const r = el.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height } }
       return {
-        figures: model ? model.figures.map((f) => ({ id: f.id, agent: f.agent, key: f.key, n: f.n, state: f.state, zone: f.zone, runCount: f.runCount, box: rect(figs.get(f.id).el), tag: figs.get(f.id).tag.style.visibility === 'hidden' ? null : rect(figs.get(f.id).tag) })) : [],
+        figures: model ? model.figures.map((f) => ({ id: f.id, agent: f.agent, key: f.key, n: f.n, state: f.state, zone: f.zone, runCount: f.runCount, box: rect(figs.get(f.id).el), tag: figs.get(f.id).tag.style.visibility === 'hidden' ? null : rect(figs.get(f.id).tag), tagText: figs.get(f.id).tag.textContent, tagFull: figs.get(f.id).tag.scrollWidth > figs.get(f.id).tag.clientWidth + 1 ? false : true })) : [],
         desks: (last.desks || []).map((d) => ({ l: d.l + o0().left, r: d.r + o0().left, t: d.t + o0().top, b: d.b + o0().top })),
         idle: model ? model.idle.length : 0, seated: Math.min(MAX_SEATED, model ? model.idle.length : 0), rooms: rooms.map((r) => r.zone), ppu: last.ppu,
         labels: [...ov.querySelectorAll('.o3c')].map((c) => ({ cls: c.className, text: c.textContent, box: rect(c) })),

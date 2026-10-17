@@ -107,6 +107,19 @@ for (const [w, h] of [[1366, 768], [1920, 1080]]) {
     // everything of the scene lies inside the scene, left of the list
     for (const [name, b] of boxes) { assert.ok(b.l >= info.scene.l - 1 && b.r <= info.scene.r + 1 && b.t >= info.scene.t - 1 && b.b <= info.scene.b + 1, name + ' is inside the scene') }
     assert.ok(info.scene.r <= info.side.l + 1, 'the list does not cover the scene')
+    // a label is a short name: at most 14 characters, no ellipsis, nothing cut off by its box
+    for (const f of info.figures) if (f.tag) {
+      assert.ok(Array.from(f.tagText).length <= 14 && !/…|\.\.\./.test(f.tagText), 'label is short and has no ellipsis: ' + f.tagText)
+      assert.ok(f.tagFull, 'label text is not truncated: ' + f.tagText)
+    }
+    // a label keeps clear of every head and badge (at least 6px) and of every other label (at least 3px)
+    const grow = (b, m) => ({ l: b.l - m, r: b.r + m, t: b.t - m, b: b.b + m })
+    const tooClose = []
+    for (const f of info.figures) if (f.tag) {
+      for (const g of info.figures) if (hit(grow(f.tag, 6), g.box)) tooClose.push('label ' + f.tagText + ' / head ' + g.n)
+      for (const g of info.figures) if (g !== f && g.tag && hit(grow(f.tag, 3), g.tag)) tooClose.push('label ' + f.tagText + ' / label ' + g.tagText)
+    }
+    assert.deepEqual(tooClose, [], 'labels too close to a head or to each other')
     // every run's desk has its label ("name · step", or the name alone): it is obvious who does what
     assert.deepEqual(info.figures.filter((f) => !f.tag).map((f) => f.id), [], 'a figure with no label at its desk')
     // the free area's label is there
@@ -114,6 +127,24 @@ for (const [w, h] of [[1366, 768], [1920, 1080]]) {
     void sb
   })
 }
+
+test('the step and full name are in a tip on hover or focus of the figure and of its label, not above the desk', { skip: SKIP || false }, async () => {
+  const page = await open(1366, 768)
+  const got = await page.eval(`(() => {
+    const tip = () => { const t = document.querySelector('.o3tip'); return t && t.style.visibility !== 'hidden' ? t.textContent : '' }
+    const a = document.querySelector('.o3a'), name = (id) => window.__office3d.info().figures.find((f) => f.id === id)
+    const out = {}
+    a.dispatchEvent(new MouseEvent('mouseenter')); out.hoverFigure = tip(); a.dispatchEvent(new MouseEvent('mouseleave')); out.after = tip()
+    a.dispatchEvent(new Event('focus')); out.focusFigure = tip(); a.dispatchEvent(new Event('blur'))
+    const t = document.querySelector('.o3t:not(.gone)'); t.dispatchEvent(new MouseEvent('mouseenter')); out.hoverLabel = tip()
+    out.row = document.querySelector('.o3row .nm small').textContent
+    return out
+  })()`)
+  assert.ok(got.row && got.hoverFigure.includes(got.row), 'the figure tip carries the step: ' + got.hoverFigure)
+  assert.equal(got.after, '', 'the tip goes away')
+  assert.ok(got.focusFigure.includes(got.row), 'focus shows the tip too')
+  assert.ok(got.hoverLabel.length > 0, 'the label shows a tip')
+})
 
 test('one run keeps its figure, number and desk while the page redraws; a second run of the same agent adds a figure', { skip: SKIP || false }, async () => {
   const { sb, page } = await world()

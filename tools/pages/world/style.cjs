@@ -100,8 +100,9 @@ const WORLD_STYLE = `
 .o3a .ini{position:absolute;left:0;right:0;text-align:center;color:#fff;font-weight:700;line-height:1;letter-spacing:0;pointer-events:none}
 .o3a.sel{box-shadow:0 0 0 2px #2F6BE0;background:rgba(47,107,224,.08)}
 .o3t,.o3c,.o3r{position:absolute;font:700 11.5px var(--font-ui);color:#17212B;background:#fff;border:1px solid #CFCBC0;border-radius:6px;padding:2px 8px;white-space:nowrap;pointer-events:none}
-.o3t{max-width:178px;border-bottom-width:3px;overflow:hidden;text-overflow:ellipsis;line-height:15px}
-.o3t.short{max-width:64px}
+.o3t{border-bottom-width:3px;line-height:15px;pointer-events:auto;cursor:pointer}
+.o3tip{position:absolute;z-index:5;max-width:260px;display:flex;flex-direction:column;gap:2px;font:400 12px var(--font-ui);color:#fff;background:#17212B;border-radius:6px;padding:6px 9px;pointer-events:none;white-space:normal;box-shadow:0 2px 8px rgba(23,33,43,.3)}
+.o3tip b{font-weight:700}
 .o3t.gone{display:none}
 .o3r{display:flex;align-items:center;gap:5px;font-weight:700;font-size:11px;padding:1px 7px 1px 5px;background:rgba(255,255,255,.88)}
 .o3r span{width:9px;height:9px;border-radius:2px;flex:none}
