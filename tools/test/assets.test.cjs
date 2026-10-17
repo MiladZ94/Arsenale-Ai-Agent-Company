@@ -21,6 +21,14 @@ test('every shipped asset file has a manifest entry with licence CC0-1.0 and the
   assert.ok(fs.existsSync(path.join(A.DIR, 'NOTICE.md')))
 })
 
+test('every manifest entry names the pack licence text that ships with it', () => {
+  for (const a of A.readManifest().assets) {
+    assert.ok(a.licenceFile && /^licenses\/[\w.-]+$/.test(a.licenceFile), a.file + ' names no licence text')
+    const txt = fs.readFileSync(path.join(A.DIR, a.licenceFile), 'utf8')
+    assert.match(txt, /creativecommons\.org\/publicdomain\/zero\/1\.0/i, a.licenceFile + ' is not the CC0 text')
+  }
+})
+
 function folder(t) {
   const d = fs.mkdtempSync(path.join(os.tmpdir(), 'arsenale-assets-'))
   t.after(() => fs.rmSync(d, { recursive: true, force: true }))
@@ -49,8 +57,16 @@ test('the loader takes a CC0 file whose hash matches, and nothing else', (t) => 
   assert.ok(r.problems.some((p) => /escape/.test(p)))
 })
 
-test('with no asset files the page gets no models (the shapes are drawn)', () => {
-  assert.deepEqual(A.pageAssets().models, {})
+test('with no asset files the page gets no models (the shapes are drawn)', (t) => {
+  assert.deepEqual(A.pageAssets(folder(t)).models, {})
+})
+
+test('the shipped models all load: one per office type, real GLB files, no problems', () => {
+  const r = A.pageAssets()
+  assert.deepEqual(r.problems, [])
+  const types = require('../campus.cjs').TYPES.map((t) => 'building:' + t.id).sort()
+  assert.deepEqual(Object.keys(r.models).sort(), types)
+  for (const b64 of Object.values(r.models)) assert.equal(Buffer.from(b64, 'base64').subarray(0, 4).toString(), 'glTF')
 })
 
 test('a shipped file with no entry is found by the check above', (t) => {

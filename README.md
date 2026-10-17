@@ -7,13 +7,19 @@ Cursor, Codex, Gemini CLI, Aider, your own scripts). The assistant logs what it
 does; Arsenale draws it as an office, a campus, an org chart and a list of the
 questions waiting for you. It watches; it never runs agents.
 
-[![Walkthrough](docs/media/arsenale-walkthrough.gif)](docs/media/arsenale-walkthrough.mp4)
+![Walkthrough: campus, build mode, an office, a version run, the org chart and the office packs](docs/media/arsenale-walkthrough.gif)
 
-[Watch the walkthrough](docs/media/arsenale-walkthrough.mp4) (MP4, no sound)
+![The campus: one building per office](docs/media/campus.png)
 
-![Org chart](docs/screenshots/org-chart.png)
+![Build mode: the hotbar of 12 building types](docs/media/campus-build.png)
 
-![The campus](docs/screenshots/campus-en.png)
+![An office: agents at their desks, idle people in the lounge, a group chip for several runs of one agent](docs/media/office.png)
+
+![The Version run page](docs/media/version-run.png)
+
+![Office packs](docs/media/packs.png)
+
+![Org chart](docs/media/org-chart.png)
 
 ## Quick start
 

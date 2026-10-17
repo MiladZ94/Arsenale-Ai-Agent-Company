@@ -22,6 +22,7 @@ const crypto = require('crypto')
 const DIR = path.join(__dirname, 'assets')
 const MAX_BYTES = 6 * 1024 * 1024
 const NOT_ASSETS = new Set(['manifest.json', 'NOTICE.md'])
+const LICENCES_DIR = 'licenses' // each pack's own licence text, kept beside the models
 
 const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex')
 
@@ -32,7 +33,7 @@ function readManifest(dir) {
   } catch { return { assets: [] } }
 }
 
-/** Every file under the folder except the manifest and the notice, as paths with / . */
+/** Every model file under the folder (not the manifest, the notice or the licence texts), as paths with / . */
 function shippedFiles(dir) {
   const root = dir || DIR
   const out = []
@@ -41,7 +42,7 @@ function shippedFiles(dir) {
     try { names = fs.readdirSync(d, { withFileTypes: true }) } catch { return }
     for (const e of names) {
       const p = path.join(d, e.name)
-      if (e.isDirectory()) walk(p)
+      if (e.isDirectory()) { if (!(d === root && e.name === LICENCES_DIR)) walk(p) }
       else if (!(d === root && NOT_ASSETS.has(e.name))) out.push(path.relative(root, p).split(path.sep).join('/'))
     }
   }

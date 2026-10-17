@@ -22,17 +22,15 @@ It is named after the Arsenal of Venice, where specialist departments under
 one management built ships in parallel, each at its own station, with the whole
 yard visible from one place.
 
-[![Arsenale walkthrough: campus, office, team, org chart, tasks, approvals](media/arsenale-walkthrough.gif)](media/arsenale-walkthrough.mp4)
-
-[Watch the walkthrough](media/arsenale-walkthrough.mp4) (about 2.5 minutes) (MP4, no sound; GitHub plays repository MP4 files when you open the link).
+![Arsenale walkthrough: campus, build mode, office, version run, org chart, office packs](media/arsenale-walkthrough.gif)
 
 ## Your AI team at a glance
 
 You, your assistant, and the offices with the people who work in them:
 
-![Org chart: you, your assistant, four offices and their team members](screenshots/org-chart.png)
+![Org chart: you, your assistant, four offices and their team members](media/org-chart.png)
 
-![The campus: one building per office, budgets and questions on the right](screenshots/campus-en.png)
+![The campus: one building per office, budgets and questions on the right](media/campus.png)
 
 ## What it is, and what it is not
 
@@ -171,7 +169,7 @@ tokens.
 
 The 1.0 screens, from the shop demo (`arsenale demo --shop`; everything invented):
 
-![Org chart: you, your assistant, and one column per office](screenshots/org-chart.png)
+![Org chart: you, your assistant, and one column per office](media/org-chart.png)
 
 | | |
 |---|---|
@@ -185,8 +183,8 @@ The screens from before 1.0:
 
 | | |
 |---|---|
-| ![Office](screenshots/office-engineering-en.png) **Office**: one floor per office; agents at their desks with what they are doing now, reports landing on the lead's table, the shift board below. | ![Activity](screenshots/activity-en.png) **Activity**: who did what and when, grouped by day, filterable; company changes from the log, everything else derived from the runs. |
-| ![Campus](screenshots/campus-en.png) **Campus**: one building per office, budgets and questions on the right. | ![Tools and usage](screenshots/usage-en.png) **Tools & usage**: tokens by agent, tools allowed against tools used, today's runs. |
+| ![Office](media/office.png) **Office**: one floor per office; agents at their desks with what they are doing now, reports landing on the lead's table, the shift board below. | ![Activity](screenshots/activity-en.png) **Activity**: who did what and when, grouped by day, filterable; company changes from the log, everything else derived from the runs. |
+| ![Campus](media/campus.png) **Campus**: one building per office, budgets and questions on the right. | ![Tools and usage](screenshots/usage-en.png) **Tools & usage**: tokens by agent, tools allowed against tools used, today's runs. |
 
 Also: **Decisions & gates** (a timeline of who decided what), an **archive** of
 every run. The interface is English only.
