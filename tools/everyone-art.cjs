@@ -1,14 +1,15 @@
-/* The drawings of the 1.0 screens: pixel people, the assistant's robot, the
- * line icons, file thumbnails, and the isometric campus and office room of
- * the wizard and the Team screen.
+/* The drawings of the 1.0 screens: the people (the one Kenney character of the
+ * office, as a round portrait with the office colour and an initials badge),
+ * the assistant's round robot, the line icons, file thumbnails and the
+ * isometric campus of the wizard.
  *
  * everyoneArt is never run in Node: like everyoneViews its source is written
  * into the page, so it uses only what the browser has and returns strings.
  * Nothing here reads data or the page language; a caller passes what is drawn
  * and any text (already through T()), and every text that comes from data is
- * escaped by the caller.
+ * escaped here or by the caller.
  *
- * A person's look is a pure function of a seed (their id, or id + ':' + the
+ * A person's angle is a pure function of a seed (their id, or id + ':' + the
  * look they picked), so the same member looks the same on every screen and in
  * every browser, with nothing stored but an optional small number.
  */
@@ -22,37 +23,69 @@ function everyoneArt() {
     const m = (v) => Math.max(0, Math.min(255, Math.round(v * f)))
     return '#' + [m(n >> 16), m((n >> 8) & 255), m(n & 255)].map((v) => v.toString(16).padStart(2, '0')).join('')
   }
-  // 12 x 14 cells: hair H, skin S, eyes E, glasses G, mouth M, shirt T
-  function cells(seed, shirt) {
-    const h = hash(seed)
-    const skin = SKIN[h % 4], hair = HAIR[(h >> 3) % 6], style = (h >> 6) % 5, glasses = ((h >> 9) % 3) === 0
-    const g = ['...HHHHHH...', '..HHHHHHHH..', '..HHSSSSHH..', '..HSSSSSSH..', '..SSESSESS..', '..SSSSSSSS..', '..SSSMMSSS..', '...SSSSSS...',
-      '....SSSS....', '..TTTTTTTT..', '.TTTTTTTTTT.', '.TTTTTTTTTT.', '.TTTTTTTTTT.', '.TTTTTTTTTT.'].map((r) => r.split(''))
-    const set = (r, c, v) => { g[r][c] = v }
-    if (style === 1) { for (let r = 3; r <= 9; r++) { set(r, 2, 'H'); set(r, 9, 'H') } for (let r = 3; r <= 8; r++) { set(r, 1, 'H'); set(r, 10, 'H') } set(9, 2, 'T'); set(9, 9, 'T') }
-    if (style === 2) { g[0] = '............'.split(''); g[1] = '...HHHHHH...'.split('') }
-    if (style === 3) { g[0] = '....HHHH....'.split(''); set(3, 2, 'S'); set(3, 9, 'S'); for (let r = 4; r <= 5; r++) { set(r, 2, 'H'); set(r, 9, 'H') } }
-    if (style === 4) { g[0] = '..HHHHHHHH..'.split(''); g[1] = '.HHHHHHHHHH.'.split('') }
-    if (glasses) g[4] = '..GEGSSGEG..'.split('')
-    const col = { H: hair, S: skin, E: '#1A1A1F', G: '#1A1A1F', M: '#8C4A3C', T: shirt || '#56B6C2' }
-    let out = ''
-    g.forEach((row, r) => row.forEach((ch, c) => { if (ch !== '.') out += '<rect x="' + c + '" y="' + r + '" width="1.02" height="1.02" fill="' + col[ch] + '"/>' }))
-    return out
+  /** A light tint of a colour (k: how much white), for a portrait's background. */
+  const tint = (hex, k) => '#' + [1, 3, 5].map((i) => Math.round((parseInt(String(hex || '#56B6C2').substr(i, 2), 16) || 0) * (1 - k) + 255 * k).toString(16).padStart(2, '0')).join('')
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+  /** Up to two letters for the badge: the first letters of the first two words ("Code reviewer" gives CR), else the first two letters. */
+  function initials(name) {
+    const w = String(name || '').split(/[\s\-_:.]+/).filter(Boolean)
+    const a = w.length > 1 ? Array.from(w[0])[0] + Array.from(w[1])[0] : Array.from(w[0] || '?').slice(0, 2).join('')
+    return a.toUpperCase()
   }
-  const ROBOT = ['.....AA.....', '.....AA.....', '..BBBBBBBB..', '.BBBBBBBBBB.', '.BWWBBBBWWB.', '.BWKBBBBKWB.', '.BBBBBBBBBB.', '.BBBGGGGBBB.', '..BBBBBBBB..', '...CCCCCC...', '.CCCCCCCCCC.', '.CCCCCCCCCC.', '.CCCCCCCCCC.', '.CCCCCCCCCC.']
-  function robotCells() {
-    const col = { A: '#3BE8B0', B: '#C6D0DA', W: '#0A0F14', K: '#3BE8B0', G: '#56B6C2', C: '#2C3A48' }
-    let out = ''
-    ROBOT.forEach((row, y) => row.split('').forEach((ch, x) => { if (ch !== '.') out += '<rect x="' + x + '" y="' + y + '" width="1.02" height="1.02" fill="' + col[ch] + '"/>' }))
-    return out
+
+  // ---------- people: the one office character, drawn from its rendered portraits
+  // The pictures are the manifest's portrait:<view> entries (tools/render-portraits.cjs
+  // renders them from the Kenney figure the office uses), reaching the page in
+  // ASSET_MODELS as base64. With none (the archive page, or a refused file) a round
+  // head on a coloured body is drawn, so a person is never missing.
+  const VIEW = ['front', 'left', 'right']
+  const pic = (v) => { try { return typeof ASSET_MODELS === 'object' && ASSET_MODELS && ASSET_MODELS['portrait:' + v] ? 'data:image/png;base64,' + ASSET_MODELS['portrait:' + v] : '' } catch (e) { return '' } }
+  /** The pictures as CSS classes, written once: a page with hundreds of faces carries each picture once. */
+  function css() {
+    if (typeof document === 'undefined' || !document.head) return
+    const have = !!pic('front')
+    const old = document.getElementById('ptcss')
+    if (old && old.dataset.have === String(have)) return
+    if (old) old.remove()
+    const el = document.createElement('style')
+    el.id = 'ptcss'; el.dataset.have = String(have)
+    el.textContent = VIEW.map((v, i) => pic(v) ? '.pt .pv' + i + '{background-image:url(' + pic(v) + ')}' : '').join('') +
+      (pic('desk') ? '.dk .di{background-image:url(' + pic('desk') + ')}' : '')
+    document.head.appendChild(el)
   }
-  const svgOf = (inner, w) => '<svg width="' + w + '" height="' + Math.round(w * 14 / 12) + '" viewBox="0 0 12 14" shape-rendering="crispEdges" aria-hidden="true">' + inner + '</svg>'
-  /** A person: `seed` picks the face, `color` is the office (the shirt). */
-  const person = (seed, color, size, back) => '<span class="av' + (back ? ' bk' : '') + '"' + (back ? ' style="background:' + shade(color, 0.42) + '"' : '') + '>' + svgOf(cells(seed, color), size || 32) + '</span>'
-  const owner = (size) => '<span class="av">' + svgOf(cells('owner-of-the-company', '#3BE8B0'), size || 32) + '</span>'
-  const robot = (size) => '<span class="av">' + svgOf(robotCells(), size || 32) + '</span>'
-  /** The same person as an SVG group, for the iso scenes. */
-  const personG = (seed, color, x, y, scale) => '<g transform="translate(' + x + ',' + y + ') scale(' + scale + ')" shape-rendering="crispEdges">' + cells(seed, color) + '</g>'
+  /** The round head on a coloured body, when there is no picture. */
+  const plainG = (h, color) => '<ellipse cx="20" cy="40" rx="15" ry="13" fill="' + color + '"/><circle cx="20" cy="18" r="9" fill="' + SKIN[h % 4] + '"/><path d="M11 17a9 9 0 0 1 18 0c-3-3-6-4-9-4s-6 1-9 4z" fill="' + HAIR[(h >> 3) % 6] + '"/>'
+  /** A person: `seed` picks the angle (and the mirror) of the one figure, `color` is the office (the tint, the ring and the badge), `name` gives the initials (else the id in the seed). */
+  function person(seed, color, size, back, name) {
+    css()
+    size = size || 32
+    color = color || '#56B6C2'
+    const h = hash(seed), v = h % 6
+    const bd = size >= 32 ? Math.max(16, Math.round(size * 0.42)) : 0
+    const badge = bd ? '<b class="ini" dir="auto" data-i="' + esc(initials(name || String(seed).split(':')[0])) + '" style="width:' + bd + 'px;height:' + bd + 'px;font-size:' + Math.max(9, Math.round(bd * 0.5)) + 'px;background:' + color + '"></b>' : ''
+    const inner = pic('front') ? '<span class="pi pv' + (v % 3) + (v > 2 ? ' fl' : '') + '"></span>' : '<svg viewBox="0 0 40 40" width="100%" height="100%" aria-hidden="true">' + plainG(h, color) + '</svg>'
+    return '<span class="av pt" style="width:' + size + 'px;height:' + size + 'px"><span class="pp" style="background:' + tint(color, 0.78) + ';box-shadow:0 0 0 2px ' + color + '">' + inner + '</span>' + badge + '</span>'
+  }
+  const owner = (size) => person('owner-of-the-company', '#0C8A62', size, false, 'Me')
+  /** The assistant: a flat round robot head, in the same round frame. */
+  function robot(size) {
+    size = size || 32
+    return '<span class="av pt" style="width:' + size + 'px;height:' + size + 'px"><span class="pp" style="background:#E4F3EC;box-shadow:0 0 0 2px #0C8A62"><svg viewBox="0 0 40 40" width="100%" height="100%" aria-hidden="true"><line x1="20" y1="6" x2="20" y2="11" stroke="#0C8A62" stroke-width="2" stroke-linecap="round"/><circle cx="20" cy="5.5" r="2.2" fill="#0C8A62"/><rect x="8" y="11" width="24" height="19" rx="6" fill="#C6D0DA"/><circle cx="15" cy="20" r="3" fill="#1F2A36"/><circle cx="25" cy="20" r="3" fill="#1F2A36"/><rect x="15" y="25" width="10" height="2" rx="1" fill="#0C8A62"/><rect x="11" y="33" width="18" height="9" rx="4" fill="#8A97A6"/></svg></span></span>'
+  }
+  /** The desk picture of the Team screen: the one figure seated at the Kenney desk, on a light tile of the office colour. */
+  const desk = (color) => { css(); return '<span class="dk"><span class="tile" style="background:' + tint(color, 0.86) + '"></span><span class="di"></span></span>' }
+  /** The same person as an SVG group, for the iso scenes (scale * 12 px across); needs personDefs(d) once in the same svg. */
+  function personG(seed, color, x, y, scale, name) {
+    const d = (scale || 3) * 12, h = hash(seed), v = h % 6, r = d / 2
+    color = color || '#56B6C2'
+    const bd = Math.max(14, d * 0.42), bx = d - bd * 0.3
+    const inner = pic('front')
+      ? '<use href="#ptimg' + (v % 3) + '" transform="' + (v > 2 ? 'translate(' + d + ',0) scale(' + (-d / 192) + ',' + (d / 192) + ')' : 'scale(' + (d / 192) + ')') + '"/>'
+      : '<g transform="scale(' + (d / 40) + ')">' + plainG(h, color) + '</g>'
+    return '<g transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ')"><circle cx="' + r + '" cy="' + r + '" r="' + r + '" fill="' + tint(color, 0.78) + '"/><g clip-path="url(#ptclip' + d + ')">' + inner + '</g><circle cx="' + r + '" cy="' + r + '" r="' + (r - 1) + '" fill="none" stroke="' + color + '" stroke-width="2"/><circle cx="' + bx + '" cy="' + bx + '" r="' + bd / 2 + '" fill="' + color + '"/><text x="' + bx + '" y="' + (bx + bd * 0.17).toFixed(1) + '" text-anchor="middle" dir="auto" style="font:700 ' + Math.round(bd * 0.46) + 'px var(--font-ui);fill:#fff">' + esc(initials(name || String(seed).split(':')[0])) + '</text></g>'
+  }
+  /** The <defs> the personG people of one svg share: a round clip of d px and the three pictures. */
+  const personDefs = (d) => '<defs><clipPath id="ptclip' + d + '"><circle cx="' + d / 2 + '" cy="' + d / 2 + '" r="' + d / 2 + '"/></clipPath>' + (pic('front') ? VIEW.map((v, i) => '<image id="ptimg' + i + '" width="192" height="192" href="' + pic(v) + '"/>').join('') : '') + '</defs>'
 
   const IC = {
     check: 'M5 12l5 5 9-10', x: 'M6 6l12 12M18 6L6 18', plus: 'M12 5v14M5 12h14', chev: 'M9 6l6 6-6 6', back: 'M15 6l-6 6 6 6',
@@ -101,11 +134,6 @@ function everyoneArt() {
     const w = Math.max(36, plain.length * 7 + 18)
     return '<g class="tagg"><rect x="' + (x - w / 2).toFixed(1) + '" y="' + (y - 12).toFixed(1) + '" width="' + w + '" height="22" rx="4" fill="' + (o.bg || '#FFFFFF') + '" stroke="' + (o.stroke || '#B8C3CE') + '"/>' + text(x, y + 4, s, { size: 12, fill: o.fill || '#1F2A36' }) + '</g>'
   }
-  const BUBBLE = { working: ['#0C8A62', '...'], waiting: ['#B8720F', '!'], done: ['#1F7A8C', 'ok'], idle: ['#8A97A6', 'zz'], paused: ['#8A97A6', '||'] }
-  const bubble = (x, y, kind) => {
-    const c = BUBBLE[kind] || BUBBLE.idle
-    return '<g><rect x="' + (x - 17).toFixed(1) + '" y="' + (y - 20).toFixed(1) + '" width="34" height="20" rx="4" fill="#FFFFFF" stroke="' + c[0] + '" stroke-width="1.5"/><polygon points="' + (x - 4).toFixed(1) + ',' + y.toFixed(1) + ' ' + (x + 4).toFixed(1) + ',' + y.toFixed(1) + ' ' + x.toFixed(1) + ',' + (y + 6).toFixed(1) + '" fill="' + c[0] + '"/>' + text(x, y - 6, c[1], { size: 12, fill: c[0], w: 700, mono: true }) + '</g>'
-  }
 
   /** The campus: up to six buildings on a light grey checkerboard slab. plots: [{ color, label,
    *  count, h, built }], people: [{ seed, color, plot }] standing at a plot. */
@@ -139,11 +167,12 @@ function everyoneArt() {
       const t = P(p.x + w / 2, p.y + d / 2, h + 10)
       labels.push(tag(t[0], t[1] - 22, p.label + (p.count !== undefined && p.count !== '' ? ' · ' + p.count : ''), { stroke: col }))
     }
+    if ((people || []).length) s = personDefs(36) + s
     for (const a of people || []) {
       const p = placed[a.plot]
       if (!p) continue
       const q = P(p.x + 0.35 + (a.n || 0) * 0.75, p.y + 2.45)
-      s += '<ellipse cx="' + q[0].toFixed(1) + '" cy="' + (q[1] + 2).toFixed(1) + '" rx="14" ry="6" fill="rgba(0,0,0,.4)"/>' + personG(a.seed, a.color, q[0] - 18, q[1] - 40, 3)
+      s += '<ellipse cx="' + q[0].toFixed(1) + '" cy="' + (q[1] + 2).toFixed(1) + '" rx="14" ry="6" fill="rgba(0,0,0,.16)"/>' + personG(a.seed, a.color, q[0] - 18, q[1] - 40, 3, a.name)
     }
     return s + labels.join('')
   }
@@ -158,57 +187,7 @@ function everyoneArt() {
       '<g transform="translate(' + sp[0].toFixed(1) + ',' + sp[1].toFixed(1) + ') matrix(1,.5,0,1,0,0)">' + text(0, 0, label, { size: 17, fill: linked ? '#0C8A62' : '#1F7A8C' }) + text(0, 22, sub, { size: 13, fill: '#8A97A6', w: 400 }) + '</g>'
   }
 
-  /** One office room with up to six desks. members: [{ seed, label (escaped),
-   *  status, hot }]; ghost: the seat index of a desk being added; sign: the
-   *  office name on the wall (escaped). */
-  function room(color, members, opts) {
-    opts = opts || {}
-    const SEATS = [[0.5, 1.1], [2.2, 1.1], [3.9, 1.1], [1.3, 3.2], [3.0, 3.2], [4.7, 3.2]]
-    const I = iso(420, 210, 120, 60), P = I.P, poly = I.poly, box = I.box
-    const H = 150, FA_ = '#EEF1F4', FB = '#E7EBEF'
-    let s = poly([P(0, 0), P(6, 0), P(6, 5), P(0, 5)], FB, '#D9DFE5')
-    for (let i = 0; i < 6; i++) for (let j = 0; j < 5; j++) s += poly([P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], (i + j) % 2 ? FA_ : FB, '#DDE2E7')
-    // the rug: a light tint of the office colour (the room is on the light page)
-    const tint = (hex, k) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(String(hex).substr(i, 2), 16) * (1 - k) + 255 * k).toString(16).padStart(2, '0')).join('')
-    s += poly([P(1.2, 2.3), P(4.8, 2.3), P(4.8, 4.9), P(1.2, 4.9)], tint(color, 0.84), tint(color, 0.55), ' stroke-width="1.5"')
-    s += poly([P(0, 5), P(6, 5), P(6, 5, -16), P(0, 5, -16)], '#C9D0D7') + poly([P(6, 0), P(6, 5), P(6, 5, -16), P(6, 0, -16)], '#BCC4CC')
-    s += poly([P(0, 0, 0), P(6, 0, 0), P(6, 0, H), P(0, 0, H)], '#F4F5F7', '#C9D1D9') + poly([P(0, 0, 0), P(0, 5, 0), P(0, 5, H), P(0, 0, H)], '#E9ECEF', '#C9D1D9')
-    s += poly([P(0, 0, H - 14), P(6, 0, H - 14), P(6, 0, H), P(0, 0, H)], color) + poly([P(0, 0, H - 14), P(0, 5, H - 14), P(0, 5, H), P(0, 0, H)], shade(color, 0.75))
-    for (const u of [0.5, 1.9, 3.3]) s += poly([P(u, 0, 60), P(u + 1.1, 0, 60), P(u + 1.1, 0, 118), P(u, 0, 118)], '#CFE0EE', '#B8C3CE') + poly([P(u + 0.05, 0, 64), P(u + 0.55, 0, 64), P(u + 0.55, 0, 114), P(u + 0.05, 0, 114)], 'rgba(86,182,194,.18)')
-    s += poly([P(0, 0.6, 52), P(0, 2.4, 52), P(0, 2.4, 118), P(0, 0.6, 118)], '#E3E9EF', '#7A8794')
-    for (let i = 0; i < 4; i++) s += poly([P(0, 0.8, 64 + i * 13), P(0, 1.2 + i * 0.25, 64 + i * 13), P(0, 1.2 + i * 0.25, 68 + i * 13), P(0, 0.8, 68 + i * 13)], i === 0 ? color : '#9AA7B5')
-    const tags = []
-    const seats = members.slice(0, SEATS.length).map((m, i) => ({ m, i, x: SEATS[i][0], y: SEATS[i][1] })).sort((a, b) => (a.x + a.y) - (b.x + b.y))
-    for (const st of seats) {
-      const m = st.m, x = st.x, y = st.y
-      s += '<g class="seat" data-ev="member-open" data-arg="' + m.id + '">'
-      s += box(x + 0.45, y - 0.62, 0.6, 0.5, 14, shade(color, 0.5), shade(color, 0.38), shade(color, 0.28)) + box(x + 0.45, y - 0.66, 0.6, 0.08, 46, shade(color, 0.45), shade(color, 0.35), shade(color, 0.25))
-      const ap = P(x + 0.75, y - 0.3, 20)
-      const bx = ap[0] - 30, by = ap[1] - 58
-      s += personG(m.seed, color, bx, by, 5)
-      s += box(x, y, 1.5, 0.8, 38, '#F1EEE7', '#DCD5C8', '#CFC7B8') + box(x, y, 1.5, 0.8, 5, shade(color, 0.8), shade(color, 0.5), shade(color, 0.4), 38)
-      const lit = m.status === 'working' ? '#1F6F58' : m.status === 'waiting' ? '#7A5A1C' : '#1B2530'
-      s += box(x + 1.0, y + 0.12, 0.42, 0.07, 26, '#C9D1D9', lit, '#FFFFFF', 43) + box(x + 1.15, y + 0.14, 0.12, 0.1, 4, '#C9D1D9', '#C9D1D9', '#FFFFFF', 43)
-      if (m.hot) s += poly([P(x - 0.25, y - 0.8), P(x + 1.75, y - 0.8), P(x + 1.75, y + 1.15), P(x - 0.25, y + 1.15)], 'rgba(12,138,98,.07)', '#0C8A62', ' stroke-width="2" stroke-dasharray="7 5"')
-      s += bubble(ap[0], by - 6, m.status) + '</g>'
-      tags.push(tag(ap[0], by - 34, m.label, { stroke: m.hot ? '#0C8A62' : '#B8C3CE', fill: m.hot ? '#0C8A62' : '#1F2A36', bg: m.hot ? '#E6F4EE' : '#FFFFFF' }))
-    }
-    s += tags.join('')
-    if (opts.ghost !== undefined && opts.ghost < SEATS.length) {
-      const gx = SEATS[opts.ghost][0], gy = SEATS[opts.ghost][1]
-      s += poly([P(gx - 0.25, gy - 0.8), P(gx + 1.75, gy - 0.8), P(gx + 1.75, gy + 1.15), P(gx - 0.25, gy + 1.15)], 'rgba(12,138,98,.08)', '#0C8A62', ' stroke-width="2" stroke-dasharray="7 5"')
-      s += poly([P(gx, gy), P(gx + 1.5, gy), P(gx + 1.5, gy + 0.8), P(gx, gy + 0.8)], 'rgba(12,138,98,.14)', '#0C8A62', ' stroke-width="1.5" stroke-dasharray="4 4"')
-      const t = P(gx + 0.75, gy + 0.4, 40), b = P(gx + 0.75, gy + 0.8, 0)
-      s += text(t[0], t[1] + 6, '+', { size: 34, fill: '#0C8A62', w: 400 }) + tag(b[0], b[1] + 18, opts.ghostLabel || '', { stroke: '#0C8A62', fill: '#0C8A62' })
-    }
-    const plant = (x, y) => box(x, y, 0.5, 0.5, 22, '#4A3A2E', '#35291F', '#2A2018') + box(x + 0.1, y + 0.1, 0.3, 0.3, 44, '#2F8F66', '#236B4E', '#1C5640', 22) + box(x + 0.18, y + 0.18, 0.14, 0.14, 66, '#0C8A62', '#2F8F66', '#236B4E', 22)
-    s += plant(5.2, 0.3) + plant(0.2, 4.2)
-    const sp = P(3.2, 0, 132)
-    if (opts.sign) s += '<g transform="translate(' + sp[0].toFixed(1) + ',' + sp[1].toFixed(1) + ') matrix(1,.5,0,1,0,0)">' + text(0, 0, opts.sign, { size: 13, fill: '#FFFFFF', w: 700 }) + '</g>'
-    return s
-  }
-
-  return { hash, shade, person, owner, robot, personG, ic, thumb, campus, laptop, room, SEATS: 6 }
+  return { hash, shade, tint, initials, person, owner, robot, desk, personG, ic, thumb, campus, laptop }
 }
 
 module.exports = { everyoneArt }

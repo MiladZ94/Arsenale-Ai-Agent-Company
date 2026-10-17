@@ -23,7 +23,7 @@
       const linked = !!(c && st.data.connect && seenFor(c, st.data.connect.clients))
       svg = '<g transform="translate(-150,10) scale(.82)">' + svg + '</g>' + A.laptop(esc(c ? T(c.name) : ''), esc(linked ? T('connected') : T('waiting…')), linked)
     }
-    return '<svg viewBox="0 0 900 600" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges" aria-hidden="true">' + svg + '</svg>'
+    return '<svg viewBox="0 0 900 600" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' + svg + '</svg>'
   }
   function wizHtml() {
     const w = st.wiz
@@ -50,7 +50,7 @@
       foot = '<span class="hint">' + ic('lock', 14) + ' ' + T('Nothing is saved until the last step. About 3 minutes.') + '</span>' + next(T('Choose offices'))
     } else if (w.step === 2) {
       form += lbl(2) + '<h1>' + T('Which offices do you need?') + '</h1><p class="lead">' + T('You can add or remove offices later in Settings.') + '</p>'
-      form += packs.length ? '<div style="display:flex;flex-direction:column;gap:8px">' + packs.map((p) => '<label class="oprow" style="border-color:' + (w.packs.includes(p.id) ? esc(packColor(p)) : 'var(--line)') + '"><input type="checkbox" name="pack" value="' + esc(p.id) + '"' + (w.packs.includes(p.id) ? ' checked' : '') + ' data-ev-change="wpack"><span class="bar" style="background:' + esc(packColor(p)) + '"></span><span style="flex:1;min-width:0"><b>' + esc(packName(p)) + '</b><span class="d">' + esc(SHORT[p.id] ? T(SHORT[p.id]) : p.description) + '</span></span><span style="display:flex">' + p.members.slice(0, 3).map((m, i) => '<span style="margin-inline-start:' + (i ? -8 : 0) + 'px">' + A.person(m.id, packColor(p), 22) + '</span>').join('') + '</span></label>').join('') + '</div>' : '<p class="hint">' + T('Loading…') + '</p>'
+      form += packs.length ? '<div style="display:flex;flex-direction:column;gap:8px">' + packs.map((p) => '<label class="oprow" style="border-color:' + (w.packs.includes(p.id) ? esc(packColor(p)) : 'var(--line)') + '"><input type="checkbox" name="pack" value="' + esc(p.id) + '"' + (w.packs.includes(p.id) ? ' checked' : '') + ' data-ev-change="wpack"><span class="sw" style="background:' + esc(packColor(p)) + '"></span><span style="flex:1;min-width:0"><b>' + esc(packName(p)) + '</b><span class="d">' + esc(SHORT[p.id] ? T(SHORT[p.id]) : p.description) + '</span></span><span style="display:flex">' + p.members.slice(0, 3).map((m, i) => '<span style="margin-inline-start:' + (i ? -8 : 0) + 'px">' + A.person(m.id, packColor(p), 22) + '</span>').join('') + '</span></label>').join('') + '</div>' : '<p class="hint">' + T('Loading…') + '</p>'
       if (w.err) form += '<p class="msg err">' + esc(errTxt(w.err)) + '</p>'
       const n = packs.filter((p) => w.packs.includes(p.id))
       foot = back + '<span class="hint"><b style="color:var(--ink-hi)">' + fa(n.length) + ' ' + T(n.length === 1 ? 'office' : 'offices') + '</b>' + T(', ') + fa(n.reduce((s, p) => s + p.members.length, 0)) + ' ' + T('team members') + '</span>' + next(T('Connect assistant'))
@@ -66,7 +66,7 @@
       foot = back + '<button type="button" class="b ghost" data-ev="wiz-skip" style="color:var(--cyan)">' + T('Skip for now') + '</button>' + next(T('Review'))
     } else if (w.step === 4) {
       form += lbl(4) + '<h1>' + T('Ready to open the doors?') + '</h1><p class="lead">' + T('Nothing has been saved yet. Check the summary.') + '</p>'
-      for (const p of packs.filter((x) => w.packs.includes(x.id))) form += '<div class="card rw"><span style="width:6px;height:38px;border-radius:2px;background:' + esc(packColor(p)) + ';flex:none"></span><div style="width:150px;flex:none"><b style="color:var(--ink-hi)">' + esc(packShort(p)) + '</b><div class="hint">' + fa(p.members.length) + ' ' + T('team members') + '</div></div><span style="display:flex;gap:5px;flex-wrap:wrap">' + p.members.map((m) => A.person(m.id, packColor(p), 22, true)).join('') + '</span></div>'
+      for (const p of packs.filter((x) => w.packs.includes(x.id))) form += '<div class="card rw"><span class="sw" style="background:' + esc(packColor(p)) + '"></span><div style="width:150px;flex:none"><b style="color:var(--ink-hi)">' + esc(packShort(p)) + '</b><div class="hint">' + fa(p.members.length) + ' ' + T('team members') + '</div></div><span style="display:flex;gap:5px;flex-wrap:wrap">' + p.members.map((m) => A.person(m.id, packColor(p), 22, true)).join('') + '</span></div>'
       const asst = ASSIST.find((x) => x[0] === w.assistant)
       form += '<div class="card rw"><div style="flex:1"><div class="lbl">' + T('Company') + '</div><b style="color:var(--ink-hi)" dir="auto">' + esc(w.name) + '</b></div><div style="flex:1"><div class="lbl">' + T('Assistant') + '</div><div class="rw" style="gap:8px">' + A.robot(22) + '<b style="color:var(--ink-hi)">' + (w.assistant === 'other' ? T('Other') : esc(asst ? asst[1] : '')) + '</b></div></div></div>'
       form += '<div class="card rw" style="border-color:var(--accent-line);background:var(--accent-soft);align-items:flex-start"><span style="color:var(--accent);line-height:0">' + ic('shield', 20) + '</span><div style="font-size:13.5px"><b style="color:var(--ink-hi)">' + T('Safe by default.') + '</b> ' + T('Your team asks you first before it sends, posts, pays or deletes anything.') + '</div></div>'

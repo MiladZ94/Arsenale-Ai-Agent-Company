@@ -253,6 +253,62 @@
       "size": 251668,
       "sha256": "20b2fc2f71cae25f4a33a375cf70c01fbe382668ebccb597b64721c7ade9a947",
       "modified": "colormap.png embedded into the GLB (no other change)"
+    },
+    {
+      "file": "portraits/front.png",
+      "use": "portrait:front",
+      "name": "portrait-front",
+      "pack": "Mini Characters 1.0 (derived)",
+      "author": "Kenney (www.kenney.nl)",
+      "source": "https://kenney.nl/assets/mini-characters",
+      "licence": "CC0-1.0",
+      "licenceFile": "licenses/kenney-mini-characters-License.txt",
+      "fetched": "2026-10-17",
+      "size": 20647,
+      "sha256": "d09897420030ebf6852cf1c49c5c1ece65c5d5eca7a8fc8bc8b40236727fe2e3",
+      "modified": "derived: 192 px head-and-shoulders render of kenney/characters/character-male-d.glb (idle pose, camera in front), transparent background, made by tools/render-portraits.cjs; CC0 as its sources"
+    },
+    {
+      "file": "portraits/left.png",
+      "use": "portrait:left",
+      "name": "portrait-left",
+      "pack": "Mini Characters 1.0 (derived)",
+      "author": "Kenney (www.kenney.nl)",
+      "source": "https://kenney.nl/assets/mini-characters",
+      "licence": "CC0-1.0",
+      "licenceFile": "licenses/kenney-mini-characters-License.txt",
+      "fetched": "2026-10-17",
+      "size": 26878,
+      "sha256": "0e730a030a2584d11a95f64c3a8bbc3218a46b095cb83a4fa01b70d74a3dbb19",
+      "modified": "derived: 192 px head-and-shoulders render of kenney/characters/character-male-d.glb (idle pose, camera 32 degrees left), transparent background, made by tools/render-portraits.cjs; CC0 as its sources"
+    },
+    {
+      "file": "portraits/right.png",
+      "use": "portrait:right",
+      "name": "portrait-right",
+      "pack": "Mini Characters 1.0 (derived)",
+      "author": "Kenney (www.kenney.nl)",
+      "source": "https://kenney.nl/assets/mini-characters",
+      "licence": "CC0-1.0",
+      "licenceFile": "licenses/kenney-mini-characters-License.txt",
+      "fetched": "2026-10-17",
+      "size": 25324,
+      "sha256": "62619fcee36da27a1f48ab10bcab456717a8ceb5e04c771a4d8c26b2b1bbd6b5",
+      "modified": "derived: 192 px head-and-shoulders render of kenney/characters/character-male-d.glb (idle pose, camera 32 degrees right), transparent background, made by tools/render-portraits.cjs; CC0 as its sources"
+    },
+    {
+      "file": "portraits/desk.png",
+      "use": "portrait:desk",
+      "name": "portrait-desk",
+      "pack": "Mini Characters 1.0 + Furniture Kit 2.0 (derived)",
+      "author": "Kenney (www.kenney.nl)",
+      "source": "https://kenney.nl/assets/furniture-kit",
+      "licence": "CC0-1.0",
+      "licenceFile": "licenses/kenney-furniture-kit-License.txt",
+      "fetched": "2026-10-17",
+      "size": 19440,
+      "sha256": "018253f00b56a477d3a26d75b303ddd741c1958561ea446e0db0fe2d100856ee",
+      "modified": "derived: 300 x 260 px render of kenney/characters/character-male-d.glb (sit pose) at kenney/furniture/desk.glb, computerScreen.glb and chairDesk.glb, from the office camera, transparent background, made by tools/render-portraits.cjs; CC0 as its sources"
     }
   ]
 }

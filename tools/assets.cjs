@@ -9,7 +9,7 @@
  *     "licence": "CC0-1.0", "fetched": "YYYY-MM-DD", "sha256": "<hex>" }
  *
  * `use` is "building:<type>" (see campus.cjs TYPES), "furniture:<name>" (desk,
- * chair, sofa, plant, screen) or "character:<style>" (office). Only CC0 files are
+ * chair, sofa, plant, screen) or "character:<style>" (office) or "portrait:<view>" (a PNG head-and-shoulders render of the character for the Team, Tasks and Approvals screens). Only CC0 files are
  * accepted and only when the hash matches the entry: anything else is left
  * out of the page and named in `problems`, and the shape is drawn instead
  * (tools/test/assets.test.cjs fails for a shipped file with no entry). A
@@ -60,7 +60,7 @@ function pageAssets(dir) {
   for (const a of readManifest(root).assets) {
     const file = String(a && a.file || '')
     const use = String(a && a.use || '')
-    if (!/^[\w.\/-]+$/.test(file) || file.includes('..') || !/^(building|furniture|character):[a-z]+$/.test(use)) { problems.push('bad entry: ' + file); continue }
+    if (!/^[\w.\/-]+$/.test(file) || file.includes('..') || !/^(building|furniture|character|portrait):[a-z]+$/.test(use)) { problems.push('bad entry: ' + file); continue }
     if (a.licence !== 'CC0-1.0') { problems.push(file + ': licence is not CC0-1.0'); continue }
     let buf
     try { buf = fs.readFileSync(path.join(root, file)) } catch { continue } // an entry without its file: the shape is drawn

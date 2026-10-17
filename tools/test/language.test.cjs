@@ -111,7 +111,7 @@ const VIEWS = (offices) => [
   // every letter: an action, a hire, a choice, a plain approval
   ...[1, 2, 3, 4].map((n) => ['approvals letter ' + n, "location.hash = '#/approvals'; WAIT('.ai:nth-child(" + n + ")', (e) => { e.click(); WAIT('[data-ev=appr-note]', (x) => x.click()) })"]),
   ['team', "location.hash = '#/team'"],
-  ['team profile', "location.hash = '#/team'; WAIT('[data-ev=team-office][data-arg=support]', (o) => { o.click(); WAIT('.roster [data-ev=member-open][data-arg=reply-drafter]', (e) => { e.click(); WAIT('.ev-drawer details', (d) => document.querySelectorAll('.ev-drawer details').forEach((x) => { x.open = true })) }) })"],
+  ['team profile', "location.hash = '#/team'; WAIT('[data-ev=team-office][data-arg=support]', (o) => { o.click(); WAIT('.desks [data-ev=member-open][data-arg=reply-drafter]', (e) => { e.click(); WAIT('.ev-drawer details', (d) => document.querySelectorAll('.ev-drawer details').forEach((x) => { x.open = true })) }) })"],
   ['hire form', "location.hash = '#/team'; WAIT('[data-ev=hire-new]', (e) => { e.click(); WAIT('.ev-drawer details', (d) => { d.open = true }) })"],
   ['hire review', "location.hash = '#/team'; WAIT('[data-ev=hire-new]', (e) => { e.click(); WAIT('form[data-evform=hire] input[name=title]', (i) => { const f = i.form; f.elements.name.value = 'Sample'; i.value = 'sample title'; f.elements.instructions.value = 'sample instructions, sample reason'; f.requestSubmit() }) })"],
   ['deliverables', "location.hash = '#/deliverables'"],

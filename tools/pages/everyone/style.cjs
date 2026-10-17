@@ -56,9 +56,15 @@ button.chip{cursor:pointer}
 .ev .pill:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
 .ev .pill.working{color:#0C8A62;background:rgba(12,138,98,.10)}.ev .pill.waiting{color:#B8720F;background:rgba(217,140,30,.13)}
 .ev .pill.idle,.ev .pill.paused{color:#66727F;background:rgba(106,118,131,.12)}.ev .pill.done{color:#1F7A8C;background:rgba(31,122,140,.12)}
-.ev .av,.wz .av{position:relative;display:inline-block;flex:none;line-height:0}
-.ev .av.bk,.wz .av.bk{border-radius:7px;padding:3px 3px 0}
-.ev .av svg,.wz .av svg{display:block}
+.av{position:relative;display:inline-block;flex:none;line-height:0}
+.av .pp{position:absolute;inset:0;border-radius:50%;overflow:hidden}
+.av .pp svg{display:block}
+.av .pi{position:absolute;inset:0;background-size:cover;background-position:center;background-repeat:no-repeat}
+.av .pi.fl{transform:scaleX(-1)}
+.av .ini,.dkb{position:absolute;display:grid;place-items:center;color:#fff;font:700 11px/1 var(--font-ui);border:2px solid #fff;box-sizing:border-box;border-radius:50%}
+.av .ini{inset-inline-end:-4px;bottom:-4px}
+/* the initials are drawn, not text: the name beside a face already says who it is, and a screen reader or a copy should not read them twice */
+.ini:after{content:attr(data-i)}
 .ev .note{font-size:13px;color:var(--ink-dim);display:flex;gap:6px;align-items:flex-start;line-height:1.5}
 .ev .hint{display:block;font-size:12px;color:var(--ink-dim);margin-top:3px}
 .ev .msg,.wz .msg{font-size:13px;margin-top:8px}
@@ -143,17 +149,26 @@ button.chip{cursor:pointer}
 .ev .pk{padding:14px;text-align:start;font:inherit;color:inherit;cursor:pointer;display:block;width:100%}
 .ev .pk.off{border-style:dashed;background:transparent}
 .ev .pk[aria-current=true]{border-color:var(--accent-line)}
-/* team: the office room, a campus list, the people in it, and the side panel */
-.ev .scene{position:absolute;inset:0;width:100%;height:100%}
-.ev .scene .seat{cursor:pointer}
+/* team: a campus list, a floor of desks (the office's checkerboard, cards with the Kenney desk picture), and the side panel */
 .ev .float{position:absolute;z-index:3;background:rgba(255,255,255,.94);border:1px solid var(--line-strong);border-radius:10px}
 .ev .camp{left:20px;top:20px;padding:12px 14px;width:220px}
 .ev .camp button{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;border:0;background:none;width:100%;color:var(--ink-soft);font:13.5px var(--font-ui);cursor:pointer;text-align:start}
 .ev .camp button[aria-current=true]{background:var(--panel-raised);box-shadow:inset 0 0 0 1px var(--line-strong);color:var(--ink-hi);font-weight:700}
-.ev .sw{width:10px;height:10px;border-radius:2px;display:inline-block;flex:none}
-.ev .roster{inset-inline:20px;bottom:56px;padding:10px 14px;display:flex;gap:10px;align-items:center;overflow:auto hidden}
-.ev .roster .m{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel-raised);cursor:pointer;font:inherit;color:inherit;text-align:start;flex:none}
-.ev .roster .m[aria-current=true]{border-color:var(--accent)}
+.ev .sw,.wz .sw{width:10px;height:10px;border-radius:2px;display:inline-block;flex:none}
+.ev .floor{position:absolute;inset:0;overflow:auto;padding:22px 24px 64px 268px;background-color:#F4F6F8;background-image:conic-gradient(#E9ECF0 25%,transparent 0 50%,#E9ECF0 0 75%,transparent 0);background-size:72px 72px;scrollbar-width:thin}
+.ev .fhead{display:flex;align-items:center;gap:12px;margin-bottom:16px;min-height:32px}
+.ev .fhead h2{margin:0;font-size:20px}
+.ev .desks{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.ev .dsk{position:relative;display:block;text-align:start;padding:0;border:1px solid var(--line-strong);border-radius:12px;background:#fff;cursor:pointer;font:inherit;color:inherit;overflow:hidden;min-width:0}
+.ev .dsk:hover{border-color:var(--ink-dim)}
+.ev .dsk[aria-current=true]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-line)}
+.ev .dsk .cap{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:8px 12px 12px;border-top:1px solid var(--line)}
+.ev .dsk .cap>.ell{max-width:100%}
+.ev .dsk.ghost{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:200px;border-style:dashed;background:rgba(255,255,255,.6);color:var(--accent);cursor:default}
+.dk{display:block;position:relative;height:132px}
+.dk .tile{position:absolute;inset:16px 26px 6px;border-radius:10px}
+.dk .di{position:absolute;inset:0;background-position:center;background-size:contain;background-repeat:no-repeat}
+.dkb{inset-inline-start:12px;top:12px;width:28px;height:28px;font-size:12px;border-width:2px}
 .ev .ticker{position:absolute;inset-inline:0;bottom:0;height:42px;background:rgba(255,255,255,.94);border-top:1px solid var(--line);display:flex;align-items:center;gap:22px;padding:0 20px;font-size:13px;color:var(--ink-soft);z-index:3;overflow:hidden;white-space:nowrap}
 .ev .ticker i{display:inline-block;width:8px;height:8px;margin-inline-end:7px}
 .ev .tool{inset-inline-end:20px;top:20px;padding:6px;display:flex;gap:6px}
@@ -167,7 +182,7 @@ button.chip{cursor:pointer}
 .ev .now.w{border-color:rgba(217,140,30,.45);background:var(--warn-bg)}
 .ev .jr{display:flex;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:13.5px}
 .ev .looks{display:flex;gap:8px;flex-wrap:wrap}
-.ev .looks label{padding:5px 5px 0;border-radius:8px;border:2px solid var(--line);cursor:pointer;line-height:0}
+.ev .looks label{padding:6px;border-radius:12px;border:2px solid var(--line);cursor:pointer;line-height:0}
 .ev .looks label:has(input:checked){border-color:var(--accent)}
 .ev .looks input{position:absolute;opacity:0;width:1px;height:1px}
 .ev .asks{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:13.5px}
@@ -201,7 +216,7 @@ button.chip{cursor:pointer}
 .wz .wfoot{padding:14px 28px;border-top:1px solid var(--line);display:flex;gap:12px;align-items:center;background:var(--panel-raised);flex:none}
 .wz .oprow{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);cursor:pointer;margin:0}
 .wz .oprow:has(input:checked){background:var(--panel-raised)}
-.wz .oprow .bar{width:8px;height:36px;border-radius:2px;flex:none}
+
 .wz .oprow b{display:block;color:var(--ink-hi);font-size:14.5px}
 .wz .oprow span.d{font-size:12.5px;color:var(--ink-dim)}
 .wz .seg2{display:inline-flex;border:1px solid var(--line-strong);border-radius:7px;overflow:hidden}

@@ -175,8 +175,8 @@ h1.co{white-space:nowrap;font-size:17px}
 .ost .num{font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ost .cbar{width:90px}
 .org .ocolh .ocsp{font:400 12px var(--font-ui);color:#F3F5F7;opacity:.9;margin-inline-start:auto;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
-.oav{position:relative;border-radius:8px;padding:5px 7px 0;line-height:0;flex:none}
-.oav i{position:absolute;inset-inline-end:-3px;bottom:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--panel)}
+.oav{position:relative;line-height:0;flex:none;padding:3px}
+.oav i{position:absolute;inset-inline-end:-2px;top:-1px;z-index:2;width:10px;height:10px;border-radius:50%;border:2px solid var(--panel)}
 .otx{min-width:0}
 .otx b{display:block;font-size:14.5px;color:#111A24;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .otx span{display:block;font-size:13px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -450,7 +450,7 @@ function companyViews(h) {
     const al = b && b.on ? (b.level === 'stop' ? '<span class="alert h">' + T('HARD STOP') + '</span>' : b.level === 'over' ? '<span class="alert h">' + fa(100) + T('%') + '+</span>' : b.level === 'soft' ? '<span class="alert s">' + fa(b.softAlertPct) + T('%') + '+</span>' : '') : ''
     const num = b && b.on ? limitTxt(b) : sp && sp.tokens ? k(sp.tokens) + ' ' + T('tok') : ''
     const stat = e.kind === 'retired' || !(e.model || al || num) ? '' : '<span class="ost"><span class="ostl">' + (e.model ? '<span class="mdlc">' + esc(e.model) + '</span>' : '') + al + '</span>' + (num ? '<span class="num" dir="ltr">' + num + '</span>' : '') + bar(b) + '</span>'
-    return '<li class="opr' + (e.kind === 'retired' ? ' retired' : '') + '"><button type="button" class="opb" data-ev="member-open" data-arg="' + esc(e.id) + '" data-to-team="1"' + (e.kind === 'retired' ? ' disabled' : '') + '><span class="oav" style="background:' + esc(ART.shade(o.color || '#56B6C2', 0.42)) + '">' + ART.person(e.id + (e.look ? ':' + e.look : ''), o.color, 30) + (dot ? '<i style="background:' + dot + '" title="' + esc(T(STATUS_TXT[s])) + '"></i>' : '') + '</span><span class="otx"><b dir="auto">' + esc(pname(e)) + '</b>' + (ptitle(e) || e.kind === 'retired' ? '<span dir="auto">' + esc(e.kind === 'retired' ? T('retired: definition file removed') : ptitle(e)) + '</span>' : '') + '</span></button>' + (stat || budget ? '<span class="oside">' + stat + budget + '</span>' : '') + '</li>'
+    return '<li class="opr' + (e.kind === 'retired' ? ' retired' : '') + '"><button type="button" class="opb" data-ev="member-open" data-arg="' + esc(e.id) + '" data-to-team="1"' + (e.kind === 'retired' ? ' disabled' : '') + '><span class="oav">' + ART.person(e.id + (e.look ? ':' + e.look : ''), o.color, 34, false, pname(e)) + (dot ? '<i style="background:' + dot + '" title="' + esc(T(STATUS_TXT[s])) + '"></i>' : '') + '</span><span class="otx"><b dir="auto">' + esc(pname(e)) + '</b>' + (ptitle(e) || e.kind === 'retired' ? '<span dir="auto">' + esc(e.kind === 'retired' ? T('retired: definition file removed') : ptitle(e)) + '</span>' : '') + '</span></button>' + (stat || budget ? '<span class="oside">' + stat + budget + '</span>' : '') + '</li>'
   }
 
   function org(S) {

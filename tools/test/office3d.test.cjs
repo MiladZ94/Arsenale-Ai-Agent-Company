@@ -103,7 +103,7 @@ test('the built file keeps the flat office and carries no three.js; the live pag
     assert.ok(!built.includes("const REVISION = '184'"), 'no three.js in the built file')
     const live = renderOffice(state, { live: true, token: 'x', lang: 'en' })
     assert.ok(live.includes("const REVISION = '184'"), 'the live page carries the pinned three.js r184')
-    assert.ok(/const ASSET_MODELS = \{("(building|furniture|character):[a-z]+":"[A-Za-z0-9+\/=]+",?)*\};/.test(live), 'and the list of real models, by building type, furniture piece and character style (one with none is drawn from shapes)')
+    assert.ok(/const ASSET_MODELS = \{("(building|furniture|character|portrait):[a-z]+":"[A-Za-z0-9+\/=]+",?)*\};/.test(live), 'and the list of real models, by building type, furniture piece and character style (one with none is drawn from shapes)')
     assert.ok(!/OFFICE_CHARACTERS/.test(live), 'there is one avatar style: one character style in the manifest, no per-role character files')
     assert.equal((live.match(/<\/script>/g) || []).length, (live.match(/<script>/g) || []).length, 'every script block closes where it should')
   } finally { sb.cleanup() }

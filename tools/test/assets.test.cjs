@@ -61,7 +61,7 @@ test('with no asset files the page gets no models (the shapes are drawn)', (t) =
   assert.deepEqual(A.pageAssets(folder(t)).models, {})
 })
 
-test('the shipped models all load: one building per office type, the office furniture and one character style, real GLB files, no problems', () => {
+test('the shipped models all load: one building per office type, the office furniture, one character style and its four rendered pictures, real files, no problems', () => {
   const r = A.pageAssets()
   assert.deepEqual(r.problems, [])
   const types = require('../campus.cjs').TYPES.map((t) => 'building:' + t.id).sort()
@@ -69,8 +69,10 @@ test('the shipped models all load: one building per office type, the office furn
   assert.deepEqual(keys.filter((k) => /^building:/.test(k)), types)
   assert.deepEqual(keys.filter((k) => /^furniture:/.test(k)), ['furniture:chair', 'furniture:desk', 'furniture:plant', 'furniture:screen', 'furniture:sofa'])
   assert.deepEqual(keys.filter((k) => /^character:/.test(k)), ['character:office'])
-  assert.equal(keys.length, types.length + 6)
-  for (const b64 of Object.values(r.models)) assert.equal(Buffer.from(b64, 'base64').subarray(0, 4).toString(), 'glTF')
+  assert.deepEqual(keys.filter((k) => /^portrait:/.test(k)), ['portrait:desk', 'portrait:front', 'portrait:left', 'portrait:right'])
+  assert.equal(keys.length, types.length + 10)
+  // the models are GLB files; the portraits are PNGs rendered from them (tools/render-portraits.cjs)
+  for (const [k, b64] of Object.entries(r.models)) assert.equal(Buffer.from(b64, 'base64').subarray(0, 4).toString('latin1'), /^portrait:/.test(k) ? 'PNG' : 'glTF', k)
 })
 
 test('every office type has its own model (twelve different files), and no file is over 6 MB or all together over 10 MB', () => {

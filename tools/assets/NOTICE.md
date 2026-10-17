@@ -29,3 +29,8 @@ page before a file is added.
 
 `tools/test/assets.test.cjs` fails when a file here has no entry, when its
 licence is not CC0-1.0, or when its hash differs.
+
+The head-and-shoulders pictures and the seated-at-a-desk picture in `portraits/` are renders of that one
+Mini Characters figure and the Furniture Kit desk (`tools/render-portraits.cjs`), so a person on the Team,
+Tasks and Approvals screens is the same character as at the desks in the
+office. They are derived from a CC0 model and are CC0 too.

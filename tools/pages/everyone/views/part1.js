@@ -44,7 +44,7 @@
   function face(id, size, back) {
     if (!id || id === 'supervisor') return A.robot(size)
     if (id === 'board') return A.owner(size)
-    return A.person(seedOf(id), colorOfMember(id), size, back)
+    return A.person(seedOf(id), colorOfMember(id), size, back, nameOf(id))
   }
   /** Who asked a question: the member who acts, the job's member, the task's
    *  member, else the assistant itself. */
@@ -415,7 +415,7 @@
       html += '<div class="prev"><div class="lbl" style="margin-bottom:8px">' + T(catOf(g)[3]) + '</div>' + (longSum(g) ? '<div class="body" dir="auto">' + esc(g.action.summary) + '</div>' + (g.action.target ? '<p class="mut" dir="auto" style="font-size:12.5px;margin-top:8px">' + T('Where: ') + esc(g.action.target) + '</p>' : '') : '<div class="body" dir="auto">' + (g.action.target ? T('Where: ') + esc(g.action.target) : esc(g.action.summary)) + '</div>') + '<p class="mut" style="font-size:12.5px;margin-top:8px">' + T('Who does it: ') + esc(nameLine(who)) + '</p></div>'
       html += whyNo(T(catOf(g)[5]), T(catOf(g)[6]).replace('{name}', nameOf(who)))
     } else if (g.approvalType === 'hire') {
-      html += '<div class="prev"><div class="lbl" style="margin-bottom:8px">' + T('Who would join') + '</div><div class="rw" style="gap:12px;margin-bottom:10px">' + A.person(p.id || 'new', colorOf(p.officeId), 36, true) + '<div><b class="hi" dir="auto">' + esc(p.name || p.id) + '</b><div class="mut" style="font-size:13px" dir="auto">' + esc(p.title || '') + ' · ' + esc(officeName(p.officeId)) + '</div></div></div><p class="soft" dir="auto" style="font-size:14px">' + esc(p.description || '') + '</p><details style="margin-top:10px"><summary>' + T('Their instructions, in full') + '</summary><pre class="txt" style="margin-top:8px">' + esc(p.instructions || '') + '</pre></details></div>'
+      html += '<div class="prev"><div class="lbl" style="margin-bottom:8px">' + T('Who would join') + '</div><div class="rw" style="gap:12px;margin-bottom:10px">' + A.person(p.id || 'new', colorOf(p.officeId), 40, true, p.name || p.id) + '<div><b class="hi" dir="auto">' + esc(p.name || p.id) + '</b><div class="mut" style="font-size:13px" dir="auto">' + esc(p.title || '') + ' · ' + esc(officeName(p.officeId)) + '</div></div></div><p class="soft" dir="auto" style="font-size:14px">' + esc(p.description || '') + '</p><details style="margin-top:10px"><summary>' + T('Their instructions, in full') + '</summary><pre class="txt" style="margin-top:8px">' + esc(p.instructions || '') + '</pre></details></div>'
       html += whyNo(p.why ? esc(p.why) : T('Your assistant thinks a role is missing.'), T('No one is added. Your assistant is told.'), true)
     } else if (Array.isArray(g.choices) && g.choices.length && g.kind !== 'approval') {
       html += whyNo(T('Your team waits for your pick before it goes on.'), T('You can close it without an answer. Your assistant is told and decides itself, or asks again.'))

@@ -137,8 +137,8 @@ test('T-5.1 through the page: the hire form writes the member after the review; 
   await w.waitFor(exists('[data-ev=hire-new]'))
   await w.click('[data-ev=hire-new]')
   await w.waitFor(exists('form[data-evform=hire] input[name=name]'))
-  // a desk being added shows in the room
-  assert.match(await w.page.eval("document.querySelector('.ev-main svg').textContent"), /New desk/)
+  // a desk being added shows on the floor, as a dashed card
+  assert.equal(await w.page.eval("document.querySelectorAll('.ev-main .dsk.ghost').length"), 1)
   // no job title: the form says why and writes nothing
   await w.set('form[data-evform=hire] input[name=name]', 'Nora')
   await w.set('form[data-evform=hire] textarea[name=instructions]', 'Draft the weekly newsletter. Never send it.')
