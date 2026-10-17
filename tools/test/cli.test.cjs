@@ -195,3 +195,13 @@ test('migration: a whole session of new CLI modes leaves every existing run log 
   const status = sb.cli('--company-status')
   assert.match(status.out, /company: 1734 tokens, USD n\/a, 3 runs \(1 unmeasured\)/)
 })
+
+test('dry run S3: "arsenale <mode> --help" prints the help for the short modes too', () => {
+  const { spawnSync } = require('child_process')
+  const bin = path.join(__dirname, '..', '..', 'bin', 'arsenale.cjs')
+  for (const mode of ['campus', 'gate', 'decision', 'version-run']) {
+    const r = spawnSync(process.execPath, [bin, mode, '--help'], { encoding: 'utf8' })
+    assert.equal(r.status, 0, mode + ': ' + r.stderr)
+    assert.match(r.stdout, /Arsenale run log/, mode + ' shows the log help')
+  }
+})

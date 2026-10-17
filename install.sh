@@ -214,7 +214,7 @@ for t in "${WANT[@]+"${WANT[@]}"}"; do
   case "$t" in
     claude-code)
       ask "Set up Claude Code in $CLAUDE (agent team, /feature and /fix skills, a block in CLAUDE.md)?" || continue
-      files=(); for f in "$REPO"/agents/*.md "$REPO"/agents/labels.fa.json; do [ -e "$f" ] && files+=("$f"); done
+      files=(); for f in "$REPO"/agents/*.md "$REPO"/agents/labels.json; do [ -e "$f" ] && files+=("$f"); done
       copy_side_by_side "$REPO/agents" "$CLAUDE/agents" "agent files" "${files[@]}"
       files=(); while IFS= read -r f; do files+=("$f"); done < <(find "$REPO/adapters/claude-code/skills" -type f | sort)
       copy_side_by_side "$REPO/adapters/claude-code/skills" "$CLAUDE/skills" "skill files" "${files[@]}"

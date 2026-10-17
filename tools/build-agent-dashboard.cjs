@@ -37,15 +37,12 @@ const P = require('./paths.cjs')
 
 const { RUNS, ACTIVE, OUT, OUT_ARCHIVE, GATES, DECISIONS, ANSWERS } = P
 const { renderOffice } = require('./agent-office-page.cjs')
-const { t, langScript, langFromRequest } = require('./dashboard-strings.cjs')
+const { renderArchive } = require('./pages/archive/render.cjs')
+const { langFromRequest } = require('./dashboard-strings.cjs')
 
-/** Other agents log while the server reads, so a file is never seen half
- *  written: write a temp file next to it, then rename over. */
-function writeAtomic(file, text) {
-  const tmp = file + '.' + process.pid + '-' + Math.random().toString(36).slice(2, 8) + '.tmp'
-  fs.writeFileSync(tmp, text)
-  fs.renameSync(tmp, file)
-}
+// Other agents log while the server reads, so a file is never seen half
+// written: a temp file next to it, then a rename (store.cjs).
+const { writeAtomic } = require('./store.cjs')
 
 function readJsonDir(dir) {
   if (!fs.existsSync(dir)) return []
@@ -64,15 +61,13 @@ function readJsonDir(dir) {
 /** The agents that exist, from their definition files. Only the frontmatter is
  *  read — the body is the agent's own instructions, not something to show. */
 function readAgents() {
-  // The page shows each agent's own English frontmatter description in
-  // English mode. labels.fa.json (optional, in any agent folder: a Persian
-  // title and one-line "what" per agent) supplies the card text in Persian
-  // mode, and `dept` (which desk an agent takes) in both. A `zone:` line in
-  // the frontmatter places the desk too, and wins.
+  // labels.json (optional, in any agent folder: { "<agent>": { "dept" } })
+  // says which desk an agent takes. A `zone:` line in the frontmatter places
+  // the desk too, and wins.
   const labels = {}
   for (const dir of P.AGENT_DIRS.slice().reverse()) {
     try {
-      const j = JSON.parse(P.stripBom(fs.readFileSync(path.join(dir, 'labels.fa.json'), 'utf8')))
+      const j = JSON.parse(P.stripBom(fs.readFileSync(path.join(dir, 'labels.json'), 'utf8')))
       for (const [k, v] of Object.entries(j)) if (v && typeof v === 'object') labels[k] = v
     } catch { /* no labels there: English text, desk from the name */ }
   }
@@ -87,22 +82,18 @@ function readAgents() {
       return m ? m[1].trim() : ''
     }
     const agentName = field('name') || name
-    const fa = Object.hasOwn(labels, agentName) ? labels[agentName] : {}
+    const lab = Object.hasOwn(labels, agentName) ? labels[agentName] : {}
     const descriptionEn = field('description')
     out.push({
       name: agentName,
       title: '',
       description: descriptionEn,
       descriptionEn,
-      titleFa: fa.title || '',
-      descriptionFa: fa.what || descriptionEn,
-      hasFa: !!fa.what,
-      persian: false,
       model: field('model'),
       effort: field('effort'),
       tools: field('tools'),
       color: field('color'),
-      dept: field('zone') || fa.dept || '', // optional: which department's desk the agent takes
+      dept: field('zone') || lab.dept || '', // optional: which department's desk the agent takes
     })
   }
   return out.sort((a, b) => a.name.localeCompare(b.name))
@@ -420,7 +411,7 @@ function saveGate(input, via) {
   // an older dashboard ignores them and still shows an approval.
   if (!reused) {
     if (input.approvalType !== undefined) g.approvalType = APPROVAL_TYPES.includes(String(input.approvalType)) ? String(input.approvalType) : 'generic'
-    for (const k of ['officeId', 'taskId', 'askedVia', 'clientId']) if (input[k] !== undefined && input[k] !== '') g[k] = clip(String(input[k]).replace(/[^\w.:-]/g, ''), 80)
+    for (const k of ['officeId', 'taskId', 'askedVia', 'clientId', 'versionRun']) if (input[k] !== undefined && input[k] !== '') g[k] = clip(String(input[k]).replace(/[^\w.:-]/g, ''), 80)
     if (input.subject && typeof input.subject === 'object') g.subject = { type: clip(input.subject.type, 20), id: clip(input.subject.id, 80) }
     if (input.action && typeof input.action === 'object') g.action = { category: clip(input.action.category, 40), target: clip(input.action.target, 200), summary: clip(input.action.summary, 300), member: clip(String(input.action.member || '').replace(/[^\w.-]/g, ''), 60) }
     if (input.payload !== undefined) {
@@ -485,7 +476,7 @@ function answerGate(id, answer, opts) {
   fs.appendFileSync(ANSWERS, JSON.stringify(Object.assign({
     at: saved.answeredAt, type: 'answer', gate: saved.id, project: saved.project, kind: saved.kind, run: saved.run,
     question: saved.question, answer: text, by: 'user', via,
-  }, saved.clientId ? { clientId: saved.clientId } : {})) + '\n')
+  }, saved.clientId ? { clientId: saved.clientId } : {}, saved.versionRun ? { versionRun: saved.versionRun } : {})) + '\n')
   return saved
 }
 
@@ -547,6 +538,8 @@ function saveDecision(input) {
     if (!input.text) throw new Error('a new decision needs "text"')
     d = { id, project: '', by: 'supervisor', text: '', reason: '', run: '', state: 'taken', closes: '', at: input.at || now }
   }
+  // a decision of an autonomous run may name its run as versionRun, like a gate does
+  if (input.run === undefined && input.versionRun !== undefined) input = Object.assign({}, input, { run: input.versionRun })
   for (const k of ['project', 'text', 'reason', 'run', 'closes']) if (input[k] !== undefined) d[k] = clip(input[k], k === 'text' || k === 'reason' ? 1000 : 300)
   if (input.by !== undefined) d.by = ['user', 'supervisor', 'agent'].includes(String(input.by)) ? String(input.by) : 'agent'
   if (input.agent !== undefined) d.agent = clip(input.agent, 60)
@@ -570,13 +563,17 @@ function pinnedDesks(raw) {
 function collect() {
   const prices = readPrices()
   const seen = answersRead()
-  const active = readJsonDir(ACTIVE).map((a) => {
+  const runs = readJsonDir(RUNS)
+  // finishRun writes the final record before it removes the active file: a
+  // run in both places is finished
+  const done = new Set(runs.map((r) => r && r.id).filter(Boolean))
+  const active = readJsonDir(ACTIVE).filter((a) => !(a && a.id && done.has(a.id))).map((a) => {
     // a running agent's counts are read from its transcript as it grows
     const t = a.transcript && a.transcript.found ? a.transcript : transcriptFor(a.id, a.startedAt, a.transcriptPath, 10000)
     return describe(Object.assign({}, a, { transcript: t }), prices)
   })
   const state = {
-    runs: readJsonDir(RUNS).map((r) => describe(r, prices)).sort((a, b) => String(b.finishedAt).localeCompare(String(a.finishedAt))),
+    runs: runs.map((r) => describe(r, prices)).sort((a, b) => String(b.finishedAt).localeCompare(String(a.finishedAt))),
     active: active.sort((a, b) => String(a.startedAt).localeCompare(String(b.startedAt))),
     agents: readAgents(),
     gates: readJsonDir(GATES).map((g) => Object.assign(g, {
@@ -656,688 +653,6 @@ function snapshot() {
 }
 /** A write made by the server itself: the next read builds a new state. */
 function invalidate() { snap = null }
-
-const STYLE = `
-  :root {
-    --font-ui: Arial, "Helvetica Neue", Helvetica, sans-serif;
-    --ink: #1F2A36; --ink-soft: #4A5663; --ink-dim: #66727F;
-    --ground: #F3F5F7; --panel: #FFFFFF; --panel-raised: #F6F8FA; --line: #D9DFE5;
-    --accent: #0C8A62; --accent-soft: rgba(12,138,98,0.1); --accent-line: rgba(12,138,98,0.3);
-    --cyan: #1F7A8C; --cyan-soft: rgba(31,122,140,0.1);
-    --ok: #0C8A62; --ok-bg: rgba(12,138,98,0.1); --warn: #B8720F; --warn-bg: rgba(217,140,30,0.12);
-    --bad: #C8372D; --bad-bg: rgba(200,55,45,0.12); --idle: #66727F; --idle-bg: rgba(106,118,131,0.12);
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--ground); color: var(--ink);
-    font: 14.5px/1.85 var(--font-ui);
-    padding: 28px 20px 60px;
-    position: relative;
-  }
-  /* one restrained ambient touch: a faint scanline field, gone when motion is reduced */
-  body::before {
-    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background: repeating-linear-gradient(to bottom, rgba(255,255,255,0) 0px, rgba(255,255,255,0) 1px, transparent 1px, transparent 3px),
-      radial-gradient(ellipse at 50% 0%, rgba(12,138,98,0.05), transparent 60%);
-  }
-  @media (prefers-reduced-motion: reduce) { body::before { display: none; } }
-  .wrap { max-width: 1060px; margin: 0 auto; position: relative; z-index: 1; }
-
-  /* header, styled as a shell prompt */
-  .shell-prompt {
-    direction: ltr; text-align: left; color: var(--ink-dim); font-size: 0.82rem;
-    margin-bottom: 6px; white-space: nowrap; overflow-x: auto;
-  }
-  .shell-prompt .u { color: var(--accent); }
-  .shell-prompt .p { color: var(--cyan); }
-  .shell-prompt .d { color: var(--ink-dim); }
-  .shell-prompt .cmd { color: var(--ink); }
-  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 2px; }
-  h1 { font-size: 1.4rem; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
-  h1 .cursor { color: var(--accent); animation: blink 1.1s step-end infinite; margin-right: 2px; }
-  @media (prefers-reduced-motion: reduce) { h1 .cursor { animation: none; } }
-  h2 {
-    font-size: 0.78rem; font-weight: 700; color: var(--accent); text-transform: uppercase;
-    margin: 30px 0 10px; letter-spacing: 0.06em;
-  }
-  h2::before { content: "# "; color: var(--ink-dim); }
-  .built { color: var(--ink-dim); font-size: 0.78rem; margin-inline-start: auto; direction: ltr; }
-  .lede { color: var(--ink-dim); margin: 0; font-size: 0.86rem; }
-
-  /* status strip */
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 18px; }
-  .tile {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px;
-  }
-  .tile-key {
-    display: block; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
-    color: var(--accent); direction: ltr; text-align: left; margin-bottom: 6px;
-  }
-  .tile b { display: block; font-size: 1.65rem; font-weight: 700; line-height: 1.4; direction: ltr; text-align: left; }
-  .tile-label { color: var(--ink-dim); font-size: 0.78rem; }
-  .tile.alert b { color: var(--bad); }
-  .tile.alert .tile-key { color: var(--bad); }
-  .tile.live b { color: var(--accent); }
-
-  /* usage/statistics — bar lists and a small sparkline, same terminal look */
-  .stat-block { margin-bottom: 16px; }
-  .stat-block h3 {
-    font-size: 0.78rem; font-weight: 700; color: var(--ink-soft); margin: 0 0 8px;
-    letter-spacing: 0.02em;
-  }
-  .bar-list { display: flex; flex-direction: column; gap: 7px; }
-  .bar-row { display: flex; align-items: center; gap: 10px; }
-  .bar-label { width: 150px; flex: none; font-size: 0.82rem; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: ltr; text-align: left; }
-  .bar-track { flex: 1; height: 8px; border-radius: 4px; background: var(--panel-raised); border: 1px solid var(--line); overflow: hidden; min-width: 40px; }
-  .bar-fill { display: block; height: 100%; background: var(--accent); opacity: 0.75; border-radius: 4px; }
-  .bar-value { flex: none; font-size: 0.8rem; color: var(--ink); direction: ltr; text-align: left; white-space: nowrap; }
-  .bar-sub { color: var(--ink-dim); font-size: 0.76rem; }
-
-  .spark { display: flex; align-items: flex-end; gap: 10px; height: 130px; padding-top: 6px; }
-  .spark-col { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; height: 100%; justify-content: flex-end; }
-  .spark-val { font-size: 0.7rem; color: var(--ink-dim); direction: ltr; }
-  .spark-bar { width: 100%; max-width: 34px; background: var(--accent); opacity: 0.75; border-radius: 3px 3px 0 0; min-height: 2px; }
-  .spark-day { font-size: 0.72rem; color: var(--ink-dim); direction: ltr; }
-
-  /* pager for the completed-runs list */
-  .pager { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-  .pager button {
-    font: inherit; font-size: 0.82rem; padding: 5px 10px; border-radius: 5px;
-    border: 1px solid var(--line); background: var(--panel); color: var(--ink-soft); cursor: pointer;
-  }
-  .pager button:hover:not(:disabled) { background: var(--panel-raised); color: var(--ink); }
-  .pager button.current { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); font-weight: 700; }
-  .pager button:disabled { opacity: 0.4; cursor: default; }
-  .pager-total { color: var(--ink-dim); font-size: 0.78rem; margin-right: 4px; }
-
-  /* running now — one terminal window per agent, side by side when several are working */
-  .live-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 12px; }
-  .live-card {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
-    overflow: hidden; display: flex; flex-direction: column;
-  }
-  .win-bar {
-    display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
-    background: var(--panel-raised); border-bottom: 1px solid var(--line); padding: 8px 12px;
-  }
-  .win-dots { display: inline-flex; gap: 5px; flex: none; }
-  .win-dots i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--line); }
-  .win-dots i:nth-child(1) { background: #C8372D; opacity: 0.7; }
-  .win-dots i:nth-child(2) { background: #B8720F; opacity: 0.7; }
-  .win-dots i:nth-child(3) { background: #0C8A62; opacity: 0.7; }
-
-  /* the log, read like a terminal */
-  .term {
-    background: var(--ground); padding: 9px 11px;
-    max-height: 210px; overflow-y: auto;
-    font-family: var(--font-ui);
-    font-size: 0.76rem; line-height: 1.8;
-  }
-  .term-line { display: flex; gap: 8px; align-items: baseline; }
-  .term-prompt { color: var(--accent); opacity: 0.6; direction: ltr; flex: none; }
-  .term-at { color: var(--ink-dim); direction: ltr; flex: none; font-size: 0.72rem; }
-  .term-text { color: var(--ink-soft); min-width: 0; }
-  .term-line.now .term-text { color: var(--ink); }
-  .term-line.now .term-text::after {
-    content: "▌"; margin-right: 2px; color: var(--accent); animation: blink 1.1s step-end infinite;
-  }
-  @keyframes blink { 50% { opacity: 0; } }
-  @media (prefers-reduced-motion: reduce) { .term-line.now .term-text::after { animation: none; } }
-  .term-empty { color: var(--ink-dim); }
-  .dot {
-    width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none;
-    animation: pulse 1.6s ease-in-out infinite;
-  }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-  @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
-  .live-task { font-weight: 700; flex: 1; min-width: 0; }
-  .live-doing { color: var(--ink-dim); font-size: 0.85rem; margin-top: 4px; }
-  .elapsed { color: var(--accent); font-size: 0.8rem; font-weight: 700; direction: ltr; }
-  .live-card .kv { padding: 9px 12px 11px; margin: 0 !important; border-top: 1px solid var(--line); }
-
-  .chip {
-    font-size: 0.74rem; font-weight: 700; padding: 3px 9px; border-radius: 4px;
-    border: 1px solid transparent; white-space: nowrap; font-family: var(--font-ui);
-  }
-  .agent-chip { background: var(--cyan-soft); color: var(--cyan); border-color: rgba(31,122,140,0.3); direction: ltr; }
-  .live-chip { background: transparent; color: var(--cyan); border: 0; padding: 0; direction: ltr; }
-  .status-ok { background: var(--ok-bg); color: var(--ok); border-color: rgba(12,138,98,0.3); }
-  .status-findings { background: var(--warn-bg); color: var(--warn); border-color: rgba(217,140,30,0.35); }
-  .status-failed { background: var(--bad-bg); color: var(--bad); border-color: rgba(200,55,45,0.35); }
-  .status-stopped { background: var(--idle-bg); color: var(--idle); border-color: var(--line); }
-
-  .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
-  .controls input, .controls select {
-    font: inherit; font-size: 0.88rem; padding: 7px 12px; border: 1px solid var(--line);
-    border-radius: 5px; background: var(--panel); color: var(--ink); min-width: 0;
-  }
-  .controls input { flex: 1; min-width: 170px; }
-  .controls input::placeholder { color: var(--ink-dim); }
-  .controls input:focus, .controls select:focus { outline: 1px solid var(--accent); outline-offset: 1px; }
-
-  .runs { display: flex; flex-direction: column; gap: 6px; }
-  .run { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
-  .run-head {
-    display: flex; align-items: center; gap: 10px; padding: 9px 14px; width: 100%;
-    border: 0; background: none; font: inherit; color: inherit; text-align:start; cursor: pointer;
-  }
-  .run-head:hover { background: var(--panel-raised); }
-  .run-head:focus-visible { outline: 1px solid var(--accent); outline-offset: -2px; }
-  .run-agent { color: var(--cyan); font-size: 0.84rem; direction: ltr; flex: none; }
-  .run-task { flex: 1; min-width: 0; font-weight: 400; }
-  .run-meta { color: var(--ink-dim); font-size: 0.76rem; white-space: nowrap; direction: ltr; }
-  .caret { color: var(--ink-dim); transition: transform 0.15s; }
-  .run.open .caret { transform: rotate(-90deg); }
-  .run-body { padding: 12px 14px 14px; border-top: 1px solid var(--line); }
-  .run-body p { margin: 0 0 10px; color: var(--ink-soft); white-space: pre-wrap; }
-  .kv { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.79rem; color: var(--ink-dim); margin-bottom: 10px; }
-  .kv b { color: var(--ink-soft); font-weight: 700; }
-  ul.findings { margin: 0 0 10px; padding-inline-start: 0; list-style: none; }
-  ul.findings li { margin-bottom: 5px; color: var(--ink-soft); }
-  ul.findings .mark { color: var(--warn); opacity: 0.8; margin-left: 7px; direction: ltr; display: inline-block; }
-  .files { display: flex; flex-wrap: wrap; gap: 5px; }
-  .file {
-    font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; direction: ltr;
-    background: var(--panel-raised); border: 1px solid var(--line); color: var(--cyan);
-    font-family: var(--font-ui);
-  }
-
-  /* the agents themselves — a small roster, man-page style */
-  .agents { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px; }
-  .agent { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 13px 15px; }
-  .agent-top { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-  .agent-name { font-weight: 700; direction: ltr; font-family: var(--font-ui); font-size: 0.88rem; color: var(--accent); }
-  .agent-flags {
-    font-size: 0.74rem; color: var(--ink-dim); direction: ltr; text-align: left;
-    font-family: var(--font-ui); margin-bottom: 8px;
-  }
-  .agent-title { font-weight: 700; font-size: 0.88rem; margin-bottom: 4px; color: var(--ink); }
-  .agent-desc { color: var(--ink-soft); font-size: 0.82rem; direction: ltr; text-align: left; }
-  .agent-desc.fa { direction:rtl; text-align:right; }
-
-  .empty { background: var(--panel); border: 1px dashed var(--line); border-radius: 8px; padding: 30px; text-align: center; color: var(--ink-dim); }
-  .empty code { background: var(--panel-raised); padding: 2px 6px; border-radius: 4px; direction: ltr; display: inline-block; color: var(--cyan); }
-  .note { color: var(--ink-dim); font-size: 0.79rem; margin: 8px 2px 0; }
-
-  /* live-mode badge next to the title */
-  .mode { display: inline-flex; align-items: center; gap: 6px; font-size: 0.76rem; color: var(--accent); direction: ltr; animation: pulse 1.6s ease-in-out infinite; }
-  .mode.stale { color: var(--bad); animation: none; }
-  @media (prefers-reduced-motion: reduce) { .mode { animation: none; } }
-  @media (max-width: 560px) { .run-meta { display: none; } }
-`
-
-const SCRIPT = `
-const STATUS = {
-  ok: T('No issues'), findings: T('Has findings'), failed: T('Failed'), stopped: T('Stopped'),
-};
-// the bracketed terminal-style code shown on each status chip; STATUS above still
-// feeds the status filter dropdown.
-const STATUS_CODE = { ok: T('OK'), findings: T('FINDINGS'), failed: T('FAILED'), stopped: T('STOPPED') };
-const el = (id) => document.getElementById(id);
-const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const when = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString(LANG === 'fa' ? 'fa-IR' : 'en-GB'); };
-// digits with a thousands separator (155,703).
-const fmt = (n) => (n || 0).toLocaleString(LANG === 'fa' ? 'fa-IR' : 'en-US');
-
-function took(ms) {
-  if (!ms) return '';
-  const s = Math.round(ms / 1000);
-  if (s < 60) return s + 's';
-  const m = Math.floor(s / 60);
-  if (m < 60) return m + 'm' + (s % 60 ? ' ' + (s % 60) + 's' : '');
-  return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
-}
-
-function tiles() {
-  const flagged = DATA.runs.filter((r) => r.status === 'findings' || r.status === 'failed');
-  const time = DATA.runs.reduce((a, r) => a + (r.durMs || 0), 0);
-  const items = [
-    [T('RUNNING'), T('Running'), DATA.active.length, DATA.active.length ? 'live' : ''],
-    [T('DONE'), T('Runs done'), DATA.runs.length, ''],
-    [T('AGENTS'), T('Agents defined'), DATA.agents.length, ''],
-    [T('FINDINGS'), T('Runs with findings'), flagged.length, flagged.length ? 'alert' : ''],
-    [T('TIME'), T('Time spent'), took(time) || '0', ''],
-  ];
-  el('tiles').innerHTML = items.map(([key, label, value, kind]) =>
-    '<div class="tile ' + kind + '"><span class="tile-key">[ ' + key + ' ]</span><b>' + esc(typeof value === 'number' ? fmt(value) : value) + '</b><span class="tile-label">' + esc(label) + '</span></div>').join('');
-}
-
-/** Everything the usage section shows, recomputed from the given runs each
- *  render — the caller narrows this to one project when that filter is set,
- *  so the whole stats section scopes with it. */
-function computeStats(runs) {
-  const now = new Date();
-  const isToday = (iso) => {
-    const d = new Date(iso);
-    return !isNaN(d) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-  };
-  const totalTokens = runs.reduce((a, r) => a + (r.tokens || 0), 0);
-  const todayTokens = runs.filter((r) => isToday(r.finishedAt)).reduce((a, r) => a + (r.tokens || 0), 0);
-
-  const byAgent = new Map();
-  for (const r of runs) {
-    const k = r.agent || T('unknown');
-    const e = byAgent.get(k) || { name: k, tokens: 0, runs: 0, time: 0 };
-    e.tokens += r.tokens || 0; e.runs += 1; e.time += r.durMs || 0;
-    byAgent.set(k, e);
-  }
-  const agents = [...byAgent.values()]
-    .map((a) => ({ ...a, avgTokens: a.runs ? Math.round(a.tokens / a.runs) : 0, avgTime: a.runs ? Math.round(a.time / a.runs) : 0 }))
-    .sort((a, b) => b.tokens - a.tokens);
-
-  const byModel = new Map();
-  for (const r of runs) {
-    const label = (r.modelKey || T('unknown')) + (r.effort ? ' · ' + r.effort : '');
-    const e = byModel.get(label) || { name: label, tokens: 0, runs: 0 };
-    e.tokens += r.tokens || 0; e.runs += 1;
-    byModel.set(label, e);
-  }
-  const models = [...byModel.values()].sort((a, b) => b.tokens - a.tokens);
-
-  const byProject = new Map();
-  for (const r of runs) {
-    const k = r.projectKey || T('unknown');
-    const e = byProject.get(k) || { name: k, runs: 0 };
-    e.runs += 1;
-    byProject.set(k, e);
-  }
-  const projects = [...byProject.values()].sort((a, b) => b.runs - a.runs);
-
-  // Last 7 calendar days including today, oldest first, by local day boundary.
-  const days = [];
-  for (let i = 6; i >= 0; i--) {
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
-    const tokens = runs
-      .filter((r) => { const t = new Date(r.finishedAt).getTime(); return t >= start.getTime() && t < end.getTime(); })
-      .reduce((a, r) => a + (r.tokens || 0), 0);
-    days.push({ label: start.toLocaleDateString(LANG === 'fa' ? 'fa-IR' : 'en-CA', { month: '2-digit', day: '2-digit' }), tokens });
-  }
-
-  return { totalTokens, todayTokens, agents, models, projects, days };
-}
-
-/** A horizontal bar list: items already sorted, key is the value each bar's width is based on. */
-function barList(items, key, extra) {
-  if (!items.length) return '<div class="empty">' + T('No data.') + '</div>';
-  const max = Math.max(...items.map((i) => i[key]), 1);
-  return '<div class="bar-list">' + items.map((i) => {
-    const pct = i[key] ? Math.max(2, Math.round((i[key] / max) * 100)) : 0;
-    return '<div class="bar-row">'
-      + '<span class="bar-label">' + esc(i.name) + '</span>'
-      + '<span class="bar-track"><span class="bar-fill" style="width:' + pct + '%"></span></span>'
-      + '<span class="bar-value">' + fmt(i[key]) + (extra ? extra(i) : '') + '</span>'
-      + '</div>';
-  }).join('') + '</div>';
-}
-
-function stats() {
-  const project = el('project').value;
-  const runs = project ? DATA.runs.filter((r) => (r.projectKey || '') === project) : DATA.runs;
-  const s = computeStats(runs);
-  const agentExtra = (a) => ' <span class="bar-sub">(' + fmt(a.runs) + T(' runs · avg ') + fmt(a.avgTokens)
-    + T(' tokens · total time ') + (took(a.time) || T('unknown')) + T(' · avg time ') + (took(a.avgTime) || T('unknown')) + ')</span>';
-  const modelExtra = (m) => ' <span class="bar-sub">(' + fmt(m.runs) + T(' runs)') + '</span>';
-
-  const maxDay = Math.max(...s.days.map((d) => d.tokens), 1);
-  const spark = '<div class="spark">' + s.days.map((d) => {
-    const h = d.tokens ? Math.max(3, Math.round((d.tokens / maxDay) * 100)) : 2;
-    return '<div class="spark-col">'
-      + '<span class="spark-val">' + fmt(d.tokens) + '</span>'
-      + '<span class="spark-bar" style="height:' + h + '%"></span>'
-      + '<span class="spark-day">' + esc(d.label) + '</span>'
-      + '</div>';
-  }).join('') + '</div>';
-
-  el('stats').innerHTML =
-    '<div class="tiles">'
-    + '<div class="tile"><span class="tile-key">[ ' + T('TOKENS') + ' ]</span><b>' + fmt(s.totalTokens) + '</b><span class="tile-label">' + T('Total tokens used (all time)') + '</span></div>'
-    + '<div class="tile"><span class="tile-key">[ ' + T('TOKENS') + ' ]</span><b>' + fmt(s.todayTokens) + '</b><span class="tile-label">' + T('Tokens used today') + '</span></div>'
-    + '</div>'
-    + '<div class="stat-block"><h3>' + T('Tokens and time by agent') + '</h3>' + barList(s.agents, 'tokens', agentExtra) + '</div>'
-    + '<div class="stat-block"><h3>' + T('Tokens and runs by model') + '</h3>' + barList(s.models, 'tokens', modelExtra) + '</div>'
-    + '<div class="stat-block"><h3>' + T('Runs by project') + '</h3>' + barList(s.projects, 'runs') + '</div>'
-    + '<div class="stat-block"><h3>' + T('Tokens used in the last 7 days') + '</h3>' + spark + '</div>';
-}
-
-function liveCards() {
-  const box = el('live');
-  if (!DATA.active.length) {
-    box.innerHTML = '<div class="empty">' + T('No agent is working right now.') + '</div>';
-    return;
-  }
-  const clock = (iso) => {
-    const d = new Date(iso);
-    return isNaN(d) ? '' : String(d.getHours()).padStart(2, '0') + ':'
-      + String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0');
-  };
-  box.innerHTML = '<div class="live-grid">' + DATA.active.map((a) => {
-    const steps = a.steps && a.steps.length ? a.steps : (a.doing ? [{ at: a.startedAt, text: a.doing }] : []);
-    const log = steps.length
-      ? steps.map((s, i) => '<div class="term-line' + (i === steps.length - 1 ? ' now' : '') + '">'
-        + '<span class="term-prompt">' + (i === steps.length - 1 ? '❯' : '$') + '</span>'
-        + '<span class="term-at">' + esc(clock(s.at)) + '</span>'
-        + '<span class="term-text">' + esc(s.text) + '</span></div>').join('')
-      : '<div class="term-empty">' + T('Waiting for the first report from this agent…') + '</div>';
-    return '<div class="live-card">'
-      + '<div class="win-bar">'
-      + '<span class="win-dots" aria-hidden="true"><i></i><i></i><i></i></span>'
-      + '<span class="dot" aria-hidden="true"></span>'
-      + '<span class="chip live-chip">' + esc(a.agent) + '</span>'
-      + '<span class="live-task">' + esc(a.task) + '</span>'
-      + '<span class="elapsed" data-since="' + esc(a.startedAt) + '"></span>'
-      + '</div>'
-      + '<div class="term" data-log="1">' + log + '</div>'
-      + '<div class="kv" style="margin:0">'
-      + '<span><b>' + T('Model:') + '</b> ' + esc(a.model || '—') + (a.effort ? ' (' + esc(a.effort) + ')' : '') + '</span>'
-      + (a.project ? '<span><b>' + T('Project:') + '</b> ' + esc(a.project) + '</span>' : '')
-      + '<span><b>' + T('Started:') + '</b> ' + esc(when(a.startedAt)) + '</span>'
-      + '<span><b>' + T('Steps:') + '</b> ' + fmt(steps.length) + '</span>'
-      + '</div></div>';
-  }).join('') + '</div>';
-  // Follow the newest line, the way a terminal does.
-  document.querySelectorAll('.term[data-log]').forEach((t) => { t.scrollTop = t.scrollHeight; });
-  tick();
-}
-
-function tick() {
-  const now = Date.now();
-  document.querySelectorAll('.elapsed').forEach((s) => {
-    const started = new Date(s.dataset.since).getTime();
-    s.textContent = isNaN(started) ? '' : took(Math.max(1000, now - started)) + ' so far';
-  });
-}
-
-// Runs have no stored id, so this is what identifies the same run across a
-// live-refresh rebuild: stable enough to keep the reader's page and open rows
-// where they left them, since these three fields never change once written.
-const runKey = (r) => (r.finishedAt || '') + '|' + (r.agent || '') + '|' + (r.task || '');
-
-function card(r, open) {
-  const status = Object.prototype.hasOwnProperty.call(STATUS, r.status) ? r.status : 'ok';
-  const meta = [r.modelKey && r.modelKey + (r.effort ? ' · ' + r.effort : ''), r.projectKey, took(r.durMs), when(r.finishedAt)]
-    .filter(Boolean).join(' · ');
-  const findings = (r.findings || []).map((f) => '<li><span class="mark">!</span>' + esc(f) + '</li>').join('');
-  const files = (r.files || []).map((f) => '<span class="file">' + esc(f) + '</span>').join('');
-  return '<div class="run' + (open ? ' open' : '') + '">'
-    + '<button class="run-head" type="button" aria-expanded="' + (open ? 'true' : 'false') + '" data-key="' + esc(runKey(r)) + '">'
-    + '<span class="caret" aria-hidden="true">&lsaquo;</span>'
-    + '<span class="chip status-' + status + '">[ ' + STATUS_CODE[status] + ' ]</span>'
-    + '<span class="run-agent">' + esc(r.agent) + '</span>'
-    + '<span class="run-task">' + esc(r.task) + '</span>'
-    + '<span class="run-meta">' + esc(meta) + '</span>'
-    + '</button>'
-    + '<div class="run-body"' + (open ? '' : ' hidden') + '>'
-    + '<div class="kv"><span><b>' + T('Model:') + '</b> ' + esc(r.model || '—') + (r.effort ? ' (' + esc(r.effort) + ')' : '') + '</span>'
-    + '<span><b>' + T('Finished:') + '</b> ' + esc(when(r.finishedAt)) + '</span>'
-    + (r.durMs ? '<span><b>' + T('Duration:') + '</b> ' + esc(took(r.durMs)) + '</span>' : '')
-    + (r.command ? '<span><b>' + T('Command:') + '</b> <span class="file">' + esc(r.command) + '</span></span>' : '') + '</div>'
-    + (r.summary ? '<p>' + esc(r.summary) + '</p>' : '')
-    + (findings ? '<ul class="findings">' + findings + '</ul>' : '')
-    + (files ? '<div class="files">' + files + '</div>' : '')
-    + '</div></div>';
-}
-
-const PAGE_SIZE = 10;
-let page = 1;
-const expandedKeys = new Set();
-
-/** Filters only — paging and the open/closed rows are handled by render(). */
-function filteredRuns() {
-  const q = el('q').value.trim().toLowerCase();
-  const agent = el('agent').value;
-  const status = el('status').value;
-  const project = el('project').value;
-  return DATA.runs.filter((r) => {
-    if (agent && r.agent !== agent) return false;
-    if (status && r.status !== status) return false;
-    if (project && (r.projectKey || '') !== project) return false;
-    if (!q) return true;
-    return JSON.stringify(r).toLowerCase().includes(q);
-  });
-}
-
-function renderPager(totalPages, total) {
-  const box = el('pager');
-  if (totalPages <= 1) { box.innerHTML = ''; return; }
-  let html = '<div class="pager">'
-    + '<button type="button" data-page="' + (page - 1) + '"' + (page === 1 ? ' disabled' : '') + '>&laquo; ' + T('Previous') + '</button>';
-  for (let p = 1; p <= totalPages; p++) {
-    html += '<button type="button" class="' + (p === page ? 'current' : '') + '" data-page="' + p + '">' + fmt(p) + '</button>';
-  }
-  html += '<button type="button" data-page="' + (page + 1) + '"' + (page === totalPages ? ' disabled' : '') + '>' + T('Next') + ' &raquo;</button>'
-    + '<span class="pager-total">' + fmt(total) + T(' items') + '</span></div>';
-  box.innerHTML = html;
-}
-
-function render() {
-  if (!DATA.runs.length) {
-    el('runs').innerHTML = '<div class="empty">' + T('No agent has done any work yet.') + '</div>';
-    el('pager').innerHTML = '';
-    return;
-  }
-  const shown = filteredRuns();
-  if (!shown.length) {
-    el('runs').innerHTML = '<div class="empty">' + T('Nothing matches this search.') + '</div>';
-    el('pager').innerHTML = '';
-    return;
-  }
-  const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
-  if (page > totalPages) page = totalPages;
-  if (page < 1) page = 1;
-  const start = (page - 1) * PAGE_SIZE;
-  const pageItems = shown.slice(start, start + PAGE_SIZE);
-  el('runs').innerHTML = pageItems.map((r) => card(r, expandedKeys.has(runKey(r)))).join('');
-  renderPager(totalPages, shown.length);
-}
-
-/** A filter change starts the reader back at the newest page of the new list.
- *  The project filter also scopes the stats section, so redraw that too. */
-function onFilterChange() {
-  page = 1;
-  stats();
-  render();
-}
-
-function agentCards() {
-  el('agents').innerHTML = DATA.agents.length
-    ? DATA.agents.map((a) =>
-      '<div class="agent"><div class="agent-top">'
-      + '<span class="agent-name">' + esc(a.name) + '</span>'
-      + '</div>'
-      + '<div class="agent-flags">--model ' + esc(a.model || '—') + (a.effort ? ' --effort ' + esc(a.effort) : '') + '</div>'
-      + (a.title ? '<div class="agent-title">' + esc(a.title) + '</div>' : '')
-      + (LANG === 'fa' && a.titleFa ? '<div class="agent-title">' + esc(a.titleFa) + '</div>' : '')
-      + '<div class="agent-desc' + (LANG === 'fa' && a.hasFa ? ' fa' : '') + '">' + esc(LANG === 'fa' ? a.descriptionFa : a.descriptionEn) + '</div></div>').join('')
-    : '<div class="empty">' + T('No agent is defined yet.') + '</div>';
-}
-
-/** The agent filter keeps whatever the reader picked, even as new agents appear. */
-function agentOptions() {
-  const chosen = el('agent').value;
-  const names = [...new Set(DATA.runs.map((r) => r.agent))].sort();
-  el('agent').innerHTML = '<option value="">' + T('All agents') + '</option>'
-    + names.map((n) => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join('');
-  if (names.includes(chosen)) el('agent').value = chosen;
-}
-
-/** Same idea, for the project filter — this is what lets one machine's
- *  dashboard cover every project, not just the one it was built for. */
-function projectOptions() {
-  const chosen = el('project').value;
-  const names = [...new Set(DATA.runs.map((r) => r.projectKey).filter(Boolean))].sort();
-  el('project').innerHTML = '<option value="">' + T('All projects') + '</option>'
-    + names.map((n) => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join('');
-  if (names.includes(chosen)) el('project').value = chosen;
-}
-
-function renderAll() {
-  // Options first: stats() and render() below both read the project filter's
-  // current value, which this rebuilds without losing what the reader picked.
-  agentOptions();
-  projectOptions();
-  tiles();
-  stats();
-  liveCards();
-  agentCards();
-  render();
-  el('built').textContent = T('Updated at ') + when(DATA.builtAt);
-}
-
-renderAll();
-setInterval(tick, 1000);
-
-el('q').addEventListener('input', onFilterChange);
-el('agent').addEventListener('change', onFilterChange);
-el('project').addEventListener('change', onFilterChange);
-el('status').addEventListener('change', onFilterChange);
-el('runs').addEventListener('click', (e) => {
-  const head = e.target.closest('.run-head');
-  if (!head) return;
-  const run = head.parentElement;
-  const body = run.querySelector('.run-body');
-  const open = body.hidden;
-  body.hidden = !open;
-  run.classList.toggle('open', open);
-  head.setAttribute('aria-expanded', String(open));
-  const key = head.dataset.key;
-  if (open) expandedKeys.add(key); else expandedKeys.delete(key);
-});
-el('pager').addEventListener('click', (e) => {
-  const btn = e.target.closest('button[data-page]');
-  if (!btn || btn.disabled) return;
-  const p = Number(btn.dataset.page);
-  if (!p || p === page) return;
-  page = p;
-  render();
-});
-
-if (LIVE) {
-  // Served by the local server: ask it for the state and redraw only when
-  // something actually changed, so an opened row is not closed under the
-  // reader's hands every second.
-  let last = JSON.stringify([DATA.runs, DATA.active, DATA.agents]);
-  let stateTag = '';
-  const badge = el('mode');
-  async function poll() {
-    try {
-      // 304 with no body while nothing changed on disk
-      const res = await fetch('api/state', { cache: 'no-store', headers: stateTag ? { 'If-None-Match': stateTag } : {} });
-      if (res.status !== 304 && !res.ok) throw new Error('HTTP ' + res.status);
-      badge.className = 'mode';
-      badge.textContent = T('● Live');
-      if (res.status === 304) { el('built').textContent = T('Updated at ') + when(new Date().toISOString()); return; }
-      stateTag = res.headers.get('ETag') || '';
-      const fresh = await res.json();
-      const now = JSON.stringify([fresh.runs, fresh.active, fresh.agents]);
-      if (now === last) { el('built').textContent = T('Updated at ') + when(fresh.builtAt); return; }
-      last = now;
-      DATA = fresh;
-      renderAll();
-    } catch {
-      badge.className = 'mode stale';
-      badge.textContent = T('● Disconnected from server');
-    }
-  }
-  poll();
-  setInterval(poll, 1500);
-} else {
-  // The built file: it reloads itself, so keep the reader where they were.
-  try {
-    const saved = JSON.parse(sessionStorage.getItem('agent-dashboard') || '{}');
-    if (saved.q) el('q').value = saved.q;
-    if (saved.agent) el('agent').value = saved.agent;
-    if (saved.project) el('project').value = saved.project;
-    if (saved.status) el('status').value = saved.status;
-    if (saved.q || saved.agent || saved.project || saved.status) { stats(); render(); }
-    if (saved.y) window.scrollTo(0, saved.y);
-    window.addEventListener('beforeunload', () => {
-      try {
-        sessionStorage.setItem('agent-dashboard', JSON.stringify({
-          q: el('q').value, agent: el('agent').value, project: el('project').value, status: el('status').value, y: window.scrollY,
-        }));
-      } catch { /* a private window simply forgets */ }
-    });
-  } catch { /* the page works without this */ }
-}
-`
-
-/** The archive: every run ever recorded, with filters and usage.
- *  `live` swaps the self-reloading file for server polling. */
-function renderArchive(state, opts = {}) {
-  const live = !!opts.live
-  // English is the only language (dashboard-strings.cjs); opts.lang is not read
-  const lang = 'en'
-  const T = (key) => t(lang, key)
-  const dir = 'ltr'
-  // "<" escaped, so a task description containing markup can never break out
-  // of the script tag.
-  const data = JSON.stringify(state).replace(/</g, '\\u003c')
-  const refresh = live ? '' : `<meta http-equiv="refresh" content="${state.active.length ? 4 : 15}" />`
-  return `<!DOCTYPE html>
-<html lang="${lang}" dir="${dir}">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-${refresh}
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 rx=%273%27 fill=%27%230A0F14%27/%3E%3Crect x=%273%27 y=%273%27 width=%2710%27 height=%2710%27 fill=%27%233BE8B0%27/%3E%3C/svg%3E" />
-<title>Arsenale · ${T('Archive')}</title>
-<style>${STYLE}</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="shell-prompt"><span class="u">user@host</span><span class="d">:</span><span class="p">~/agents</span><span class="d">$</span> <span class="cmd">watch --agents</span></div>
-  <header>
-    <h1>Arsenale · ${T('Archive')}<span class="cursor" aria-hidden="true">▌</span></h1>
-    ${live ? '<span class="mode" id="mode">' + T('● Live') + '</span>' : ''}
-    <span class="built" id="built"></span>
-    <a class="chip agent-chip" style="text-decoration:none" href="${live ? './' : 'agent-dashboard.html'}">${T('Today’s office ←')}</a>
-  </header>
-  <p class="lede">${T('Every task ever given to an agent: what was asked, which model did it, and what came back.')}</p>
-
-  <div class="tiles" id="tiles"></div>
-
-  <h2>${T('Usage stats')}</h2>
-  <div id="stats"></div>
-
-  <h2>${T('Running right now')}</h2>
-  <div id="live"></div>
-  <p class="note">${live
-    ? T('This page asks the local server for fresh state every 1.5 seconds; it does not move until something actually changes.')
-    : T('This page refreshes itself every few seconds and is rebuilt on every logged event.')}</p>
-
-  <h2>${T('Runs done')}</h2>
-  <div class="controls">
-    <input id="q" type="search" placeholder="${T('Search tasks, files and findings…')}" aria-label="${T('Search')}" />
-    <select id="agent" aria-label="${T('Filter by agent')}"><option value="">${T('All agents')}</option></select>
-    <select id="project" aria-label="${T('Filter by project')}"><option value="">${T('All projects')}</option></select>
-    <select id="status" aria-label="${T('Filter by result')}">
-      <option value="">${T('Any result')}</option>
-      <option value="ok">${T('No issues')}</option>
-      <option value="findings">${T('Has findings')}</option>
-      <option value="failed">${T('Failed')}</option>
-      <option value="stopped">${T('Stopped')}</option>
-    </select>
-  </div>
-  <div class="runs" id="runs"></div>
-  <div id="pager"></div>
-
-  <h2>${T('Agents defined')}</h2>
-  <div class="agents" id="agents"></div>
-  <p class="note">${T('Each agent is defined in a Markdown file in the agent folders, and their shared rules are in <code>AGENT-RULES.md</code>. Agents can build a new agent themselves, under the same rules.')}</p>
-</div>
-
-<script>
-let DATA = ${data};
-const LIVE = ${live};
-${langScript(lang, live)}
-${SCRIPT}
-</script>
-</body>
-</html>
-`
-}
-
 /** The page the dashboard opens on: the campus when a company is set up,
  *  else today's office. */
 const renderPage = (state, opts) => renderOffice(state, Object.assign({}, opts || {}, { company: (opts && opts.company) || companyOf(state) }))

@@ -90,9 +90,41 @@ test('demo: serves invented data from a temporary folder and never touches the u
   assert.deepEqual(hashTree(home), beforeHome, 'the home folder is untouched')
 })
 
+test('H6: demo --no-open with stdout in a file writes the key URL within 5 s, before its seed; the first request waits for the seed; its PID stops it', async (t) => {
+  const sb = makeSandbox()
+  const out = path.join(sb.base, 'out.txt')
+  const fd = fs.openSync(out, 'w')
+  const port = 43000 + Math.floor(Math.random() * 2000)
+  const t0 = Date.now()
+  const child = spawn(process.execPath, [BIN, 'demo', '--port', String(port), '--no-open'], { env: sb.env, stdio: ['ignore', fd, fd] })
+  fs.closeSync(fd)
+  const exited = new Promise((res) => child.on('exit', res))
+  let folder = ''
+  // a killed demo cannot remove its folder itself
+  t.after(() => { try { process.kill(child.pid) } catch { /* stopped */ } sb.cleanup(); if (folder) fs.rmSync(folder, { recursive: true, force: true }) })
+  let text = ''
+  while (Date.now() - t0 < 30000 && !/\?k=[a-f0-9]{64}/.test(text)) { await new Promise((r) => setTimeout(r, 50)); text = fs.readFileSync(out, 'utf8') }
+  const took = Date.now() - t0
+  const m = /Arsenale demo \(invented data\): (http:\S+\?k=([a-f0-9]{64}))/.exec(text)
+  assert.ok(m, 'no key URL in the file: ' + text)
+  // the seed comes after the address, so the folder it names is still filling
+  folder = /Data folder: (.+)/.exec(text)[1].trim()
+  assert.ok(path.basename(folder).startsWith('arsenale-demo-'), folder)
+  const seeded = fs.existsSync(path.join(folder, 'company', 'issues'))
+  // a request made now waits for the seed and sees the whole invented company
+  const cookie = (await get(port, '/?k=' + m[2])).headers['set-cookie'][0].split(';')[0]
+  const tasks = JSON.parse((await get(port, '/api/tasks', cookie)).text).tasks
+  assert.ok(tasks.length >= 3, 'the seeded tasks are there: ' + tasks.length)
+  assert.equal(seeded, false, 'the key URL came only after the seed')
+  assert.ok(took < 5000, 'the key URL took ' + took + ' ms')
+  process.kill(child.pid)
+  await exited
+})
+
 test('arsenale open: prints the address with the data folder\'s key; with no key yet it says to serve first', (t) => {
   const sb = makeSandbox()
   t.after(() => sb.cleanup())
+  fs.rmSync(path.join(sb.root, 'launch-key'), { force: true }) // the sandbox makes one for the CLI board tests
   const none = run(['open', '--no-open'], sb.env)
   assert.equal(none.status, 1)
   assert.match(none.stderr, /arsenale serve/)

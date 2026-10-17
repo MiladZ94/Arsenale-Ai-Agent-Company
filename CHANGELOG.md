@@ -5,36 +5,29 @@ All notable changes are listed here. Versions follow
 
 ## Unreleased
 
-- **Office v3: a room on the ground, and people who walk.** No shadows and
-  nothing floating: the desks, the supervisor's station and the campus plots
-  stand on the light ground grid. Each office has a work area with low
-  screens, the supervisor's station in the middle (lilac platform, the in-tray
-  on its desk, a sign), a lounge with sofas and a coffee bar, a reception by
-  the door, windows, and wall screens with today's projects. People walk from
-  the lounge to the supervisor and their desk when they start, and back by the
-  supervisor (the report into the tray) to the lounge when they finish, driven
-  by the states the page already has; a change halfway is taken from where
-  they are. The default character has new `Walk` and `Stand` clips; a file
-  without them moves in its idle pose.
+- **Security hardening.** CLI actions that claim `"by":"board"` (campus, budgets, approvals, gate answers) need the owner's launch key in `ARSENALE_BOARD_TOKEN` (or `--board-token`); without it they act as an agent and board-only actions are refused. Supervisor campus edits need an active version run whose process is alive or that was updated in the last 30 minutes. `arsenale init` skips a symbolic link at a destination instead of writing through it.
+- **Autonomous version runs.** `arsenale init` sets up agents, skills, PROJECT.md and the autonomous files; `arsenale autonomous start|status|resume <version>` keeps the state file and its mirror; a Version run page shows phases, token budget, agents, owner gates and review reports (a run selector when more than two runs are active). Run records carry optional `versionRun`, `phase`, `pid` and `tier`; a 4th heavy-tier run at once is refused, and `resume` closes runs whose process is gone. `arsenale awake` holds a Mac or Linux machine awake. The essential rules ship as `autonomous/RULES.md`. A version must look like `1.2` or `1.2.3-beta.1`.
+- **Header and office.** The top bar fits at 1366 wide ("Live" with the interval as a tooltip), the office strip and the lounge show one idle count, and no label touches a desk.
+- **Dry-run fixes.** `arsenale init --dry-run` shows the whole plan and a declined `init` writes nothing (not even `docs/specs`); `arsenale campus --help` (and the other short modes) print the help; `--version-run` takes a `reviews` list for the Version run page; a gate or decision can name its run with `versionRun`; a supervisor campus change needs a reason and is listed under its run; the round cap and the slow-suite note are in the autonomous rules; waiting-question and phone callouts lose the thick left stripe.
+- **Campus builder and a calmer office (design C2).** The campus is a board of lots
+  drawn in 3D from code: 12 building types, a Build mode with a hotbar (keys 1 to 9),
+  move, rotate and archive tools, a ghost building and a "Lot taken" refusal. The
+  layout is `company/campus.json`; an older company is laid out as before and nothing
+  is written until the first change. `arsenale campus` lets the supervisor place and
+  move buildings in an autonomous run (each change is a decision). The office is
+  walled zone rooms with one figure per run (two runs of one agent are two figures),
+  a side list with the step and state, "N idle" in the lounge, one avatar style
+  everywhere, state by shape as well as colour, and labels that never cover a figure
+  or each other. No portrait cards and no character files any more. `tools/assets/`
+  and `manifest.json` are ready for CC0 models; none ships.
 - **One light theme everywhere**: the header, the panels, the waiting rail,
   the org chart, activity, archive, dialogs and the 1.0 screens.
-- **English only, for now.** The EN/FA switch, the Persian strings and the
-  `?lang=` and `dash-lang` cookie handling are gone; every page is English.
-- **The office in 3D.** One floating podium per person with a desk, a chair
-  and their character, a portrait card framed by their state, the handed-in
-  tray, and a camera that pans, orbits, zooms and survives every redraw. The
-  bubbles, the details panel, the shift board and the questions waiting for
-  you are the same as before. Without WebGL the flat office stays.
-- **A light campus.** White isometric buildings on plinths, one plot per
-  office, no streets or trees, the office's card above its building, zoom and
-  pan.
-- **Characters.** A default character (`tools/characters/default.glb`, CC0,
-  made by `make-default-character.cjs`) with the clips Idle, Typing, Thinking
-  and Celebrate; replace it per person by dropping a `.glb` on a podium or with
-  `ARSENALE_HOME/characters/<agent>.glb`.
+- **English only.** The language switch, all other-language strings, data and
+  files, and the `?lang=` and `dash-lang` cookie handling are gone; every page
+  is English.
 - three.js r184 is pinned in `tools/vendor/three/` and inlined into the page.
   The page's Content-Security-Policy now allows `blob:` images and fetches,
-  which GLTFLoader uses for the textures inside a dropped character file.
+  which GLTFLoader uses for the textures of an asset model.
 - Every font is Arial, in weights 400 and 700.
 
 ## 1.0.0 (2026-10-06)

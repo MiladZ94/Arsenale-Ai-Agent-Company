@@ -1,0 +1,75 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs, design, verify, ship, plan, ops, data or legal.",
+  "agent-builder": {
+    "dept": "docs"
+  },
+  "architecture-reviewer": {
+    "dept": "review"
+  },
+  "code-reviewer": {
+    "dept": "review"
+  },
+  "data-migration": {
+    "dept": "review"
+  },
+  "dev-docs": {
+    "dept": "docs"
+  },
+  "docs-explainer": {
+    "dept": "docs"
+  },
+  "domain-validator": {
+    "dept": "review"
+  },
+  "engineering-lead": {
+    "dept": "lead"
+  },
+  "feature-scout": {
+    "dept": "design"
+  },
+  "finding-verifier": {
+    "dept": "review"
+  },
+  "implementer": {
+    "dept": "build"
+  },
+  "office-lead": {
+    "dept": "lead"
+  },
+  "performance": {
+    "dept": "review"
+  },
+  "product-lead": {
+    "dept": "lead"
+  },
+  "release-builder": {
+    "dept": "build"
+  },
+  "release-manager": {
+    "dept": "build"
+  },
+  "research-lead": {
+    "dept": "lead"
+  },
+  "security-reviewer": {
+    "dept": "review"
+  },
+  "spec-writer": {
+    "dept": "design"
+  },
+  "tester": {
+    "dept": "build"
+  },
+  "ui-designer": {
+    "dept": "design"
+  },
+  "user-guide": {
+    "dept": "docs"
+  },
+  "ux-reviewer": {
+    "dept": "design"
+  },
+  "visual-qa": {
+    "dept": "design"
+  }
+}

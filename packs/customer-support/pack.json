@@ -4,14 +4,11 @@
   "id": "customer-support",
   "version": "1.0.0",
   "name": "Customer support",
-  "nameFa": "پشتیبانی مشتریان",
   "description": "Draft replies in your brand tone, write FAQs, sort and tag exported tickets and summarise customer feedback. Replies are drafts; nothing is ever sent for you.",
-  "descriptionFa": "پیش‌نویس پاسخ‌ها با لحن برند، نوشتن پرسش‌های متداول، مرتب‌سازی و برچسب‌گذاری تیکت‌های خروجی‌گرفته‌شده و خلاصه‌سازی بازخورد مشتریان؛ هیچ پیامی از طرف شما ارسال نمی‌شود.",
   "minArsenale": "1.0.0",
   "office": {
     "id": "support",
     "name": "Customer support",
-    "nameFa": "پشتیبانی مشتریان",
     "theme": "cyan",
     "profile": "support",
     "lead": "support-lead"
@@ -22,7 +19,6 @@
       "id": "support-lead",
       "zone": "lead",
       "title": "Support Lead",
-      "titleFa": "مدیر پشتیبانی",
       "tier": "standard"
     },
     {
@@ -30,7 +26,6 @@
       "id": "reply-drafter",
       "zone": "docs",
       "title": "Reply Drafter",
-      "titleFa": "نویسنده‌ی پیش‌نویس پاسخ",
       "tier": "standard"
     },
     {
@@ -38,7 +33,6 @@
       "id": "faq-writer",
       "zone": "docs",
       "title": "FAQ Writer",
-      "titleFa": "نویسنده‌ی پرسش‌های متداول",
       "tier": "standard"
     },
     {
@@ -46,7 +40,6 @@
       "id": "ticket-triager",
       "zone": "review",
       "title": "Ticket Triager",
-      "titleFa": "مرتب‌کننده‌ی تیکت‌ها",
       "tier": "light"
     },
     {
@@ -54,7 +47,6 @@
       "id": "feedback-summariser",
       "zone": "build",
       "title": "Feedback Summariser",
-      "titleFa": "خلاصه‌کننده‌ی بازخورد",
       "tier": "standard"
     }
   ],

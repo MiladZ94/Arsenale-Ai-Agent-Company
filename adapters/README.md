@@ -6,7 +6,7 @@ just the text and settings that make a given tool call that command.
 
 | Tool | Where the instructions go | Agent team | Token counts | Installer |
 |---|---|---|---|---|
-| [Claude Code](claude-code/) | `~/.claude/CLAUDE.md` | native sub-agents (`agents/*.md`), `/feature` and `/fix` skills | from transcripts, or the usage block | asks, then installs |
+| [Claude Code](claude-code/) | `~/.claude/CLAUDE.md` | native sub-agents (`agents/*.md`), `/feature`, `/fix`, `/version-run` and `/version-resume` skills | from transcripts, or the usage block | asks, then installs |
 | [OpenAI Codex CLI](codex/) | `~/.codex/AGENTS.md` | role briefs | usage block, if reported | asks, then installs |
 | [Gemini CLI](gemini/) | `~/.gemini/GEMINI.md` | role briefs | usage block, if reported | asks, then installs |
 | [Cursor](cursor/) | `.cursor/rules/arsenale.mdc` per repo | role briefs | usage block, if reported | copy step |

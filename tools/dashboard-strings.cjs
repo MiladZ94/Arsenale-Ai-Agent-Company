@@ -1,14 +1,8 @@
 /* UI strings for the agent dashboard: English only.
  *
- * The dashboard had a Persian interface; the owner took it out for now
- * (2026-10-12): there is no language switch, nothing reads ?lang= or the old
- * `dash-lang` cookie, and every page is English. The Persian table is in the
- * git history (tools/dashboard-strings.cjs before that date) for whoever
- * brings it back.
- *
- * The text still goes through T(key) / t(lang, key), which return the
- * English key itself, so a second language can come back here without
- * touching the hundreds of call sites. LANG is always 'en'.
+ * There is no language switch, nothing reads ?lang= or a language cookie, and
+ * every page is English. The text still goes through T(key) / t(lang, key),
+ * which return the key itself. LANG is always 'en'.
  */
 
 /** English is the only language: the key is the text. */

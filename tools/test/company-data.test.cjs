@@ -15,14 +15,10 @@ function withCompany(t, opts) {
   return { sb, C, B: require(path.join(sb.tools, 'build-agent-dashboard.cjs')) }
 }
 
-test('Persian names match across keyboards: kaf, yeh, ZWNJ and digits', () => {
+test('names match without case or edge spaces', () => {
   const sb = makeSandbox()
   try {
     const C = sb.mod('agent-company.cjs')
-    assert.equal(C.normName('رفع خطای كاربر'), C.normName('رفع خطای کاربر'))
-    assert.equal(C.normName('علي'), 'علی')
-    assert.equal(C.normName('می‌خواهم'), 'میخواهم')
-    assert.equal(C.normName('نسخه ۱۲'), 'نسخه 12')
     assert.equal(C.normName('  Demo Calc '), 'demo calc')
   } finally { sb.cleanup() }
 })
@@ -30,7 +26,7 @@ test('Persian names match across keyboards: kaf, yeh, ZWNJ and digits', () => {
 test('AT-3: an old run with a free-text project resolves by alias, and no run file changes', (t) => {
   const { sb, C, B } = withCompany(t)
   sb.measured('implementer', 'democalc', 1000)
-  sb.measured('ui-designer', 'داشبورد', 500, { finishedAt: new Date().toISOString() })
+  sb.measured('ui-designer', 'dashboard', 500, { finishedAt: new Date().toISOString() })
   sb.run({ agent: 'tester', project: 'Demo Calc (feature branch)', finishedAt: new Date().toISOString() })
   sb.run({ agent: 'tester', project: 'workspace' })
   const before = hashTree(sb.runs)
@@ -43,7 +39,7 @@ test('AT-3: an old run with a free-text project resolves by alias, and no run fi
   assert.equal(R.project(rec).id, 'demo-calc')
   assert.equal(R.office(rec), 'engineering')
   // today's runs carry the resolution for the page, in memory only
-  const fa = state.runs.find((r) => r.project === 'داشبورد')
+  const fa = state.runs.find((r) => r.project === 'dashboard')
   assert.equal(fa.projectId, 'tide-app')
   assert.equal(fa.officeId, 'studio')
   assert.equal(state.runs.find((r) => /feature branch/.test(r.project)).projectId, 'demo-calc')
@@ -265,7 +261,7 @@ test('the page shows today\'s runs in their office and the company in the page d
   const html = B.renderPage(state, { live: true, token: 't', lang: 'en' })
   assert.match(html, /<title>Arsenale<\/title>/)
   assert.match(html, /"configured":true/)
-  // English only: a request for Persian still renders the English page
+  // English only: a request for another language still renders the English page
   assert.match(B.renderPage(state, { lang: 'fa' }), /<html lang="en" dir="ltr">/)
   void thisMonth
 })
@@ -283,4 +279,23 @@ test('a job with no project and no office falls back to the member\'s home offic
   // an explicit office still wins over the home office
   const other = co.offices.find((o) => !o.builtIn && o.id !== homed.id)
   if (other) assert.equal(R.office({ agent: 'homed', officeId: other.id }), other.id)
+})
+
+test('every shipped agent names its desk zone in its frontmatter, and is placed in it (more agents than desks: the rest take a guest desk)', () => {
+  const dir = path.join(__dirname, '..', '..', 'agents')
+  const { homeDesks } = require('../agent-office-page.cjs')
+  const agents = []
+  for (const f of fs.readdirSync(dir)) {
+    if (!f.endsWith('.md')) continue
+    const block = /^---\r?\n([\s\S]*?)\r?\n---/.exec(fs.readFileSync(path.join(dir, f), 'utf8'))
+    if (!block || !/^name:/m.test(block[1])) continue // rules and templates are not agents
+    const zone = (/^zone:\s*(\S+)/m.exec(block[1]) || [])[1]
+    assert.ok(['lead', 'build', 'review', 'docs', 'design'].includes(zone), f + ' has no valid zone: line')
+    agents.push({ name: /^name:\s*(\S+)/m.exec(block[1])[1], dept: zone })
+  }
+  assert.ok(agents.length >= 20)
+  const placed = homeDesks(agents, {})
+  for (const a of agents) {
+    assert.equal(placed.zones[a.name], a.dept, a.name)
+  }
 })

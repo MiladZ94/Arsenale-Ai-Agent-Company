@@ -282,8 +282,7 @@ When `agent-builder` has been asked to create one:
 4. Every new agent inherits these rules. Say so in its body:
    "Follow `AGENT-RULES.md` (in the same folder as this file) and the repo's
    `PROJECT.md`."
-5. If the user keeps translated dashboard labels (`labels.fa.json`), add an
-   entry for it there.
+5. If the user keeps desk labels (`labels.json`), add an entry for it there.
 6. A definition written now may not be available as an agent type until the
    session restarts. Until then, use it by pointing a general-purpose agent at
    the file with the right model.
@@ -324,3 +323,50 @@ waste.
 7. **Few heavy runs at once.** At most two or three heavy-tier runs in
    parallel; standard and light runs may run alongside them. This avoids
    hitting a usage limit mid-task, which costs more than it saves.
+
+## 10. Autonomous runs
+
+These add to the rules above when the supervisor runs a whole version (WORKFLOW,
+"Autonomous mode"; short digest in `autonomous/RULES.md`, installed to `<data folder>/autonomous/RULES.md`). They bind
+every agent in such a run.
+
+1. **Your own branch and worktree.** Work only in the worktree you were given,
+   on its branch `auto/<version>/<phase>/<request>`. Commit only there, and
+   only because the run authorisation covers it. Never push, merge, tag,
+   rebase, change git config or touch another agent's files. A file you need
+   that someone else owns is a finding for the supervisor, not an edit.
+2. **Stop at an owner gate.** Building an installer, signing, tagging,
+   pushing, publishing, a change to anything on the PROJECT.md "Owner gates
+   (autonomous mode)" list, or an action `check_action` marks `ask` or
+   `never`: stop and report it. Do not use a placeholder value to get past it.
+3. **Short prompts, pointers not pastes.** The prompt names the repo, PROJECT.md,
+   the state-file section (for example "section P2 of
+   `docs/specs/1.2-list.md`"), the run id, the task in a few lines and what
+   not to do. Read the pointed sections; do not ask for them pasted.
+4. **Tag the run.** The supervisor starts every run with `versionRun` and
+   `phase` in the `arsenale start` JSON, so tokens can be summed per phase.
+5. **Evidence over claims.** Report the test command with its real result, the
+   build result, a screenshot you opened. "Should work" is not a result.
+   A step you did not run is "not run".
+6. **Reviewers and the verifier read the diff, not the repo.** They get the
+   diff, the changed paths, the spec section and the builder's report path,
+   read `REVIEW.md` first, and open other files only for a specific doubt.
+   Label findings Important, Nit or Pre-existing, with id, `file:line`, claim
+   and triggering input. Round 2 and 3 reviews get only the fix diff.
+7. **The verifier decides, you do not argue.** Only `confirmed` findings are
+   fixed. A fix for an Important finding includes the regression test that
+   fails on the old code (rule 1); if no test can catch it, say so.
+8. **Slow suites only when stored data changed.** Otherwise the normal suite is
+   enough; the supervisor logs the skip.
+9. **Heavy tier only where it pays** (rule 3): data and security builds and
+   fixes, specs, data-migration, security-reviewer, calculations. Raising a run
+   to heavy is logged with the reason.
+10. **Budget.** The supervisor starts no new agent at 100 % of the version
+    budget. A running agent finishes its current step, saves its work on its
+    branch and reports.
+11. **Round cap.** A phase gets three fix rounds for a surviving Important
+    finding, never a fourth. After the third, the supervisor records a
+    "rethink" decision and starts a new set of three; if that fails too, the
+    phase is `blocked`, the owner is told, and independent phases go on.
+12. **Say what was skipped.** When the slow suite is skipped, the state file's
+    review log says "slow suite skipped, no stored data touched".

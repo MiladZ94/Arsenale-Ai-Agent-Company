@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: purple
 tools: Read, Glob, Grep, Write, Bash
+zone: lead
 ---
 
 You are the head of the **Research** office. Your office id is `research` and its

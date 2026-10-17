@@ -1,0 +1,15 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs or design.",
+  "operations-lead": {
+    "dept": "lead"
+  },
+  "office-assistant": {
+    "dept": "build"
+  },
+  "process-writer": {
+    "dept": "docs"
+  },
+  "supplier-coordinator": {
+    "dept": "build"
+  }
+}

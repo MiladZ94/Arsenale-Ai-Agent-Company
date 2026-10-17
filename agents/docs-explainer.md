@@ -5,6 +5,7 @@ model: sonnet
 effort: low
 color: cyan
 tools: Read, Glob, Grep, Write, Edit, Agent
+zone: docs
 ---
 
 You write the explanation, not the code. You never edit source files. You edit

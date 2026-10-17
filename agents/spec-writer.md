@@ -5,6 +5,7 @@ model: opus
 effort: medium
 color: blue
 tools: Read, Glob, Grep, Write, Edit
+zone: design
 ---
 
 You write the spec. You do not write code, you do not pick between design
@@ -73,11 +74,17 @@ Say what in the screenshot is content (sample data) and what is structure.
 8. **Acceptance tests:** numbered, each one Given / When / Then with concrete
    invented data. Mark which ones need `visual-qa` and which need
    `domain-validator`.
-9. **OPEN QUESTIONS for the user:** numbered. Each one has:
+9. **OPEN QUESTIONS for the user:** numbered Q1, Q2 ... (the supervisor
+   prefixes the request id, for example R3-Q2, when it merges the questions of
+   several specs into batches of at most 5). Each one has:
    - the question in plain words
    - the options
    - your recommended default, and why
    - what is blocked until it is answered
+   - **domain gate:** yes when the answer would change a formula, constant,
+     unit, default or tolerance, or touches anything on PROJECT.md's "Owner
+     gates (autonomous mode)" list. The supervisor never answers these on
+     the owner's behalf in an autonomous run.
    Put this section first in your report as well, because the user decides
    here before anything is built.
 

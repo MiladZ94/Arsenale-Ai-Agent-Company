@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: blue
 tools: Read, Glob, Grep, Write, Bash
+zone: lead
 ---
 
 You are the head of the **Engineering** office. Your office id is `engineering` and its

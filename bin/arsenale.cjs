@@ -29,7 +29,13 @@ Commands
                                  --shop: a small shop with office packs and no developers
   log <mode> [json] [flags]      record agent activity; "arsenale log --help" lists the modes
   start | progress | finish | gate | decision | answers | inbox | dismiss | budget-check
+                                 | version-run | version-ledger | campus
                                  short for "log --start", "log --progress", "log <json>" …
+  init [--dir D] [--dry-run] [--yes] [--force]
+                                 install agents, rules and skills; scaffold PROJECT.md, REVIEW.md, docs/specs
+  autonomous start|status|resume <version>
+                                 state file docs/specs/<version>-list.md for an autonomous run
+  awake start [--pid N] | stop   keep the machine awake while a process lives (macOS, Linux)
   mcp                            the MCP server on stdin/stdout, for an assistant to start
                                  (Settings > Connect your assistant shows the exact line)
   task | comment | deliverable | check-action
@@ -60,6 +66,7 @@ const ALIASES = {
   dismiss: '--dismiss', 'budget-check': '--budget-check', budget: '--budget', budgets: '--budgets', employee: '--employee',
   heartbeat: '--heartbeat', 'company-init': '--company-init', 'company-status': '--company-status',
   task: '--task', comment: '--comment', deliverable: '--deliverable', 'check-action': '--check-action',
+  campus: '--campus', 'version-run': '--version-run', 'version-ledger': '--version-ledger',
 }
 
 function flags(args) {
@@ -137,6 +144,11 @@ async function demo(opts) {
   delete process.env.ARSENALE_AGENT_DIRS
   delete process.env.ARSENALE_TRANSCRIPT_ROOTS
   const { seedCompany, seedEveryone, seedShop, simulate } = require(path.join(TOOLS, 'demo.cjs'))
+  // The address first, then the seed (seconds on a busy machine), then the
+  // browser: a script reading the output gets the key URL at once. The seed
+  // runs in one synchronous stretch, so a request that arrives meanwhile
+  // waits for it and never sees half the invented company.
+  const s = await serve({ port: opts.port || 4311, open: false }, 'Arsenale demo (invented data)')
   let stop = () => {}
   if (shop) seedShop(home)
   else {
@@ -144,7 +156,8 @@ async function demo(opts) {
     try { seedEveryone() } catch (e) { console.error('demo: the 1.0 screens have no data (' + e.message + ')') }
     stop = simulate(home)
   }
-  const s = await serve({ port: opts.port || 4311, open: opts.open }, 'Arsenale demo (invented data)')
+  require(path.join(TOOLS, 'build-agent-dashboard.cjs')).invalidate()
+  if (opts.open) openBrowser(s.keyUrl)
   const cleanup = () => {
     stop()
     try { s.server.close() } catch { /* already closed */ }
@@ -169,9 +182,12 @@ if (cmd === 'serve') serve(flags(args))
 else if (cmd === 'open') openDashboard(flags(args))
 else if (cmd === 'demo') demo(flags(args))
 else if (cmd === 'log') log(args)
-else if (cmd === 'mcp') require(path.join(TOOLS, 'mcp-server.cjs')).runStdio()
+else if (cmd === 'init' || cmd === 'autonomous' || cmd === 'awake') {
+  const A = require(path.join(TOOLS, 'autonomous.cjs'))
+  process.exitCode = A[cmd](args, console.log)
+} else if (cmd === 'mcp') require(path.join(TOOLS, 'mcp-server.cjs')).runStdio()
 else if (cmd === 'finish') log(args)
-else if (Object.hasOwn(ALIASES, cmd)) log([ALIASES[cmd], ...args])
+else if (Object.hasOwn(ALIASES, cmd)) log(args.length === 1 && ['--help', '-h'].includes(args[0]) ? ['--help'] : [ALIASES[cmd], ...args])
 else if (cmd === 'build') {
   const B = require(path.join(TOOLS, 'build-agent-dashboard.cjs'))
   const n = B.build()

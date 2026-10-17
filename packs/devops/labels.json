@@ -1,0 +1,15 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs, design, verify, ship, plan, ops, data or legal.",
+  "devops-lead": {
+    "dept": "lead"
+  },
+  "ci-triager": {
+    "dept": "ops"
+  },
+  "build-fixer": {
+    "dept": "build"
+  },
+  "environment-doctor": {
+    "dept": "ops"
+  }
+}

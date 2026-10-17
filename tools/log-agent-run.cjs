@@ -38,7 +38,10 @@ JSON input, for every mode that takes it:
 
 Runs
   --start <json>      {"agent","task", optional "model","effort","project","parent",
-                      "projectId","officeId","session","issue","doing"}
+                      "projectId","officeId","session","issue","doing",
+                      "versionRun","phase" (autonomous mode: version run id and phase),
+                      "pid" (the agent process, so a resume can tell a dead run from a live one),
+                      "tier": light|standard|heavy (a 4th heavy run at once is refused)}
                       prints the new run id
   --progress <json>   {"id","doing", optional "pct": 0-100}: one line of what the agent
                       is doing now, and how far it is
@@ -47,12 +50,21 @@ Runs
                       "usage":{"tokens","toolUses","durationMs","model"},"transcript"}
                       prints the path of the run record
 
+Autonomous version runs (the state file in the repo is the source; this is its mirror)
+  --version-run <json>     {"id":"app-x-1.2", optional "app","version","status","budget"
+                      (positive whole tokens),"phases":[{"id","name","tier": low|medium|high,
+                      "requests","dependsOn","status","percent"}],"stateFile",
+                      "integrationBranch","reviews":[{"phase","round","findings","confirmed",
+                      "rejected","unclear","report" (a path, shown as text)}]}: creates or updates <data>/version-runs/<id>.json
+  --version-ledger <json>  {"versionRun"} ("id" is accepted too): tokens per phase from the run log, as JSON
+                      (null = not recorded, never 0)
+
 Gates and decisions
   --gate <json>       {"project","question", optional "kind": A|B|C|approval,"label",
-                      "choices":[...],"run"}: prints the gate id. With "id" and
+                      "choices":[...],"run","versionRun" (the run that asks)}: prints the gate id. With "id" and
                       "status": waiting|answered|expired it updates that gate
   --decision <json>   {"project","by": user|supervisor|agent,"text", optional
-                      "reason","run","agent","state":"open","closes"}
+                      "reason","run" or "versionRun","agent","state":"open","closes"}
   --answers [--peek|--all|--json]   answers given on the dashboard since the
                       last read (then marked read)
   --dismiss <gate id> [<gate id> ...]    close waiting gates without an answer
@@ -67,8 +79,16 @@ Company (optional; see company.example/seed.json)
   --budgets on|off <json>          every budget on or off: {"by":"board"}
   --employee <json>   {"id", "homeOfficeId","zone","reportsTo","status","pauseReason",
                       "title","aliases", "by":"board"}
+  --board-token <key>  proves "by":"board" is the owner (or set ARSENALE_BOARD_TOKEN to the
+                      launch-key in the data folder); without it "board" acts as an agent
   --inbox [--peek|--all|--json]    what the owner changed on the dashboard
   --heartbeat [json]               "the supervisor is here"
+
+Campus
+  --campus <json>     {"op": list|place|move|rotate|remove, "type" (place), "name", "x","y", "rot",
+                      "id" or "officeId" (move, rotate, remove), "reason", "by"}. The supervisor may
+                      change the campus in an autonomous run only; each change is also a
+                      decision. Removing a building archives its office
 
 Tasks, deliverables and the safety rules
   --task <json>       create: {"title", optional "description","assignee","officeId",
@@ -91,6 +111,13 @@ Exit codes
 Data folder: ${P.HOME}  (set ARSENALE_HOME to change it)`
 
 const args = process.argv.slice(2)
+// --board-token <key> proves a "by":"board" action comes from the owner (see
+// runlog.cjs cliActor). The environment variable ARSENALE_BOARD_TOKEN is
+// better: a command line shows in the process list.
+for (let i = args.indexOf('--board-token'); i !== -1; i = args.indexOf('--board-token')) {
+  process.env.ARSENALE_BOARD_TOKEN = String(args[i + 1] || '')
+  args.splice(i, 2)
+}
 const company = () => require('./agent-company.cjs')
 const shown = (iso) => { const d = new Date(iso); return isNaN(d) ? String(iso || '?') : d.toLocaleString('en-GB', { hour12: false }).replace(',', '') }
 const die = (e) => { console.error(e.message || String(e)); process.exit(1) }
@@ -238,7 +265,7 @@ if (args[0] === '--company-status') {
   process.exit(0)
 }
 
-const MODES = ['--start', '--progress', '--budget-check', '--budget', '--employee', '--decision', '--gate', '--task', '--comment', '--deliverable', '--check-action']
+const MODES = ['--start', '--progress', '--budget-check', '--budget', '--employee', '--decision', '--gate', '--task', '--comment', '--deliverable', '--check-action', '--version-run', '--version-ledger', '--campus']
 // no mode: the JSON (inline, --stdin, --file or @file) is a finish. "--finish"
 // says so outright; older run logs took it (as any unknown mode) for a finish,
 // and supervisors' notes still use it.
@@ -253,6 +280,7 @@ if (!input || typeof input !== 'object' || Array.isArray(input)) die(new Error((
 // it always was: the CLI runs as the user and proves nothing more.
 const L = require('./runlog.cjs')
 const actor = L.cliActor(input)
+if (actor.claimedBoard) console.error('note: "by":"board" needs the owner board token (ARSENALE_BOARD_TOKEN, the launch-key in the data folder); treating this as an agent, so board-only actions are refused.')
 
 // Every write rebuilds the page, so a window left open follows the work.
 const refresh = () => { try { build() } catch (e) { console.warn('dashboard not rebuilt: ' + e.message) } }
@@ -278,6 +306,25 @@ if (mode === '--budget' || mode === '--employee') {
     console.log(r.summary)
     process.exit(0)
   } catch (e) { die(e) }
+}
+
+if (mode === '--campus') {
+  try {
+    if (input.op === 'list') {
+      const v = require('./campus.cjs').view(company().readCompany())
+      console.log(JSON.stringify({ grid: v.grid, buildings: v.buildings, types: v.types.map((t) => t.id) }, null, 2))
+    } else console.log(L.campus(input, actor).summary)
+    if (input.op !== 'list') refresh()
+  } catch (e) { die(e) }
+  process.exit(0)
+}
+
+if (mode === '--version-run' || mode === '--version-ledger') {
+  try {
+    if (mode === '--version-run') console.log(L.versionRun(input, actor).id)
+    else console.log(JSON.stringify(L.versionLedger(input.versionRun || input.id), null, 2))
+  } catch (e) { die(e) }
+  process.exit(0)
 }
 
 if (mode === '--decision' || mode === '--gate') {

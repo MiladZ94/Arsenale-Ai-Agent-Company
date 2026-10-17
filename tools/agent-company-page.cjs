@@ -72,8 +72,6 @@ h1.co{white-space:nowrap;font-size:17px}
 .csetup code{font-family:var(--font-ui);color:var(--cyan);direction:ltr;display:inline-block}
 /* office strip, over the floor */
 .board.co .zoombar{left:auto;right:12px}
-[dir=rtl] .board.co .zoombar{right:auto;left:12px}
-[dir=rtl] .ohead{left:auto;right:14px}
 #vtab-office{max-width:170px;overflow:hidden;text-overflow:ellipsis}
 .board.co .counts{gap:12px}
 .board.co .top{gap:14px}
@@ -154,27 +152,29 @@ h1.co{white-space:nowrap;font-size:17px}
 .olink{height:38px;position:relative;width:100%;display:flex;justify-content:center}
 .olink i{width:2px;height:100%;background:var(--accent);display:block}
 .olink span{position:absolute;inset-inline-start:calc(50% + 14px);top:10px;font:12px var(--font-ui);color:var(--ink-dim)}
-[dir=rtl] .olink span{font-family:var(--font-ui)}
 .obus{width:calc(100% - (100% / var(--n)));height:2px;background:#CBD3DB;display:flex;justify-content:space-between;margin:0 auto}
 .obus i{width:9px;height:9px;margin-top:-3.5px;display:block}
 .org .ocols{gap:16px;margin-top:0}
 .org .ocol{padding-top:30px}
 .org .ocol:before{top:0;height:30px;width:2px;background:#CBD3DB}
 .org .ocolh{font:700 15px var(--font-ui);color:#F3F5F7;border-radius:10px 10px 0 0;padding:11px 16px;align-items:center;flex-wrap:nowrap}
-.org .ocolh b{color:#F3F5F7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* a name keeps a fixed width and ends in an ellipsis; the numbers give way first */
+.org .ocolh b{color:#F3F5F7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto;min-width:100px}
 .org .ocolh .ocnt{font:700 11px var(--font-ui);background:rgba(30,40,50,.12);color:#F3F5F7;border-radius:9px;padding:1px 8px;flex:none}
 .ompl{list-style:none;margin:0;padding:10px 14px;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;background:var(--panel)}
-.opr{display:flex;align-items:center;gap:6px}
+.opr{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .opr.retired{opacity:.55}
-.opb{flex:1;min-width:0;display:flex;gap:12px;align-items:center;padding:7px 2px;background:none;border:0;cursor:pointer;text-align:start;font:inherit;color:inherit;border-radius:6px}
+.opb{flex:1 1 150px;min-width:150px;display:flex;gap:12px;align-items:center;padding:7px 2px;background:none;border:0;cursor:pointer;text-align:start;font:inherit;color:inherit;border-radius:6px}
 .opb:hover:not(:disabled) b{text-decoration:underline dotted}
 .opb:disabled{cursor:default}
 /* what each person costs this month: model, tokens or the budget, its bar */
+/* model, cost and Budget… move under the name together when the column is narrow */
+.oside{flex:none;margin-inline-start:auto;display:flex;align-items:center;gap:6px}
 .ost{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px;max-width:46%;text-align:end}
 .ost .ostl{display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .ost .num{font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ost .cbar{width:90px}
-.org .ocolh .ocsp{font:400 12px var(--font-ui);color:#F3F5F7;opacity:.9;margin-inline-start:auto;white-space:nowrap;font-variant-numeric:tabular-nums}
+.org .ocolh .ocsp{font:400 12px var(--font-ui);color:#F3F5F7;opacity:.9;margin-inline-start:auto;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 .oav{position:relative;border-radius:8px;padding:5px 7px 0;line-height:0;flex:none}
 .oav i{position:absolute;inset-inline-end:-3px;bottom:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--panel)}
 .otx{min-width:0}
@@ -206,26 +206,17 @@ function companyViews(h) {
   const QUIET_MS = 10 * 60000
   const st = { armed: '', armT: 0, retired: false, dlg: null, busy: false, mmsg: '' }
   // the campus is drawn, zoomed and panned by the shared art (office-world.cjs); this file says what is on it
-  const CA = campusArt({ esc, fa, go })
+  const CA = campusArt({ esc, fa, go, post, refresh, redraw })
+  window.__campus = CA
   const ST_COL = CA.ST_COL
   const C = () => COMPANY
   const canEdit = () => LIVE && !!ANSWER_TOKEN && !C().readOnly
   const officeList = () => C().offices.filter((o) => !o.archived)
   const officeById = (id) => C().offices.find((o) => o.id === id) || null
   const emp = (id) => C().employees.find((e) => e.id === id) || null
-  // One language per screen: an office has a name in each, and only the one
-  // in the page's language is shown (the English name when there is no Persian one).
-  const oname = (o) => (!o ? '' : LANG === 'fa' && o.nameFa ? o.nameFa : o.builtIn ? T(o.name) : o.name)
-  // the title of a person: Persian titles only on the Persian page; a title the
-  // server made up from the id ("Eng lead") is English and so is not shown there
-  const autoTitle = (e) => String(e.title).toLowerCase() === e.id.replace(/-/g, ' ').toLowerCase()
-  const etitle = (e) => (LANG === 'fa' ? e.titleFa || (autoTitle(e) ? '' : e.title) : e.title) || ''
-  // "2026-10" is the Gregorian key of the month; the Persian page names the Persian month
-  const periodTxt = (key) => {
-    const m = /^(\d{4})-(\d{2})$/.exec(String(key || ''))
-    if (!m || LANG !== 'fa') return String(key || '')
-    return new Date(Number(m[1]), Number(m[2]) - 1, 15).toLocaleDateString('fa-IR', { year: 'numeric', month: 'long' })
-  }
+  const oname = (o) => (!o ? '' : o.builtIn ? T(o.name) : o.name)
+  const etitle = (e) => e.title || ''
+  const periodTxt = (key) => String(key || '')
   // file diagnostics from the server are English sentences around a file name
   const problemTxt = (p) => {
     let m = /^(.+?)( is missing or unreadable| is not a list| is not an object)$/.exec(p)
@@ -240,9 +231,10 @@ function companyViews(h) {
    *  n/a"; a sum that misses some runs says so. */
   function money(sp) {
     if (!sp) return ''
-    // each part isolated, so "$0" stays "$0" inside Persian text
+    // each part isolated, so "$0" stays "$0" inside other text
     const tok = '<bdi>' + k(sp.tokens) + ' ' + T('tok') + '</bdi> · '
-    if (sp.usdStatus === 'none') return tok + '<bdi dir="ltr">' + (sp.runs ? T('USD n/a') : '$' + fa(0)) + '</bdi>'
+    // nothing measured is not "$0": like every unpriced sum it is n/a
+    if (sp.usdStatus === 'none') return tok + '<bdi dir="ltr">' + T('USD n/a') + '</bdi>'
     if (sp.usdStatus === 'na') return tok + '<bdi dir="ltr" class="dim" title="' + T('Model prices are not set in model-prices.json') + '">' + T('USD n/a') + '</bdi>'
     return tok + '<bdi dir="ltr">' + usd(sp.usd) + (sp.usdStatus === 'partial' ? '<span class="dim" title="' + fa(sp.usdMissing) + T(' runs have tokens but no price') + '">+</span>' : '') + '</bdi>'
   }
@@ -362,35 +354,19 @@ function companyViews(h) {
   }
 
   function campus(S) {
-    const list = officeList().filter((o) => !o.builtIn)
-    const un = officeById('unassigned')
-    const unC = counts(S, 'unassigned')
-    const showUn = !!(un && (unC.working || unC.today || unC.waiting))
-    // work no project claims sits in a shed on its own plot, after the offices
-    const plots = list.map((o, i) => ({ o, kind: i % 4 })).concat(showUn ? [{ o: un, kind: 'shed' }] : [])
-    const cells = plots.map(({ o, kind }) => {
-      const c = counts(S, o.id)
-      const sd = o.standing || {}
-      const small = kind === 'shed'
-      return {
-        id: o.id, name: oname(o), color: o.color || '#8A97A6', kind, small, wins: small ? [] : windowsOf(S, o.id),
-        label: oname(o) + T(', ') + fa(c.working) + ' ' + T('working'),
-        sign: '<h3 title="' + esc(oname(o)) + '">' + esc(oname(o)) + '</h3>' +
-          '<div class="n"><span class="a" title="' + T('working') + '">▸ ' + fa(c.working) + '</span><span class="b" title="' + T('waiting for you') + '">! ' + fa(c.waiting) + '</span>' + (small ? '' : '<span class="c">' + money(sd.spend) + '</span>') + '</div>' +
-          (small ? '' : bar(sd.budget)) +
-          '<button type="button" class="cbtn go" data-goto="office:' + esc(o.id) + '">' + T('Enter office →') + '</button>',
-      }
-    })
-    // visitors: a figure at the door for each employee working away from home
-    const visitors = []
-    for (const a of S.active) {
-      const e = emp(a.agent)
-      if (!e || !e.homeOfficeId || e.homeOfficeId === a.officeId) continue
-      visitors.push({ officeId: a.officeId, draw: (x, y) => sprite('stand', a.agent, x, y, 2) })
+    // the layout is the server's (campus.cjs); an older server sends none, and the offices are then laid out in a row-by-row grid
+    let cp = C().campus
+    if (!cp) {
+      const list = officeList().filter((o) => !o.builtIn)
+      const cols = 6
+      cp = { grid: { cols, rows: Math.max(4, Math.ceil(list.length / cols)) }, buildings: list.map((o, i) => ({ id: 'b-' + o.id, officeId: o.id, type: 'business', x: i % cols, y: Math.floor(i / cols), rot: 0, floors: 1 })), types: [], readOnly: true }
     }
-    const legend = '<div class="cleg"><span>' + T('Windows on the top floors: one per employee') + '</span><span><i style="background:' + ST_COL.working + '"></i>' + T('working') + '</span><span><i style="background:' + ST_COL.waiting + '"></i>' + T('waiting') + '</span><span><i style="background:' + ST_COL.paused + '"></i>' + T('paused') + '</span><span><i style="background:' + ST_COL.idle + '"></i>' + T('idle') + '</span></div>'
-    const tip = '<div class="ctip">' + T('Lavender kiosk = ') + '<b>' + T('Supervisor desk') + '</b>. ' + T('Click a building to enter.') + '</div>'
-    return CA.draw({ cells, hq: { id: hqId(), lit: !ceoAway(), label: T('Supervisor desk') }, visitors, legend, tip, side: side(S) })
+    const cells = cp.buildings.map((b) => {
+      const o = officeById(b.officeId)
+      const c = counts(S, b.officeId)
+      return { id: b.officeId, name: o ? oname(o) : b.officeId, color: (o && o.color) || '#8A97A6', working: c.working, waiting: c.waiting }
+    })
+    return CA.draw({ campus: cp, cells, canEdit: canEdit() && !!cp.types.length, side: side(S) })
   }
   const hqId = () => { const o = officeList().find((x) => x.leadEmployeeId === 'supervisor') || officeList()[0]; return o ? o.id : 'unassigned' }
   const ceoAway = () => { const hb = C().heartbeat; return !hb || !hb.lastSeenAt || Date.now() - ms(hb.lastSeenAt) > 30 * 60000 }
@@ -407,7 +383,7 @@ function companyViews(h) {
     html += '<div class="ch">' + T('Company this month') + ' <span class="dim">' + esc(periodTxt(co.periodKey)) + '</span></div>'
     html += '<div class="ckpis"><div class="ckpi cw"><b>' + fa(waitingAll) + '</b><span>' + T('waiting for you') + '</span></div>' +
       '<div class="ckpi cg"><b>' + fa(working) + '</b><span>' + T('working now') + '</span></div>' +
-      '<div class="ckpi"><b dir="ltr">' + k(sd.spend.tokens).replace(/(\s?[^\d۰-۹٫.\s]+)$/, '<small>$1</small>') + '</b><span>' + (sd.budget.on && sd.budget.tokens ? T('tokens of ') + k(sd.budget.tokens.limit) : T('tokens this month')) + '</span></div></div>'
+      '<div class="ckpi"><b dir="ltr">' + k(sd.spend.tokens).replace(/(\s?[^\d.\s]+)$/, '<small>$1</small>') + '</b><span>' + (sd.budget.on && sd.budget.tokens ? T('tokens of ') + k(sd.budget.tokens.limit) : T('tokens this month')) + '</span></div></div>'
     html += '<p class="cnote">' + money(sd.spend) + (sd.spend.unmeasured ? ' · ' + fa(sd.spend.unmeasured) + T(' runs unmeasured') : '') + (sd.budget.on ? ' · ' + T('company budget ') + pctTxt(sd.budget.pct) : '') + '</p>'
     if (sd.budget.on) html += bar(sd.budget) + '<p></p>'
     const on = co.company.budgetsEnabled
@@ -438,18 +414,20 @@ function companyViews(h) {
   }
 
   // ---------- the strip over an office floor
-  function officeHead(S, officeId) {
+  // `idleN`: the floor's own count when there is one (the 3D lounge), so the
+  // strip and the lounge never disagree; without it, the company's home staff.
+  function officeHead(S, officeId, idleN) {
     const o = officeById(officeId)
     if (!o) return ''
     const c = counts(S.full || S, officeId)
     const home = C().employees.filter((e) => e.kind === 'employee' && e.homeOfficeId === officeId)
-    const idle = home.filter((e) => empStatus(S.full || S, e.id, officeId) === 'idle').length
+    const idle = Number.isInteger(idleN) ? idleN : home.filter((e) => empStatus(S.full || S, e.id, officeId) === 'idle').length
     const sd = o.standing || {}
     const b = sd.budget
     return '<div class="crumb"><button type="button" data-goto="campus">' + T('Campus') + '</button><span class="dim">/</span><span class="sq" style="background:' + esc(o.color) + '"></span><b>' + esc(oname(o)) + '</b>' + '</div>' +
       '<div class="ostats"><div class="a"><b>' + fa(c.working) + '</b>' + T('working') + '</div><div class="b"><b>' + fa(c.waiting) + '</b>' + T('waiting for you') + '</div><div><b>' + fa(idle) + '</b>' + T('idle') + '</div>' +
       '<div><b dir="ltr">' + (sd.spend ? k(sd.spend.tokens) : '—') + '</b>' + T('tokens this month') + '</div>' +
-      '<div><b dir="ltr">' + (!sd.spend || sd.spend.usdStatus === 'na' || (sd.spend.usdStatus === 'none' && sd.spend.runs) ? T('n/a') : usd(sd.spend.usd)) + '</b>' + T('USD') + '</div>' +
+      '<div><b dir="ltr">' + (!sd.spend || sd.spend.usdStatus === 'na' || sd.spend.usdStatus === 'none' ? T('n/a') : usd(sd.spend.usd)) + '</b>' + T('USD') + '</div>' +
       (b && b.on ? '<div class="' + (b.level === 'stop' || b.level === 'over' ? 'r' : b.level === 'soft' ? 'b' : '') + '"><b>' + pctTxt(b.pct) + '</b>' + T('monthly budget') + '</div>' : '<div><b>—</b>' + budgetWord(b) + '</div>') +
       (o.builtIn ? '' : '<div style="display:flex;align-items:center">' + editBtn('office', o.id) + '</div>') + '</div>'
   }
@@ -472,7 +450,7 @@ function companyViews(h) {
     const al = b && b.on ? (b.level === 'stop' ? '<span class="alert h">' + T('HARD STOP') + '</span>' : b.level === 'over' ? '<span class="alert h">' + fa(100) + T('%') + '+</span>' : b.level === 'soft' ? '<span class="alert s">' + fa(b.softAlertPct) + T('%') + '+</span>' : '') : ''
     const num = b && b.on ? limitTxt(b) : sp && sp.tokens ? k(sp.tokens) + ' ' + T('tok') : ''
     const stat = e.kind === 'retired' || !(e.model || al || num) ? '' : '<span class="ost"><span class="ostl">' + (e.model ? '<span class="mdlc">' + esc(e.model) + '</span>' : '') + al + '</span>' + (num ? '<span class="num" dir="ltr">' + num + '</span>' : '') + bar(b) + '</span>'
-    return '<li class="opr' + (e.kind === 'retired' ? ' retired' : '') + '"><button type="button" class="opb" data-ev="member-open" data-arg="' + esc(e.id) + '" data-to-team="1"' + (e.kind === 'retired' ? ' disabled' : '') + '><span class="oav" style="background:' + esc(ART.shade(o.color || '#56B6C2', 0.42)) + '">' + ART.person(e.id + (e.look ? ':' + e.look : ''), o.color, 30) + (dot ? '<i style="background:' + dot + '" title="' + esc(T(STATUS_TXT[s])) + '"></i>' : '') + '</span><span class="otx"><b dir="auto">' + esc(pname(e)) + '</b>' + (ptitle(e) || e.kind === 'retired' ? '<span dir="auto">' + esc(e.kind === 'retired' ? T('retired: definition file removed') : ptitle(e)) + '</span>' : '') + '</span></button>' + stat + budget + '</li>'
+    return '<li class="opr' + (e.kind === 'retired' ? ' retired' : '') + '"><button type="button" class="opb" data-ev="member-open" data-arg="' + esc(e.id) + '" data-to-team="1"' + (e.kind === 'retired' ? ' disabled' : '') + '><span class="oav" style="background:' + esc(ART.shade(o.color || '#56B6C2', 0.42)) + '">' + ART.person(e.id + (e.look ? ':' + e.look : ''), o.color, 30) + (dot ? '<i style="background:' + dot + '" title="' + esc(T(STATUS_TXT[s])) + '"></i>' : '') + '</span><span class="otx"><b dir="auto">' + esc(pname(e)) + '</b>' + (ptitle(e) || e.kind === 'retired' ? '<span dir="auto">' + esc(e.kind === 'retired' ? T('retired: definition file removed') : ptitle(e)) + '</span>' : '') + '</span></button>' + (stat || budget ? '<span class="oside">' + stat + budget + '</span>' : '') + '</li>'
   }
 
   function org(S) {
@@ -483,7 +461,7 @@ function companyViews(h) {
     const waitingAll = (DATA.gates || []).filter((g) => g.status === 'waiting').length
     const hb = co.heartbeat
     const away = ceoAway()
-    const cname = LANG === 'fa' && co.company.nameFa ? co.company.nameFa : co.company.name
+    const cname = co.company.name
     const asst = (co.company.assistants || []).map((a) => CLIENT_NAMES[a]).filter(Boolean)
     let html = '<div class="org"><div class="otools"><div><h2 dir="auto">' + esc(cname || T('Org chart')) + '</h2><p class="osub">' + T('Your AI team: ') + '<span class="ochip">' + fa(staffN) + ' ' + T('team members') + '</span> ' + T('in') + ' <span class="ochip">' + fa(offices.length) + ' ' + T(offices.length === 1 ? 'office' : 'offices') + '</span>. ' + T('They ask you first before anything leaves the computer.') + '</p></div><span class="sp"></span>' +
       '<button type="button" class="cbtn" data-retired="1" aria-pressed="' + st.retired + '">' + (st.retired ? T('Hide retired') : T('Show retired')) + '</button></div>'
@@ -504,7 +482,7 @@ function companyViews(h) {
     }
     html += '</div></div>'
     // the office packs not installed yet, read once from the server
-    if (LIVE && st.packsLeft === undefined) { st.packsLeft = null; fetch('api/packs', { cache: 'no-store' }).then((r) => r.json()).then((d) => { st.packsLeft = (d.packs || []).filter((p) => !p.installed).map((p) => (LANG === 'fa' && p.nameFa ? p.nameFa : p.name)); redraw() }, () => { st.packsLeft = [] }) }
+    if (LIVE && st.packsLeft === undefined) { st.packsLeft = null; fetch('api/packs', { cache: 'no-store' }).then((r) => r.json()).then((d) => { st.packsLeft = (d.packs || []).filter((p) => !p.installed && !officeList().some((o) => p.office && o.id === p.office.id)).map((p) => p.name); redraw() }, () => { st.packsLeft = [] }) }
     const cons = co.employees.filter((e) => e.kind === 'contractor')
     if (cons.length) html += '<div class="ocont"><div class="ch">' + T('Contractors') + ' <span class="dim" style="text-transform:none;letter-spacing:0">' + T('agent names with no definition in the agent folders, this month') + '</span></div><div class="chips">' + cons.map((e) => '<span class="ochip" dir="ltr">' + esc(e.id) + ' ×' + fa(e.runsThisPeriod) + (e.standing && e.standing.spend && e.standing.spend.tokens ? ' · ' + k(e.standing.spend.tokens) + ' ' + T('tok') : '') + '</span>').join('') + '</div></div>'
     html += '<div class="oft"><span><i style="background:#0C8A62"></i>' + T('working') + '</span><span><i style="background:#B8720F"></i>' + T('waiting for you') + '</span><span><i style="background:#C8372D"></i>' + T('paused or stopped by budget') + '</span>' +
@@ -525,12 +503,12 @@ function companyViews(h) {
     const box = document.getElementById('cdlg')
     box.innerHTML = '<form class="cdlg" data-bform="1" role="dialog" aria-modal="true" aria-labelledby="cdlg-h">' +
       '<h3 id="cdlg-h">' + T('Monthly budget — ') + '<span' + (scope === 'employee' ? ' dir="ltr"' : '') + '>' + esc(what) + '</span></h3>' +
-      '<p class="sub">' + T('Counted from the runs the supervisor logs, per calendar month. Saved in company/ and read by the supervisor at its next turn.') + '</p>' +
+      '<p class="sub">' + T('Counted per calendar month from logged runs.') + '</p>' +
       '<label class="ck"><input type="checkbox" name="enabled"' + (b.enabled ? ' checked' : '') + '> <span>' + T('Budget on') + '<span class="hint">' + T('Off keeps the numbers but shows usage only: no alerts, no refusals.') + '</span></span></label>' +
       '<label>' + T('Tokens per month') + '<input type="text" name="monthlyTokens" inputmode="numeric" autocomplete="off" value="' + esc(val(b.monthlyTokens)) + '" placeholder="2000000"><span class="hint">' + T('Empty = no limit. 0 = nothing may be spent. Cache reads are not counted.') + '</span></label>' +
       '<label>' + T('USD per month') + '<input type="text" name="monthlyUsd" inputmode="decimal" autocomplete="off" value="' + esc(val(b.monthlyUsd)) + '" placeholder="25.00"><span class="hint">' + (co.pricesSet ? T('From the prices in model-prices.json.') : T('Model prices are not set in model-prices.json: USD use shows n/a and cannot be checked.')) + '</span></label>' +
       '<label>' + T('Alert at (%)') + '<input type="text" name="softAlertPct" inputmode="numeric" autocomplete="off" value="' + esc(val(b.softAlertPct)) + '"></label>' +
-      '<label class="ck"><input type="checkbox" name="hardStop"' + (b.hardStop ? ' checked' : '') + '> <span>' + T('Hard stop at 100%') + '<span class="hint">' + T('The supervisor’s --budget-check then refuses to start agents here. The dashboard cannot stop a running agent.') + '</span></span></label>' +
+      '<label class="ck"><input type="checkbox" name="hardStop"' + (b.hardStop ? ' checked' : '') + '> <span>' + T('Hard stop at 100%') + '<span class="hint">' + T('The supervisor then refuses to start agents here.') + '</span></span></label>' +
       '<div class="msg" id="cdlg-msg" role="status"></div>' +
       '<div class="row">' + (cur ? '<button type="button" class="cbtn" data-bclear="1">' + T('Remove budget') + '</button>' : '') + '<span style="flex:1"></span><button type="button" class="cbtn" data-bcancel="1">' + T('Cancel') + '</button><button type="submit" class="cbtn ok">' + T('Save') + '</button></div></form>'
     box.hidden = false

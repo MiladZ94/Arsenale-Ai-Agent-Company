@@ -77,7 +77,7 @@ function activityView(h) {
       chip('who', '', T('Everyone')) + chip('who', 'board', T('You')) + chip('who', 'supervisor', T('Supervisor')) + chip('who', 'agent', T('Agents')) + chip('who', 'system', T('System')) +
       '<span class="dim" style="margin-inline-start:12px"></span>' +
       chip('type', '', T('Everything')) + chip('type', 'run', T('Runs')) + chip('type', 'gate', T('Questions')) + chip('type', 'decision', T('Decisions')) + chip('type', 'company', T('Company & budgets')) + '</div>'
-    html += '<p class="muted">' + T('Newest first. Lines marked “derived” are read from the run records, questions and decisions; the others are the company log (company/activity.jsonl).') + '</p>'
+    html += '<p class="muted">' + T('Newest first. “Derived” lines come from run records.') + '</p>'
     html += '<div class="act" id="act">'
     if (!recent.length) html += '<p class="empty">' + T('Nothing recorded in these days.') + '</p>'
     let day = ''
@@ -87,7 +87,7 @@ function activityView(h) {
       if (key !== day) {
         if (day) html += '</ol>'
         day = key
-        html += '<h3>' + esc(d.toLocaleDateString(LANG === 'fa' ? 'fa-IR' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' })) + '</h3><ol>'
+        html += '<h3>' + esc(d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })) + '</h3><ol>'
       }
       html += '<li class="t-' + KIND[e.type] + (e.bad ? ' bad' : '') + '"><time>' + hhmm(e.at) + '</time><span class="who" title="' + esc(e.who) + '">' + esc(e.who === 'supervisor' ? T('Supervisor') : e.who) + '</span>' +
         '<span class="what">' + esc(e.text) + '</span><span class="k' + (e.derived ? ' der' : '') + '">' + T(e.type === 'budget' ? 'budget' : e.type === 'company' ? 'company' : e.type) + (e.derived ? ' · ' + T('derived') : '') + '</span></li>'

@@ -17,11 +17,13 @@
   "files": [
     "bin/",
     "tools/*.cjs",
+    "tools/pages/",
     "tools/model-prices.json",
     "tools/OFFICE-WORLD-NOTE.md",
     "tools/vendor/",
-    "tools/characters/",
+    "tools/assets/",
     "agents/",
+    "autonomous/",
     "adapters/",
     "packs/",
     "company.example/",
@@ -38,6 +40,8 @@
   "scripts": {
     "start": "node bin/arsenale.cjs serve",
     "demo": "node bin/arsenale.cjs demo",
-    "test": "node tools/test/run.cjs"
+    "test": "node tools/test/run.cjs fast",
+    "test:ui": "node tools/test/run.cjs ui",
+    "test:all": "node tools/test/run.cjs all"
   }
 }

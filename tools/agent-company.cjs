@@ -3,8 +3,8 @@
  * Everything lives in <ARSENALE_HOME>/company/ (paths.cjs), next to
  * agent-runs/ and never inside a repo:
  *   company.json        name, mission, the company budget, budgetsEnabled
- *   offices.json        [{ id, name, nameFa, leadEmployeeId, profile, theme, order, budget, archived }]
- *   projects.json       [{ id, name, nameFa, key, aliases[], officeId, status, budget, … }]
+ *   offices.json        [{ id, name, leadEmployeeId, profile, theme, order, budget, archived }]
+ *   projects.json       [{ id, name, key, aliases[], officeId, status, budget, … }]
  *   employees.json      { <agent name>: { title, homeOfficeId, zone, reportsTo, budget, status, aliases[],
  *                         and since 1.0, all optional: name, skills[], look } }
  *   activity.jsonl      one line per write made through the CLI or the dashboard
@@ -33,6 +33,7 @@ const crypto = require('crypto')
 const { projectKey, modelKey, writeAtomic } = require('./build-agent-dashboard.cjs')
 const { homeDesks } = require('./agent-office-page.cjs')
 const P = require('./paths.cjs')
+const { withLock } = require('./store.cjs')
 
 const COMPANY = P.COMPANY
 // ids come from files and requests: only own keys count, so "constructor" or
@@ -54,7 +55,8 @@ const THEMES = { teal: '#2FA98A', blue: '#4E8BD4', violet: '#8C78C8', coral: '#D
 // reads "SEO specialist", never "Seo specialist"
 const ACRONYMS = new Set(['seo', 'ui', 'ux', 'qa', 'hr', 'faq', 'api', 'ceo', 'cli', 'cfo', 'cto', 'pr', 'crm', 'csv', 'pdf', 'it', 'kpi', 'mcp', 'sql', 'ai'])
 const titleFromId = (id) => String(id).split(/[-_]+/).filter(Boolean).map((w, i) => (ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase() : i ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())).join(' ')
-const ZONES = ['build', 'review', 'docs', 'design', 'lead', 'guest']
+// the rooms of the office floor (pages/world/palette.cjs); packs.cjs uses the same names
+const ZONES = ['build', 'review', 'docs', 'design', 'lead', 'verify', 'ship', 'plan', 'ops', 'data', 'legal', 'guest']
 const OFFICE_ID = /^[a-z][a-z0-9-]{1,30}$/
 const AGENT_ID = /^[A-Za-z0-9][\w.-]{0,59}$/
 const KEY = /^[A-Z][A-Z0-9]{1,5}$/
@@ -73,13 +75,9 @@ function readLines(file) {
 }
 const clip = (s, n) => String(s == null ? '' : s).slice(0, n)
 
-/** Names typed in two scripts and two keyboards still match: Arabic kaf and
- *  yeh, the zero-width non-joiner, and Persian or Arabic-Indic digits. */
+/** Names compare without case or edge spaces. */
 function normName(s) {
   return String(s == null ? '' : s)
-    .replace(/[ك]/g, 'ک').replace(/[يى]/g, 'ی').replace(/‌/g, '')
-    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
-    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
     .trim().toLowerCase()
 }
 
@@ -146,7 +144,7 @@ function readCompany() {
   const raw = readJson(fileOf('company'), null)
   if (!raw) problems.push(FILES.company + ' is missing or unreadable')
   const company = Object.assign({
-    schemaVersion: SCHEMA, id: 'co-main', name: 'My company', nameFa: '', mission: '', missionFa: '',
+    schemaVersion: SCHEMA, id: 'co-main', name: 'My company', mission: '', 
     issuePrefix: 'CO', ceoEmployeeId: CEO, defaultOfficeId: UNASSIGNED, budgetsEnabled: true, budget: null,
   }, raw || {})
   company.budget = cleanBudget(company.budget)
@@ -155,13 +153,13 @@ function readCompany() {
   let offices = readJson(fileOf('offices'), null)
   if (!Array.isArray(offices)) { if (offices !== null || fs.existsSync(fileOf('offices'))) problems.push(FILES.offices + ' is not a list'); offices = [] }
   offices = offices.filter((o) => o && OFFICE_ID.test(String(o.id)) && o.id !== UNASSIGNED).map((o, i) => ({
-    id: String(o.id), name: clip(o.name || o.id, 40), nameFa: clip(o.nameFa, 40), leadEmployeeId: clip(o.leadEmployeeId, 60),
+    id: String(o.id), name: clip(o.name || o.id, 40), leadEmployeeId: clip(o.leadEmployeeId, 60),
     profile: clip(o.profile, 30), layout: 'standard', theme: Object.hasOwn(THEMES, o.theme) ? o.theme : 'slate',
     order: typeof o.order === 'number' ? o.order : i, budget: cleanBudget(o.budget), archived: !!o.archived, builtIn: false,
   })).sort((a, b) => a.order - b.order)
   // "unassigned" is never stored: it always exists and holds every project
   // that has no office
-  offices.push({ id: UNASSIGNED, name: 'Unassigned work', nameFa: '', leadEmployeeId: '', profile: '', layout: 'standard', theme: 'slate', order: 1e9, budget: null, archived: false, builtIn: true })
+  offices.push({ id: UNASSIGNED, name: 'Unassigned work', leadEmployeeId: '', profile: '', layout: 'standard', theme: 'slate', order: 1e9, budget: null, archived: false, builtIn: true })
   const officeIds = new Set(offices.map((o) => o.id))
   let projects = readJson(fileOf('projects'), null)
   if (!Array.isArray(projects)) { if (projects !== null) problems.push(FILES.projects + ' is not a list'); projects = [] }
@@ -169,7 +167,7 @@ function readCompany() {
     const officeId = officeIds.has(p.officeId) ? p.officeId : UNASSIGNED
     if (p.officeId && officeId !== p.officeId) problems.push('project ' + p.id + ' names an unknown office "' + p.officeId + '"')
     return {
-      id: clip(p.id, 40), name: clip(p.name || p.id, 60), nameFa: clip(p.nameFa, 60), key: KEY.test(p.key) ? p.key : '',
+      id: clip(p.id, 40), name: clip(p.name || p.id, 60), key: KEY.test(p.key) ? p.key : '',
       aliases: Array.isArray(p.aliases) ? p.aliases.map((a) => clip(a, 60)).filter(Boolean) : [], officeId,
       goalId: clip(p.goalId, 60), leadEmployeeId: clip(p.leadEmployeeId, 60), repoPath: clip(p.repoPath, 300),
       status: ['active', 'paused', 'done', 'archived'].includes(p.status) ? p.status : 'active', budget: cleanBudget(p.budget),
@@ -470,7 +468,7 @@ function companyState(state) {
     employees.push({
       id, kind,
       // no title typed: "code-reviewer" reads as "Code reviewer", "seo-specialist" as "SEO specialist"
-      title: clip(ov.title || (kind === 'ceo' ? 'Supervisor · CEO' : titleFromId(id)), 60), titleFa: clip(ov.titleFa || def.titleFa || '', 60),
+      title: clip(ov.title || (kind === 'ceo' ? 'Supervisor · CEO' : titleFromId(id)), 60), 
       // 1.0: a person's name, what they are good at and the look they picked; all optional
       name: clip(ov.name, 60), skills: Array.isArray(ov.skills) ? ov.skills.slice(0, 8).map((x) => clip(x, 40)).filter(Boolean) : [], look: Number.isInteger(ov.look) && ov.look >= 0 && ov.look < 6 ? ov.look : 0,
       homeOfficeId: homeOf(id, co), zone, reportsTo: bossOf(id, co),
@@ -483,22 +481,23 @@ function companyState(state) {
   // agent names seen this month with no definition and no owner: contractors
   for (const [id, n] of runsBy) {
     if (ids.has(id)) continue
-    employees.push({ id, kind: 'contractor', title: '', titleFa: '', homeOfficeId: '', zone: 'guest', reportsTo: '', status: 'active', pauseReason: '', model: '', effort: '', color: '', aliases: [], budget: null, standing: st.employees[id], runsThisPeriod: n })
+    employees.push({ id, kind: 'contractor', title: '', homeOfficeId: '', zone: 'guest', reportsTo: '', status: 'active', pauseReason: '', model: '', effort: '', color: '', aliases: [], budget: null, standing: st.employees[id], runsThisPeriod: n })
   }
   employees.sort((a, b) => a.id.localeCompare(b.id))
   const hb = co.heartbeat && co.heartbeat.supervisor ? co.heartbeat.supervisor : null
   return {
     configured: true, readOnly: co.readOnly, schemaVersion: Number(co.company.schemaVersion) || SCHEMA, problems: co.problems,
     company: {
-      id: co.company.id, name: clip(co.company.name, 80), nameFa: clip(co.company.nameFa, 80), mission: clip(co.company.mission, 1000), missionFa: clip(co.company.missionFa, 1000),
+      id: co.company.id, name: clip(co.company.name, 80), mission: clip(co.company.mission, 1000), 
       issuePrefix: co.company.issuePrefix, ceoEmployeeId: co.company.ceoEmployeeId || CEO, budgetsEnabled: co.company.budgetsEnabled, budget: co.company.budget,
       // how the owner pays for the assistant decides how money is shown (spec Q10); unknown before 1.0
       payModel: ['plan', 'api', 'unknown'].includes(co.company.payModel) ? co.company.payModel : 'unknown',
       assistants: Array.isArray(co.company.assistants) ? co.company.assistants.slice(0, 12).map((a) => clip(a, 30)) : [],
     },
     themes: THEMES,
+    campus: require('./campus.cjs').view(co),
     offices: co.offices.map((o) => Object.assign({}, o, { color: THEMES[o.theme], standing: st.offices[o.id] })),
-    projects: co.projects.map((p) => ({ id: p.id, name: p.name, nameFa: p.nameFa, key: p.key, officeId: p.officeId, status: p.status, aliases: p.aliases, standing: st.projects[p.id] })),
+    projects: co.projects.map((p) => ({ id: p.id, name: p.name, key: p.key, officeId: p.officeId, status: p.status, aliases: p.aliases, standing: st.projects[p.id] })),
     employees,
     periodKey: st.periodKey,
     standing: st.company,
@@ -540,9 +539,18 @@ const fmtBudget = (b) => !b ? 'no budget' : (b.enabled ? '' : 'off · ') + [b.mo
 
 /** Sets the budget of the company, an office or an employee. `budget: null`
  *  removes it (no limit). */
+// Every read-change-write of a company file holds that file's lock
+// (store.cjs): agents in parallel would otherwise lose each other's update.
+// The checks come first, outside it: the lock is held only for the file.
+const locked = (k, fn) => withLock(fileOf(k), fn)
+const LOCKED_SCOPE = { company: 'company', office: 'offices', employee: 'employees' }
 function setBudget(input, via) {
   checkBy(input.by)
   const co = needCompany(true)
+  const k = Object.hasOwn(LOCKED_SCOPE, String(input.scope)) ? LOCKED_SCOPE[input.scope] : ''
+  return k ? locked(k, () => setBudgetLocked(input, via, co)) : setBudgetLocked(input, via, co)
+}
+function setBudgetLocked(input, via, co) {
   const scope = String(input.scope || '')
   const id = String(input.id == null ? '' : input.id)
   const budget = validateBudget(input.budget === undefined ? {} : input.budget)
@@ -580,6 +588,9 @@ function setBudget(input, via) {
 function setBudgetsEnabled(on, by, via) {
   checkBy(by)
   needCompany(true)
+  return locked('company', () => setBudgetsEnabledLocked(on, via))
+}
+function setBudgetsEnabledLocked(on, via) {
   const c = readJson(fileOf('company'), {})
   c.budgetsEnabled = !!on; c.updatedAt = new Date().toISOString()
   writeAtomic(fileOf('company'), JSON.stringify(c, null, 2))
@@ -594,6 +605,9 @@ function setBudgetsEnabled(on, by, via) {
 function updateEmployee(input, via) {
   checkBy(input.by)
   const co = needCompany(true)
+  return locked('employees', () => updateEmployeeLocked(input, via, co))
+}
+function updateEmployeeLocked(input, via, co) {
   const id = String(input.id || '')
   if (!AGENT_ID.test(id) || id.replace(/[^\w.-]/g, '') !== id) throw fail(400, 'bad employee id')
   const all = readJson(fileOf('employees'), {})
@@ -601,7 +615,7 @@ function updateEmployee(input, via) {
   if (!own(all, id) && !known.has(id) && id !== CEO) throw fail(404, 'no such employee: ' + id)
   const e = Object.assign({}, own(all, id))
   const changed = []
-  for (const k of ['title', 'titleFa', 'pauseReason', 'name']) if (input[k] !== undefined) { e[k] = clip(input[k], k === 'pauseReason' ? 200 : 60); changed.push(k) }
+  for (const k of ['title', 'pauseReason', 'name']) if (input[k] !== undefined) { e[k] = clip(input[k], k === 'pauseReason' ? 200 : 60); changed.push(k) }
   if (input.skills !== undefined) {
     if (!Array.isArray(input.skills)) throw fail(400, 'skills must be a list')
     e.skills = input.skills.slice(0, 8).map((x) => clip(String(x).trim(), 40)).filter(Boolean); changed.push('skills')
@@ -651,6 +665,9 @@ function updateEmployee(input, via) {
 function addOffice(o, by, via) {
   checkBy(by)
   needCompany(true)
+  return locked('offices', () => addOfficeLocked(o, via))
+}
+function addOfficeLocked(o, via) {
   if (!o || !OFFICE_ID.test(String(o.id)) || o.id === UNASSIGNED) throw fail(400, 'bad office id')
   const list = readJson(fileOf('offices'), [])
   const all = Array.isArray(list) ? list : []
@@ -659,7 +676,7 @@ function addOffice(o, by, via) {
     if (!old.archived) return { id: o.id, created: false }
     old.archived = false
   } else {
-    all.push({ id: o.id, name: clip(o.name || o.id, 40), nameFa: clip(o.nameFa, 40), leadEmployeeId: clip(o.leadEmployeeId, 60), profile: clip(o.profile, 30), layout: 'standard', theme: Object.hasOwn(THEMES, o.theme) ? o.theme : 'slate', order: all.length, budget: null, archived: false })
+    all.push({ id: o.id, name: clip(o.name || o.id, 40), leadEmployeeId: clip(o.leadEmployeeId, 60), profile: clip(o.profile, 30), layout: 'standard', theme: Object.hasOwn(THEMES, o.theme) ? o.theme : 'slate', order: all.length, budget: null, archived: false })
   }
   writeAtomic(fileOf('offices'), JSON.stringify(all, null, 2))
   activity({ actor: 'board', action: 'office.added', entityType: 'office', entityId: o.id, summary: 'office ' + o.id + (old ? ' brought back' : ' added'), via: via || 'cli' })
@@ -669,6 +686,9 @@ function addOffice(o, by, via) {
 function archiveOffice(id, by, via) {
   checkBy(by)
   needCompany(true)
+  return locked('offices', () => archiveOfficeLocked(id, via))
+}
+function archiveOfficeLocked(id, via) {
   const list = readJson(fileOf('offices'), [])
   const o = Array.isArray(list) && list.find((x) => x && x.id === id)
   if (!o) throw fail(404, 'no such office: ' + id)
@@ -682,6 +702,9 @@ function archiveOffice(id, by, via) {
 function writeOverlay(id, fields, by) {
   checkBy(by)
   needCompany(true)
+  return locked('employees', () => writeOverlayLocked(id, fields))
+}
+function writeOverlayLocked(id, fields) {
   if (!AGENT_ID.test(id) || id.replace(/[^\w.-]/g, '') !== id) throw fail(400, 'bad employee id')
   const all = readJson(fileOf('employees'), {})
   all[id] = Object.assign({}, own(all, id), fields)
@@ -721,6 +744,9 @@ function noteIncidents(state, co) {
 
 function stampHeartbeat(session) {
   if (!fs.existsSync(COMPANY)) return false
+  return locked('heartbeat', () => stampHeartbeatLocked(session))
+}
+function stampHeartbeatLocked(session) {
   const hb = readJson(fileOf('heartbeat'), {}) || {}
   hb.supervisor = { lastSeenAt: new Date().toISOString() }
   if (session) hb.supervisor.session = clip(session, 60)
@@ -730,6 +756,9 @@ function stampHeartbeat(session) {
 
 /** The Board's dashboard changes not read yet, oldest first. */
 function unreadInbox(mark) {
+  return mark && fs.existsSync(COMPANY) ? locked('inboxRead', () => unreadInboxNow(mark)) : unreadInboxNow(mark)
+}
+function unreadInboxNow(mark) {
   const all = readLines(fileOf('inbox'))
   const seen = readJson(fileOf('inboxRead'), {}) || {}
   const lines = Number(seen.lines) || 0
@@ -747,18 +776,18 @@ function companyInit(seed, agentNames) {
     throw fail(409, COMPANY + ' already exists' + (missing.length ? ' but is missing ' + missing.join(', ') + ': remove the folder or finish it by hand' : ''))
   }
   const now = new Date().toISOString()
-  const c = Object.assign({ id: 'co-main', name: 'My company', nameFa: '', mission: '', missionFa: '', issuePrefix: 'CO', ceoEmployeeId: CEO, defaultOfficeId: UNASSIGNED, budgetsEnabled: true, budget: null }, seed.company || {}, { schemaVersion: SCHEMA, createdAt: now, updatedAt: now })
+  const c = Object.assign({ id: 'co-main', name: 'My company', mission: '', issuePrefix: 'CO', ceoEmployeeId: CEO, defaultOfficeId: UNASSIGNED, budgetsEnabled: true, budget: null }, seed.company || {}, { schemaVersion: SCHEMA, createdAt: now, updatedAt: now })
   if (!KEY.test(c.issuePrefix)) throw fail(400, 'issuePrefix must match ' + KEY)
   c.budget = c.budget ? validateBudget(c.budget) : null
-  const offices = (Array.isArray(seed.offices) && seed.offices.length ? seed.offices : [{ id: 'hq', name: 'Headquarters', nameFa: '', leadEmployeeId: CEO, profile: 'operations', theme: 'coral' }]).map((o, i) => {
+  const offices = (Array.isArray(seed.offices) && seed.offices.length ? seed.offices : [{ id: 'hq', name: 'Headquarters', leadEmployeeId: CEO, profile: 'operations', theme: 'coral' }]).map((o, i) => {
     if (!OFFICE_ID.test(String(o.id)) || o.id === UNASSIGNED) throw fail(400, 'bad office id "' + o.id + '": lowercase letters, digits and hyphens, for example "' + String(o.id || 'office').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^[^a-z]+/, '') + '"')
-    return { id: o.id, name: clip(o.name || o.id, 40), nameFa: clip(o.nameFa, 40), leadEmployeeId: clip(o.leadEmployeeId, 60), profile: clip(o.profile, 30), layout: 'standard', theme: Object.hasOwn(THEMES, o.theme) ? o.theme : 'slate', order: typeof o.order === 'number' ? o.order : i, budget: o.budget ? validateBudget(o.budget) : null, archived: false }
+    return { id: o.id, name: clip(o.name || o.id, 40), leadEmployeeId: clip(o.leadEmployeeId, 60), profile: clip(o.profile, 30), layout: 'standard', theme: Object.hasOwn(THEMES, o.theme) ? o.theme : 'slate', order: typeof o.order === 'number' ? o.order : i, budget: o.budget ? validateBudget(o.budget) : null, archived: false }
   })
   const officeIds = new Set(offices.map((o) => o.id))
   const projects = (Array.isArray(seed.projects) ? seed.projects : []).map((p) => {
     if (!p || !p.id) throw fail(400, 'a project needs an id')
     if (p.key && !KEY.test(p.key)) throw fail(400, 'project key "' + p.key + '" must match ' + KEY)
-    return { id: clip(p.id, 40), name: clip(p.name || p.id, 60), nameFa: clip(p.nameFa, 60), key: p.key || '', aliases: Array.isArray(p.aliases) ? p.aliases.map((a) => clip(a, 60)) : [], officeId: officeIds.has(p.officeId) ? p.officeId : UNASSIGNED, goalId: '', leadEmployeeId: clip(p.leadEmployeeId, 60), repoPath: clip(p.repoPath, 300), status: 'active', budget: p.budget ? validateBudget(p.budget) : null }
+    return { id: clip(p.id, 40), name: clip(p.name || p.id, 60), key: p.key || '', aliases: Array.isArray(p.aliases) ? p.aliases.map((a) => clip(a, 60)) : [], officeId: officeIds.has(p.officeId) ? p.officeId : UNASSIGNED, goalId: '', leadEmployeeId: clip(p.leadEmployeeId, 60), repoPath: clip(p.repoPath, 300), status: 'active', budget: p.budget ? validateBudget(p.budget) : null }
   })
   const seedEmp = seed.employees && typeof seed.employees === 'object' ? seed.employees : {}
   const employees = {}
@@ -770,7 +799,7 @@ function companyInit(seed, agentNames) {
     const home = officeIds.has(s.homeOfficeId) ? s.homeOfficeId : led ? led.id : offices[0].id
     const boss = s.reportsTo || (led ? CEO : lead(home) && lead(home) !== name ? lead(home) : CEO)
     employees[name] = {
-      title: clip(s.title, 60), titleFa: clip(s.titleFa, 60), homeOfficeId: home,
+      title: clip(s.title, 60), homeOfficeId: home,
       ...(s.name ? { name: clip(s.name, 60) } : {}), ...(Array.isArray(s.skills) ? { skills: s.skills.slice(0, 8).map((x) => clip(x, 40)) } : {}), ...(Number.isInteger(s.look) && s.look >= 0 && s.look < 6 ? { look: s.look } : {}),
       // no zone unless the seed gives one: the desk then follows the agent's own
       // zone: line or its name (homeDesks), also after the definition changes

@@ -32,6 +32,18 @@ Last checked against the code: <YYYY-MM-DD>
 | Build (web) | <e.g. `npx vite build`> | |
 | Build (installer) | <e.g. `npm run electron:build`> | <any multi-step ritual, and why each step exists> |
 
+## Test suites
+
+<!-- Autonomous runs choose which suite to run from this table (WORKFLOW,
+"Autonomous mode"). Fill in what exists; write "none" for the rest. -->
+| Suite | Command | When it runs |
+|---|---|---|
+| Full | <e.g. `npm test`> | after every merge |
+| Fast | <e.g. `npm run test:fast`> | while building |
+| Slow / compatibility | <e.g. `npm run test:compat`> | only when stored data or the file format changed |
+
+Baseline: <which tests fail on the base branch today, or "all green">.
+
 ## Dev port
 
 - Dev server: <port, e.g. 5177>. Other apps on this machine use: <list, to avoid clashes>.
@@ -88,9 +100,21 @@ Works for any stack: app screens, website routes, mobile screens, design files.
 - Engineering references: <standard and edition, reference workbooks and where they are, units, agreed tolerances>
 - Decisions already taken: <e.g. "min towline floor removed to match the workbook; do not re-add">
 
+## Owner gates (autonomous mode)
+
+<!-- Things an autonomous run must never decide alone: it parks the item,
+asks the owner, and carries on with independent work. List paths, modules or
+kinds of change. Release steps (build, sign, tag, push, publish) are always
+gates and need not be listed. An empty list means "no domain gate"; a missing
+heading makes the supervisor ask. -->
+- <e.g. everything under `src/calc/`>
+- <e.g. constants, tolerances, default unit systems, tax rates>
+- <e.g. legal text, prices>
+
 ## Docs
 
 - Developer docs: <README.md, architecture notes>
+- Review rules: `REVIEW.md` in the repo root (template: `REVIEW.template.md`); reviewers read it first
 - User guide: <path, build command, screenshot capture script>
 - Release notes: <path>
 - Specs and mockups: <where spec-writer and ui-designer should write, or "scratchpad">

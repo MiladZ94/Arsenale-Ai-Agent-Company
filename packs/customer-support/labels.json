@@ -1,0 +1,18 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs or design.",
+  "support-lead": {
+    "dept": "lead"
+  },
+  "reply-drafter": {
+    "dept": "docs"
+  },
+  "faq-writer": {
+    "dept": "docs"
+  },
+  "ticket-triager": {
+    "dept": "review"
+  },
+  "feedback-summariser": {
+    "dept": "build"
+  }
+}

@@ -4,14 +4,11 @@
   "id": "content-marketing",
   "version": "1.0.0",
   "name": "Content & Marketing",
-  "nameFa": "محتوا و بازاریابی",
   "description": "Plan campaigns, write brand-voice copy, draft social posts, improve website SEO and prepare newsletters, all as drafts that you review before anything goes out.",
-  "descriptionFa": "برنامه‌ریزی کمپین، نوشتن متن با لحن برند، پیش‌نویس پست شبکه‌های اجتماعی، بهبود سئوی وب‌سایت و آماده‌سازی خبرنامه؛ همه به‌صورت پیش‌نویس برای بازبینی شما.",
   "minArsenale": "1.0.0",
   "office": {
     "id": "marketing",
     "name": "Content & Marketing",
-    "nameFa": "محتوا و بازاریابی",
     "theme": "coral",
     "profile": "marketing",
     "lead": "marketing-lead"
@@ -22,7 +19,6 @@
       "id": "marketing-lead",
       "zone": "lead",
       "title": "Marketing Lead",
-      "titleFa": "مدیر بازاریابی",
       "tier": "standard"
     },
     {
@@ -30,7 +26,6 @@
       "id": "copywriter",
       "zone": "docs",
       "title": "Copywriter",
-      "titleFa": "کپی‌رایتر",
       "tier": "standard"
     },
     {
@@ -38,7 +33,6 @@
       "id": "social-media-planner",
       "zone": "docs",
       "title": "Social Media Planner",
-      "titleFa": "برنامه‌ریز شبکه‌های اجتماعی",
       "tier": "standard"
     },
     {
@@ -46,7 +40,6 @@
       "id": "seo-specialist",
       "zone": "build",
       "title": "SEO Specialist (content)",
-      "titleFa": "متخصص سئوی محتوا",
       "tier": "standard"
     },
     {
@@ -54,7 +47,6 @@
       "id": "newsletter-editor",
       "zone": "docs",
       "title": "Newsletter Editor",
-      "titleFa": "ویراستار خبرنامه",
       "tier": "standard"
     }
   ],

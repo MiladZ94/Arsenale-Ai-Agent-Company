@@ -23,4 +23,4 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - name: Test
-        run: npm test
+        run: npm run test:all

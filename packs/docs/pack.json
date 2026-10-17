@@ -1,0 +1,79 @@
+{
+  "format": "arsenale-pack",
+  "formatVersion": 1,
+  "id": "docs",
+  "version": "1.0.0",
+  "name": "Docs",
+  "description": "Keep developer docs, user guides and change explanations in line with the code, and keep them short.",
+  "minArsenale": "1.0.0",
+  "office": {
+    "id": "docs",
+    "name": "Docs",
+    "theme": "blue",
+    "profile": "docs",
+    "lead": "docs-lead"
+  },
+  "members": [
+    {
+      "file": "agents/docs-lead.md",
+      "id": "docs-lead",
+      "zone": "lead",
+      "title": "Docs Lead",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/readme-trimmer.md",
+      "id": "readme-trimmer",
+      "zone": "docs",
+      "title": "README Trimmer",
+      "tier": "light"
+    },
+    {
+      "id": "dev-docs",
+      "ref": true,
+      "zone": "docs",
+      "title": "Dev Docs",
+      "tier": "standard"
+    },
+    {
+      "id": "user-guide",
+      "ref": true,
+      "zone": "docs",
+      "title": "User Guide",
+      "tier": "standard"
+    },
+    {
+      "id": "docs-explainer",
+      "ref": true,
+      "zone": "docs",
+      "title": "Docs Explainer",
+      "tier": "standard"
+    }
+  ],
+  "sampleTasks": [
+    {
+      "title": "Trim an invented README",
+      "description": "Shorten the invented README I name to install, run, test and purpose, and list what you removed.",
+      "assignee": "readme-trimmer"
+    },
+    {
+      "title": "Find the docs a change made wrong",
+      "description": "From the invented change summary I name, list every doc sentence that is now wrong and who should update it.",
+      "assignee": "docs-lead"
+    }
+  ],
+  "policy": {
+    "members": {
+      "docs-lead": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "readme-trimmer": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      }
+    }
+  }
+}

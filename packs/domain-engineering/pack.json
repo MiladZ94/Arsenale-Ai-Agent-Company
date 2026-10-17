@@ -1,0 +1,77 @@
+{
+  "format": "arsenale-pack",
+  "formatVersion": 1,
+  "id": "domain-engineering",
+  "version": "1.0.0",
+  "name": "Domain engineering",
+  "description": "Check calculation apps against a reference workbook or a standard. Reports deviations with their cause; it never adjusts a formula to hit a number.",
+  "minArsenale": "1.0.0",
+  "office": {
+    "id": "domain-engineering",
+    "name": "Domain Lab",
+    "theme": "teal",
+    "profile": "domain",
+    "lead": "domain-lead"
+  },
+  "members": [
+    {
+      "file": "agents/domain-lead.md",
+      "id": "domain-lead",
+      "zone": "lead",
+      "title": "Domain Lead",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/numeric-regression-checker.md",
+      "id": "numeric-regression-checker",
+      "zone": "verify",
+      "title": "Numeric Regression Checker",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/standards-cross-checker.md",
+      "id": "standards-cross-checker",
+      "zone": "review",
+      "title": "Standards Cross-Checker",
+      "tier": "standard"
+    },
+    {
+      "id": "domain-validator",
+      "ref": true,
+      "zone": "review",
+      "title": "Domain Validator",
+      "tier": "heavy"
+    }
+  ],
+  "sampleTasks": [
+    {
+      "title": "Compare two invented result sets",
+      "description": "Compare the two invented result tables I name and list every number that moved beyond the stated tolerance.",
+      "assignee": "numeric-regression-checker"
+    },
+    {
+      "title": "Trace the constants of an invented calculation",
+      "description": "For the invented calculation note I name, list each constant with the clause it should come from and mark the untraceable ones.",
+      "assignee": "standards-cross-checker"
+    }
+  ],
+  "policy": {
+    "members": {
+      "domain-lead": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "numeric-regression-checker": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "standards-cross-checker": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      }
+    }
+  }
+}

@@ -14,10 +14,12 @@ through a pull request that the maintainer reviews and merges.
 3. **Change, with tests.** A bug fix comes with a test that fails without the
    fix. Run the whole suite:
    ```
-   npm test
+   npm run test:all
    ```
-   It needs only Node.js 20 or newer. The page tests run when Chrome or Edge is
-   installed (set `CHROME_BIN` to point at one) and skip otherwise.
+   It needs only Node.js 20 or newer. `npm test` is the fast tier (no browser);
+   `npm run test:ui` runs the page tests, at most two Chromes at once, when
+   Chrome or Edge is installed (set `CHROME_BIN` to point at one) and skips
+   them otherwise.
 4. **Open a pull request** against `main`. Fill in the template: what changed,
    why, how you tested it, and what it does to saved data.
 5. **Review.** The maintainer (see `.github/CODEOWNERS`) reviews every pull
@@ -37,14 +39,15 @@ shape before you build it.
   new field is optional.
 - **Everything shown is escaped.** Use `esc()` for any text from a file.
 - **No real data** in tests, fixtures or screenshots: invented names only.
-- **Two languages in the page.** New interface text goes through `T('…')`,
-  with a Persian entry in `tools/dashboard-strings.cjs`; the language tests
-  check that each page is in one language.
+- **English only.** New interface text goes through `T('…')`, which returns
+  the English key; the language tests check no other script appears.
 - Match the style around your change; comments say why, not what.
 
 - **One write path.** Every write goes through `tools/runlog.cjs` and the
   libraries next to it; a door (CLI, MCP, page) only fixes the actor. Owner-only
   work is refused in the library, never just hidden in the UI.
+- **Safe writes.** Data files are written with `writeAtomic` and changed under
+  `withLock` (`tools/store.cjs`), never with a bare `fs.writeFileSync`.
 
 ## Help wanted
 
@@ -76,9 +79,6 @@ open an issue with the label `help wanted` and the area's name.
   other trades (HR and Finance texts need a qualified reviewer).
 - **Claude Code hook enforcement** of the safety rules (block a known sending
   or paying tool unless approved), as an opt-in.
-- **A Persian (Jalali) date picker** for the task due date; today the browser's
-  own date field is used, and the task shows its due date in the Persian
-  calendar.
 - **Update checks** (opt-in, GitHub Releases only) once there is a desktop app.
 - **A Linux desktop package.**
 
