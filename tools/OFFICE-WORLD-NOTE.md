@@ -12,8 +12,8 @@ there is one copy of the drawing code and nothing to sync.
 |---|---|
 | `tools/office-world.cjs` | the one require path: re-exports the pieces below |
 | `tools/pages/world/kit.cjs` | the shared three.js kit: the engine (orthographic isometric camera, pan, zoom, picking), the 12 procedural building shapes, the avatar, the desk, the asset loader (buildings, furniture, characters), the checkerboard floor |
-| `tools/pages/world/campus.cjs` | the campus board (design C2): lots, buildings, build mode, hotbar, ghost; talks to `POST api/campus` |
-| `tools/pages/world/office3d.cjs` | the office floor (design C2): zone rooms, one figure per run, the side list, label placement |
+| `tools/pages/world/campus.cjs` | the campus board (design C2): one continuous checkerboard ground (lot outlines only in build mode), buildings, titles placed clear of every building, build mode, hotbar, ghost; talks to `POST api/campus` |
+| `tools/pages/world/office3d.cjs` | the office floor (design C2): one open floor, a grid of desks on personal tiles, the free area for idle agents, one figure per run, the side list, label placement |
 | `tools/pages/world/palette.cjs` | role, room and state colours, one table, with the contrast check (4.5:1) |
 | `tools/pages/world/style.cjs` | the CSS of both |
 | `tools/pages/world/scripts.cjs` | Node: the pinned three.js and the asset models, inlined into the page |

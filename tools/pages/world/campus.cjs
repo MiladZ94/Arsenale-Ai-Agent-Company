@@ -1,5 +1,5 @@
 /* ======================================================================
- * The campus (design C2): a building game board. Lots on a grid, one
+ * The campus (design C2): a building game board. Lots on a grid (implied by one flat checkerboard, outlined only in Build mode), one
  * building per office, drawn in three.js (orthographic, isometric) from the
  * shared kit (kit.cjs). Without WebGL a flat grid of tiles stands in.
  *
@@ -103,49 +103,40 @@ function campusArt(h) {
     return eng
   }
 
-  // a white board: a light grey slab, every lot a two-tone checkerboard, a free lot with a dashed edge
-  const GROUND = '#CBD1D9', PAD = '#F4F5F7', PAD_B = '#E3E7EC', PAD_EDGE = '#8E9AA8'
+  // one continuous flat checkerboard, like the Sims build grid: no slab, no side edges, no tiles with borders.
+  // A lot is only implied by the grid; its outline is drawn in Build mode (see setOutlines).
+  const FLOOR_A = '#F4F5F7', FLOOR_B = '#DFE3E9', EDGE = '#8E9AA8', TILE = 0.3 // four tiles to a lot pitch, so lot edges fall on tile lines
+  let outlines = null, gen = 0
   function rebuild() {
     if (!eng || !model) return
     const c = model.campus
     const next = JSON.stringify([c.grid, c.buildings, (model.cells || []).map((x) => [x.id, x.name, x.color])])
     if (next === sig) return
     sig = next
+    gen++
     const T3 = window.THREE
-    if (built) { eng.scene.remove(built.group); built.group.traverse((o) => { if (o.geometry) o.geometry.dispose() }); built.labels.forEach((l) => l.remove()) }
+    if (built) { eng.scene.remove(built.group); built.group.traverse((o) => { if (o.geometry) o.geometry.dispose() }); built.labels.forEach((l) => l.remove()); if (built.svg) built.svg.remove() }
     const group = new T3.Group()
     const { cols, rows } = c.grid
     const W = cols * PITCH, D = rows * PITCH
-    K.box(group, W + 0.5, 0.22, D + 0.5, GROUND, 0, -0.22, 0)
+    K.checker(group, W + 1.2, D + 1.2, TILE, FLOOR_A, FLOOR_B, 0, 0, 0)
+    // lot outlines, build mode only
+    outlines = new T3.Group()
     const lots = new Map(c.buildings.map((b) => [b.x + ',' + b.y, b]))
     for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
       const px = (x - cols / 2 + 0.5) * PITCH, pz = (y - rows / 2 + 0.5) * PITCH
-      K.box(group, 1, 0.03, 1, PAD, px, 0, pz)
-      K.checker(group, 1, 1, 0.25, PAD, PAD_B, px, 0.031, pz)
-      if (!lots.has(x + ',' + y)) {
-        const e = new T3.LineSegments(new T3.EdgesGeometry(new T3.BoxGeometry(0.94, 0.001, 0.94)), new T3.LineDashedMaterial({ color: PAD_EDGE, dashSize: 0.07, gapSize: 0.05 }))
-        e.computeLineDistances(); e.position.set(px, 0.035, pz); group.add(e)
-      }
+      const e = new T3.LineSegments(new T3.EdgesGeometry(new T3.BoxGeometry(0.94, 0.001, 0.94)), lots.has(x + ',' + y) ? new T3.LineBasicMaterial({ color: EDGE }) : new T3.LineDashedMaterial({ color: EDGE, dashSize: 0.07, gapSize: 0.05 }))
+      e.computeLineDistances(); e.position.set(px, 0.012, pz); outlines.add(e)
     }
-    // trees on the verge, the same ones every time
-    let seed = cols * 31 + rows * 17 + c.buildings.length
-    const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff }
-    for (let i = 0; i < Math.min(14, 4 + cols + rows); i++) {
-      const side = i % 4, t = rnd()
-      const x = side === 0 ? -W / 2 - 0.22 : side === 1 ? W / 2 + 0.22 : (t - 0.5) * W
-      const z = side === 2 ? -D / 2 - 0.22 : side === 3 ? D / 2 + 0.22 : (t - 0.5) * D
-      group.add(K.tree(x, z, 0.8 + rnd() * 0.5))
-    }
+    group.add(outlines)
     const things = new Map(), labels = []
     for (const b of c.buildings) {
       const cell = cellOf(b.officeId)
       const g = K.building(b.type, cell.color, b.rot)
       const p = lotOf(b)
-      g.position.set(p.x, 0.03, p.z)
+      g.position.set(p.x, 0, p.z)
       g.userData.id = b.id
       group.add(g)
-      // the label stands on the building's own roof, so a low hall's label does not cover the lot behind it
-      const roof = Math.max(0.45, new T3.Box3().setFromObject(g).max.y + 0.06)
       const lab = document.createElement('div')
       lab.className = 'c3lab'
       lab.dataset.b = b.id
@@ -156,14 +147,29 @@ function campusArt(h) {
       lab.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() } })
       eng.ov.appendChild(lab)
       labels.push(lab)
-      things.set(b.id, { id: b.id, group: g, b, lab, roof })
+      things.set(b.id, { id: b.id, group: g, b, lab, tris: null })
     }
+    group.updateMatrixWorld(true)
+    // the building's triangles in world space: the titles are kept off what is really drawn, not off a box round it
+    for (const t of things.values()) {
+      const v = [], p = new T3.Vector3()
+      t.group.traverse((o) => {
+        if (!o.isMesh || !o.geometry.attributes.position) return
+        const pos = o.geometry.attributes.position, idx = o.geometry.index
+        const n = idx ? idx.count : pos.count
+        for (let i = 0; i < n; i++) { p.fromBufferAttribute(pos, idx ? idx.getX(i) : i).applyMatrix4(o.matrixWorld); v.push(p.x, p.y, p.z) }
+      })
+      t.tris = new Float32Array(v)
+    }
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    svg.setAttribute('class', 'c3ln')
+    eng.ov.insertBefore(svg, eng.ov.firstChild) // under the titles
     hl = new T3.LineSegments(new T3.EdgesGeometry(new T3.BoxGeometry(1.04, 0.06, 1.04)), new T3.LineBasicMaterial({ color: '#2F6BE0' }))
     hl.visible = false
     group.add(hl)
     eng.scene.add(group)
-    built = { group, things, labels, W, D }
-    eng.bounds = { minx: -W / 2 - 0.4, maxx: W / 2 + 0.4, minz: -D / 2 - 0.4, maxz: D / 2 + 0.4, h: 1.2 }
+    built = { group, things, labels, svg, W, D }
+    eng.bounds = { minx: -W / 2 - 0.6, maxx: W / 2 + 0.6, minz: -D / 2 - 0.6, maxz: D / 2 + 0.6, h: 0.3 }
     if (!userView) fitView()
     eng.dirty()
   }
@@ -171,38 +177,126 @@ function campusArt(h) {
   const padNow = () => (bm.on && editable() ? { l: 84, r: 24, t: 54, b: 150 } : { l: 24, r: 24, t: 56, b: 24 })
   function fitView() { if (eng && eng.bounds) { eng.resize(); eng.fit(padNow()) } }
 
-  // ---------- labels (name, counts), the ghost, the highlights
+  // ---------- titles (name, agents working now), the ghost, the highlights
+  // A title is a small pill on the ground. It is put on the nearest spot that covers no building (the drawn
+  // triangles, from a mask) and no other title, and joined to its lot by a short leader line when it had to move away.
+  const OFFS = (() => { const o = []; for (let dy = -150; dy <= 170; dy += 6) for (let dx = -220; dx <= 220; dx += 8) o.push([dx, dy, Math.hypot(dx, dy * 1.2) + (dy < 0 ? 10 : 0)]); return o.sort((a, b) => a[2] - b[2]) })()
+  let mask = null
+  function ensureMask() {
+    const S = 0.5, W = eng.W, H = eng.H
+    const o = eng.project(0, 0, 0)
+    const key = [W, H, eng.view.ppu.toFixed(3), o.x.toFixed(1), o.y.toFixed(1), gen].join('|')
+    if (mask && mask.key === key) return mask
+    const w = Math.ceil(W * S) + 2, h = Math.ceil(H * S) + 2
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h
+    const cx = cv.getContext('2d', { willReadFrequently: true })
+    const T3 = window.THREE
+    const m = new T3.Matrix4().multiplyMatrices(eng.cam.projectionMatrix, eng.cam.matrixWorldInverse).elements
+    const sx = (x, y, z) => ((m[0] * x + m[4] * y + m[8] * z + m[12]) + 1) / 2 * W * S
+    const sy = (x, y, z) => (1 - (m[1] * x + m[5] * y + m[9] * z + m[13])) / 2 * H * S
+    cx.fillStyle = '#000'
+    for (const t of built.things.values()) {
+      const v = t.tris
+      cx.beginPath()
+      for (let i = 0; i + 8 < v.length; i += 9) {
+        const ax = sx(v[i], v[i + 1], v[i + 2]), ay = sy(v[i], v[i + 1], v[i + 2]), bx = sx(v[i + 3], v[i + 4], v[i + 5]), by = sy(v[i + 3], v[i + 4], v[i + 5]), qx = sx(v[i + 6], v[i + 7], v[i + 8]), qy = sy(v[i + 6], v[i + 7], v[i + 8])
+        // every triangle the same way round, so overlapping ones add up under the non-zero rule instead of cancelling
+        const flip = (bx - ax) * (qy - ay) - (by - ay) * (qx - ax) < 0
+        cx.moveTo(ax, ay); if (flip) { cx.lineTo(qx, qy); cx.lineTo(bx, by) } else { cx.lineTo(bx, by); cx.lineTo(qx, qy) }
+        cx.closePath()
+      }
+      cx.fill()
+    }
+    const px = cx.getImageData(0, 0, w, h).data
+    const sat = new Int32Array((w + 1) * (h + 1))
+    for (let y = 1; y <= h; y++) { let row = 0; for (let x = 1; x <= w; x++) { row += px[((y - 1) * w + (x - 1)) * 4 + 3] > 0 ? 1 : 0; sat[y * (w + 1) + x] = sat[(y - 1) * (w + 1) + x] + row } }
+    mask = { key, S, w, h, sat, covers(b, pad) {
+      const l = Math.max(0, Math.floor((b.l - pad) * S)), t = Math.max(0, Math.floor((b.t - pad) * S)), r = Math.min(w, Math.ceil((b.r + pad) * S)), bt = Math.min(h, Math.ceil((b.b + pad) * S))
+      if (r <= l || bt <= t) return false
+      return sat[bt * (w + 1) + r] - sat[t * (w + 1) + r] - sat[bt * (w + 1) + l] + sat[t * (w + 1) + l] > 0
+    } }
+    return mask
+  }
+
   const rectsHit = (a, b) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t
-  function overlay() {
-    if (!built || !model) return
+  let labKey = ''
+  function placeTitles() {
+    const pad = padNow()
+    const area = { l: pad.l, r: eng.W - pad.r, t: pad.t, b: eng.H - pad.b }
+    const mk = ensureMask()
+    const key = mk.key + '|' + JSON.stringify([area, bm.sel, bm.hover, (model.cells || []).map((x) => [x.id, x.name, x.working, x.waiting])])
+    if (key === labKey) return
+    labKey = key
     const placed = []
+    const svg = built.svg
+    while (svg.firstChild) svg.removeChild(svg.firstChild)
     const items = [...built.things.values()].map((t) => {
-      const p = eng.project(lotOf(t.b).x, t.roof, lotOf(t.b).z)
-      return { t, p }
-    }).sort((a, b) => b.p.y - a.p.y)
-    for (const { t, p } of items) {
+      const q = lotOf(t.b)
+      return { t, a: eng.project(q.x, 0, q.z), corners: [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([i, j]) => eng.project(q.x + i * 0.46, 0, q.z + j * 0.46)) }
+    }).sort((x, y) => y.a.y - x.a.y)
+    for (const { t, a, corners } of items) {
       const cell = cellOf(t.b.officeId)
-      const full = '<b dir="auto">' + esc(cell.name) + '</b>' + (cell.working ? '<u class="w" title="working"><i></i>' + fa(cell.working) + '</u>' : '') + (cell.waiting ? '<u class="q" title="waiting for you"><i></i>' + fa(cell.waiting) + '</u>' : '')
       const lab = t.lab
+      const w = cell.working || 0, q = cell.waiting || 0
+      const first = String(cell.name).split(' ')[0]
+      const forms = [
+        '<b dir="auto">' + esc(cell.name) + '</b><em>· ' + fa(w) + '</em>' + (q ? '<u class="q" title="waiting for you">' + fa(q) + ' waiting</u>' : ''),
+        '<b dir="auto">' + esc(first) + '</b><em>· ' + fa(w) + '</em>' + (q ? '<u class="q" title="waiting for you">' + fa(q) + '</u>' : ''),
+      ]
       lab.className = 'c3lab' + (bm.sel === t.id ? ' sel' : '') + (bm.hover === t.id ? ' hov' : '')
       lab.style.setProperty('--c', cell.color)
-      let form = 'full'
-      for (const f of ['full', 'short']) {
-        if (lab.dataset.form !== f || lab.dataset.k !== cell.name + '|' + cell.working + '|' + cell.waiting) { lab.innerHTML = f === 'full' ? full : '<b dir="auto">' + esc(cell.name) + '</b>'; lab.dataset.form = f; lab.dataset.k = cell.name + '|' + cell.working + '|' + cell.waiting }
-        lab.style.left = p.x + 'px'; lab.style.top = p.y + 'px'
-        const r = lab.getBoundingClientRect(), o = eng.host.getBoundingClientRect()
-        const box = { l: r.left - o.left, r: r.right - o.left, t: r.top - o.top, b: r.bottom - o.top }
-        if (!placed.some((q) => rectsHit(q, box))) { placed.push(box); form = f; lab.hidden = false; break }
-        form = ''
+      lab.setAttribute('aria-label', cell.name + ', ' + w + ' working now' + (q ? ', ' + q + ' waiting for you' : ''))
+      lab.hidden = false
+      let spot = null
+      // a title near its lot first, the full form before the short one; then anywhere
+      for (const [limit, fi] of [[110, 0], [190, 0], [110, 1], [1e9, 0], [1e9, 1]]) {
+        lab.innerHTML = forms[fi]
+        lab.style.visibility = 'hidden'; lab.style.left = '0px'; lab.style.top = '0px'
+        const lw = lab.offsetWidth, lh = lab.offsetHeight
+        for (const [dx, dy, cost] of OFFS) {
+          if (cost > limit) break
+          const cx = a.x + dx, cy = a.y + dy
+          const b = { l: cx - lw / 2, r: cx + lw / 2, t: cy - lh / 2, b: cy + lh / 2 }
+          if (b.l < area.l || b.r > area.r || b.t < area.t || b.b > area.b) continue
+          if (placed.some((p) => rectsHit(p, { l: b.l - 4, r: b.r + 4, t: b.t - 4, b: b.b + 4 }))) continue
+          if (mk.covers(b, 4)) continue
+          spot = { b, cx, cy }; break
+        }
+        if (spot) break
       }
-      if (!form) { lab.hidden = true }
+      if (!spot) { lab.hidden = true; continue }
+      lab.style.left = spot.cx + 'px'; lab.style.top = spot.cy + 'px'; lab.style.visibility = ''
+      placed.push(spot.b)
+      // the leader ends at the corner of the lot nearest the title, so it never crosses its own building
+      const corner = corners.slice().sort((p, r) => Math.hypot(p.x - spot.cx, p.y - spot.cy) - Math.hypot(r.x - spot.cx, r.y - spot.cy))[0]
+      if (Math.hypot(spot.cx - corner.x, spot.cy - corner.y) > 34) {
+        // only the parts of the leader that are over open floor are drawn: it never runs across a building
+        const N = 48, pt = (k) => ({ x: corner.x + (spot.cx - corner.x) * k / N, y: corner.y + (spot.cy - corner.y) * k / N })
+        const open = (k) => { const p = pt(k); return !mk.covers({ l: p.x - 1, r: p.x + 1, t: p.y - 1, b: p.y + 1 }, 0) }
+        let from = -1
+        for (let k = 0; k <= N + 1; k++) {
+          const ok = k <= N && open(k)
+          if (ok && from < 0) from = k
+          if (!ok && from >= 0) {
+            if (k - 1 > from) { const p0 = pt(from), p1 = pt(k - 1), ln = document.createElementNS('http://www.w3.org/2000/svg', 'line'); ln.setAttribute('x1', p0.x); ln.setAttribute('y1', p0.y); ln.setAttribute('x2', p1.x); ln.setAttribute('y2', p1.y); svg.appendChild(ln) }
+            from = -1
+          }
+        }
+        if (open(0)) { const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); dot.setAttribute('cx', corner.x); dot.setAttribute('cy', corner.y); dot.setAttribute('r', 2.5); svg.appendChild(dot) }
+      }
     }
+  }
+
+  function overlay() {
+    if (!built || !model) return
+    if (outlines) outlines.visible = bm.on && editable()
+    placeTitles()
     const on = built.things.get(bm.sel) || built.things.get(bm.hover)
     if (hl) { hl.visible = !!on; if (on) { const q = lotOf(on.b); hl.position.set(q.x, 0.06, q.z) } }
     const gl = $('c3ghost')
     if (gl && ghost && ghostLot) {
       const p = lotOf(ghostLot)
-      const q = eng.project(p.x, 1.25, p.z)
+      const q = eng.project(p.x + 0.5, 0, p.z + 0.5) // under the lot, so it does not hide the titles behind it
       gl.style.left = q.x + 'px'; gl.style.top = q.y + 'px'
     }
   }
@@ -405,7 +499,14 @@ function campusArt(h) {
 
   const info = () => ({
     on: !!eng, build: bm.on, type: bm.type, tool: bm.tool, sel: bm.sel, ghost: ghostLot,
-    buildings: built ? [...built.things.values()].map((t) => ({ id: t.id, officeId: t.b.officeId, type: t.b.type, x: t.b.x, y: t.b.y, rot: t.b.rot, label: t.lab.hidden ? '' : t.lab.textContent })) : [],
+    buildings: built ? [...built.things.values()].map((t) => ({ id: t.id, officeId: t.b.officeId, type: t.b.type, x: t.b.x, y: t.b.y, rot: t.b.rot, label: t.lab.hidden ? '' : t.lab.textContent, box: t.lab.hidden ? null : (() => { const r = t.lab.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom } })() })) : [],
+    // the id of the building drawn at a viewport point (a ray, independent of the title mask), and the lot outlines' visibility
+    buildingAt: (x, y) => { const r = eng.canvas.getBoundingClientRect(); return pickB(x - r.left, y - r.top) },
+    outlines: !!(outlines && outlines.visible),
+    // the pieces of the ground: one continuous checkerboard, so exactly one mesh that is not a building or an outline
+    floorMeshes: built ? built.group.children.filter((o) => o.isMesh).length : 0,
+    // anything else standing on the ground that is not a building, the lot outlines or the selection frame (a tree, say)
+    loose: built ? built.group.children.filter((o) => !o.isMesh && o !== outlines && o !== hl && !(o.userData && o.userData.id)).length : 0,
     // the screen position of the middle of a lot (for tests that click)
     lotXY: (x, y) => { const q = lotOf({ x, y }), p = eng.project(q.x, 0.2, q.z), r = eng.canvas.getBoundingClientRect(); return [p.x + r.left, p.y + r.top] },
   })

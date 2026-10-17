@@ -55,7 +55,7 @@ async function open(w, h) {
 }
 const hit = (a, b) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t
 
-test('8 runs are 8 figures (the implementer twice), each with a number; 6 idle are a count, not figures', { skip: SKIP || false }, async () => {
+test('8 runs are 8 figures (the implementer twice), each with a number; 6 idle sit in the free area, not at desks', { skip: SKIP || false }, async () => {
   const page = await open(1366, 768)
   const got = await page.eval(`(() => {
     const i = window.__office3d.info()
@@ -64,6 +64,7 @@ test('8 runs are 8 figures (the implementer twice), each with a number; 6 idle a
       rows: [...document.querySelectorAll('.o3row')].map((r) => ({ name: r.querySelector('.nm b').textContent, step: r.querySelector('.nm small').textContent, st: r.querySelector('.st').textContent, key: r.dataset.key })),
       idleRow: (document.querySelector('.o3idle') || {}).textContent || '',
       lounge: (document.querySelector('.o3c.lounge') || {}).textContent || '',
+      info: { rooms: i.rooms, seated: i.seated, desks: i.desks.length },
       cards: document.querySelectorAll('.w3card,.w3who').length,
       avatars: document.querySelectorAll('.o3a').length,
       badges: [...document.querySelectorAll('.o3a .n')].map((n) => n.textContent),
@@ -77,7 +78,9 @@ test('8 runs are 8 figures (the implementer twice), each with a number; 6 idle a
   assert.equal(got.rows.length, 8)
   assert.ok(got.rows.every((r) => r.st === 'Working' && r.step && r.key), 'each row has a state, a step and a run to open')
   assert.match(got.idleRow, /6 idle/)
-  assert.match(got.lounge, /6 idle/)
+  assert.match(got.lounge, /^Free area · 6 idle$/)
+  assert.deepEqual(got.info.rooms, ['desks', 'free'], 'one open floor: a block of desks and the free area, no rooms')
+  assert.equal(got.info.seated, 5, 'idle agents sit in the free area (the sofa and chairs seat five; the label counts all six)')
   const nums = got.badges.map((b) => b.trim()).sort()
   assert.deepEqual(nums, ['1', '2', '3', '4', '5', '6', '7', '8'])
 })
@@ -104,8 +107,10 @@ for (const [w, h] of [[1366, 768], [1920, 1080]]) {
     // everything of the scene lies inside the scene, left of the list
     for (const [name, b] of boxes) { assert.ok(b.l >= info.scene.l - 1 && b.r <= info.scene.r + 1 && b.t >= info.scene.t - 1 && b.b <= info.scene.b + 1, name + ' is inside the scene') }
     assert.ok(info.scene.r <= info.side.l + 1, 'the list does not cover the scene')
-    // the lounge chip is there, and every figure that has a tag shows it whole
-    assert.ok(info.labels.some((c) => /Lounge/.test(c.text)))
+    // every run's desk has its label ("name · step", or the name alone): it is obvious who does what
+    assert.deepEqual(info.figures.filter((f) => !f.tag).map((f) => f.id), [], 'a figure with no label at its desk')
+    // the free area's label is there
+    assert.ok(info.labels.some((c) => /Free area · \d+ idle/.test(c.text)))
     void sb
   })
 }

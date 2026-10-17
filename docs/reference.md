@@ -215,16 +215,17 @@ nothing is written until the first change. The supervisor may place, move, turn 
 remove buildings with `arsenale campus <json>` in an autonomous run only; each
 change is also written as a decision. An agent cannot change the campus.
 
-**The office floor** is a building with walled zone rooms, a desk per run and a
-lounge. A run is a figure: a round head on a body in the colour of its zone, the
+**The office floor** is one open checkerboard floor, with no rooms and no walls:
+a clean grid of desks, one per run, each on a light tile of its own in the colour
+of its zone, and a free area beside it with a sofa and chairs. A run is a figure: a round head on a body in the colour of its zone, the
 initials on it, a number badge above (a circle for working, a triangle for quiet, a
 diamond for waiting, a square for failed, a ring for done). The name, the step and
-the state are in the side list under the same number. Two runs of one agent are two
-figures at two desks ("Implementer · run 1", "run 2") under one "Implementer ×2"
-chip, and a run keeps its figure, number and desk for its whole life. Idle people
-are not figures: they are "6 idle" in the lounge and in the list. A name tag or chip
-takes the nearest free slot, shrinks, and then disappears rather than cover a
-figure or another label. Wheel to zoom, drag to pan, **Fit** (or Esc) for the
+the state are in the side list under the same number, and a small label over the
+figure says "name · step". Two runs of one agent are two figures at two desks
+("Implementer · run 1", "run 2"), and a run keeps its figure, number and desk for
+its whole life. Idle people are not at desks: they sit together in the free area,
+under an "N idle" label, and are in the list. A label takes the nearest free slot,
+shrinks, and then disappears rather than cover a figure or another label. Wheel to zoom, drag to pan, **Fit** (or Esc) for the
 whole office; the camera stays where you left it through every redraw. Without
 WebGL, and in the built file, the office stays the flat isometric one and the
 campus is a flat grid of tiles.

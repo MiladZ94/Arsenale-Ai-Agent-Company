@@ -50,6 +50,51 @@ test('the campus shows one building per office, drawn in 3D, with a name label e
   assert.equal(got.flat, 0)
 })
 
+test('one continuous ground: no slab, no trees, lot outlines only in build mode', { skip: SKIP || false }, async () => {
+  const { page } = await world()
+  await page.eval("if (window.__campus.info().build) document.querySelector('[data-c3=build]').click(); 1")
+  await page.sleep(600)
+  const off = await page.eval('window.__campus.info()')
+  assert.equal(off.floorMeshes, 1, 'the ground is one checkerboard plane, not a slab with a tile per lot')
+  assert.equal(off.loose, 0, 'nothing but the buildings stands on it: no trees')
+  assert.equal(off.outlines, false, 'no lot outlines in normal mode')
+  await page.eval("document.querySelector('[data-c3=build]').click(); 1")
+  await page.waitFor("window.__campus.info().build", 5000)
+  await page.sleep(400)
+  assert.equal(await page.eval('window.__campus.info().outlines'), true, 'lot outlines show in build mode')
+  await page.eval("document.querySelector('[data-c3=build]').click(); 1")
+  await page.sleep(400)
+})
+
+for (const [w, h] of [[1366, 768], [1920, 1080]]) {
+  test('titles name the building and its working count, and never cover a building or each other, at ' + w + 'x' + h, { skip: SKIP || false }, async () => {
+    const { page } = await world()
+    await page.eval("if (window.__campus.info().build) document.querySelector('[data-c3=build]').click(); 1")
+    await page.screenshot(path.join(require('os').tmpdir(), 'campus-titles-' + w + '.png'), w, h)
+    await page.eval('document.querySelector("[data-c3=fit]").click(); 1')
+    await page.sleep(900)
+    const info = await page.eval('window.__campus.info()')
+    const labelled = info.buildings.filter((b) => b.box)
+    assert.equal(labelled.length, info.buildings.length, 'every building has a visible title')
+    for (const b of info.buildings) {
+      assert.match(b.label, /· ?\d+/, b.officeId + ' shows its working count: ' + b.label)
+    }
+    // no title box over any drawn part of a building (a ray through a grid of points in the box), nor over another title
+    const hitsB = []
+    for (const b of labelled) {
+      for (let i = 0; i <= 8; i++) for (let j = 0; j <= 3; j++) {
+        const x = b.box.l + (b.box.r - b.box.l) * i / 8, y = b.box.t + (b.box.b - b.box.t) * j / 3
+        const id = await page.eval(`window.__campus.info().buildingAt(${x}, ${y})`)
+        if (id) { hitsB.push(b.officeId + ' over ' + id); break }
+      }
+    }
+    assert.deepEqual(hitsB, [], 'titles over buildings')
+    const clash = []
+    for (let i = 0; i < labelled.length; i++) for (let j = i + 1; j < labelled.length; j++) { const a = labelled[i].box, c = labelled[j].box; if (a.l < c.r && a.r > c.l && a.t < c.b && a.b > c.t) clash.push(labelled[i].officeId + ' / ' + labelled[j].officeId) }
+    assert.deepEqual(clash, [], 'titles over each other')
+  })
+}
+
 test('a building label enters its office, with the keyboard too', { skip: SKIP || false }, async () => {
   const { page } = await world()
   await page.eval("document.querySelector('.c3lab[data-b=b-docs]').click(); 1")

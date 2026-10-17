@@ -13,7 +13,7 @@ questions waiting for you. It watches; it never runs agents.
 
 ![Build mode: the hotbar of 12 building types](docs/media/campus-build.png)
 
-![An office: agents at their desks, idle people in the lounge, a group chip for several runs of one agent](docs/media/office.png)
+![An office: one open floor, a desk and a label per run, idle people together in the free area](docs/media/office.png)
 
 ![The Version run page](docs/media/version-run.png)
 

@@ -20,15 +20,16 @@ const WORLD_STYLE = `
 .c3b:hover{border-color:#8FA0B2}
 .c3b.pri{background:#2F6BE0;border-color:#2F6BE0;color:#fff}
 .c3b.pri:hover{background:#2A5FC9}
-.c3lab{position:absolute;transform:translate(-50%,-100%);display:flex;align-items:center;gap:6px;background:#fff;border:1px solid #CBD3DB;border-bottom:3px solid var(--c,#8A97A6);border-radius:7px;padding:3px 8px;font:700 12px var(--font-ui);color:#17212B;white-space:nowrap;max-width:150px;pointer-events:auto;cursor:pointer;margin-top:-4px}
-.c3lab b{overflow:hidden;text-overflow:ellipsis;max-width:104px}
-.c3lab u{text-decoration:none;display:inline-flex;align-items:center;gap:3px;font-size:11px;color:#fff;border-radius:9px;padding:0 6px;min-width:18px;justify-content:center}
-.c3lab u.w{background:#19795A}.c3lab u.q{background:#B45309}
-.c3lab u i{display:none}
+.c3lab{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:5px;background:#fff;border:1px solid #CBD3DB;border-bottom:3px solid var(--c,#8A97A6);border-radius:12px;padding:2px 10px;font:700 12px var(--font-ui);color:#17212B;white-space:nowrap;pointer-events:auto;cursor:pointer}
+.c3lab b{overflow:hidden;text-overflow:ellipsis;max-width:130px}
+.c3lab em{font-style:normal;font-size:13px;color:#19795A}
+.c3lab u{text-decoration:none;font-size:11px;color:#fff;background:#B45309;border-radius:9px;padding:0 6px}
+.c3ln{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.c3ln line{stroke:#7C8794;stroke-width:1.2}.c3ln circle{fill:#7C8794}
 .cmap.building .c3lab{pointer-events:none}
 .c3lab:focus-visible{outline:2px solid #2F6BE0}
 .c3lab.hov,.c3lab.sel{border-color:#2F6BE0;box-shadow:0 0 0 2px rgba(47,107,224,.25)}
-.c3gl{position:absolute;transform:translate(-50%,-100%);background:#2F6BE0;color:#fff;font:700 12px var(--font-ui);border-radius:12px;padding:4px 11px;white-space:nowrap;margin-top:-8px}
+.c3gl{position:absolute;transform:translate(-50%,0);background:#2F6BE0;color:#fff;font:700 12px var(--font-ui);border-radius:12px;padding:4px 11px;white-space:nowrap;margin-top:8px}
 .c3gl.bad{background:#fff;color:#B3261E;border:1px solid #D64545}
 .c3msg{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:7;background:#17212B;color:#fff;font:700 12.5px var(--font-ui);border-radius:8px;padding:8px 14px;max-width:70%}
 .c3msg.bad{background:#B3261E}
@@ -99,7 +100,7 @@ const WORLD_STYLE = `
 .o3a .ini{position:absolute;left:0;right:0;text-align:center;color:#fff;font-weight:700;line-height:1;letter-spacing:0;pointer-events:none}
 .o3a.sel{box-shadow:0 0 0 2px #2F6BE0;background:rgba(47,107,224,.08)}
 .o3t,.o3c,.o3r{position:absolute;font:700 11.5px var(--font-ui);color:#17212B;background:#fff;border:1px solid #CFCBC0;border-radius:6px;padding:2px 8px;white-space:nowrap;pointer-events:none}
-.o3t{max-width:116px;overflow:hidden;text-overflow:ellipsis;line-height:15px}
+.o3t{max-width:178px;border-bottom-width:3px;overflow:hidden;text-overflow:ellipsis;line-height:15px}
 .o3t.short{max-width:64px}
 .o3t.gone{display:none}
 .o3r{display:flex;align-items:center;gap:5px;font-weight:700;font-size:11px;padding:1px 7px 1px 5px;background:rgba(255,255,255,.88)}
