@@ -61,7 +61,7 @@ test('with no asset files the page gets no models (the shapes are drawn)', (t) =
   assert.deepEqual(A.pageAssets(folder(t)).models, {})
 })
 
-test('the shipped models all load: one building per office type, the office furniture, one character style and its four rendered pictures, real files, no problems', () => {
+test('the shipped models all load: one building per office type, the office furniture, one character style, its rendered portraits in each of the ten outfits and the building pictures of the wizard, real files, no problems', () => {
   const r = A.pageAssets()
   assert.deepEqual(r.problems, [])
   const types = require('../campus.cjs').TYPES.map((t) => 'building:' + t.id).sort()
@@ -69,10 +69,12 @@ test('the shipped models all load: one building per office type, the office furn
   assert.deepEqual(keys.filter((k) => /^building:/.test(k)), types)
   assert.deepEqual(keys.filter((k) => /^furniture:/.test(k)), ['furniture:chair', 'furniture:desk', 'furniture:plant', 'furniture:screen', 'furniture:sofa'])
   assert.deepEqual(keys.filter((k) => /^character:/.test(k)), ['character:office'])
-  assert.deepEqual(keys.filter((k) => /^portrait:/.test(k)), ['portrait:desk', 'portrait:front', 'portrait:left', 'portrait:right'])
-  assert.equal(keys.length, types.length + 10)
+  const outfits = require('../pages/world/palette.cjs').OUTFIT.length
+  assert.deepEqual(keys.filter((k) => /^portrait:/.test(k)), ['desk', 'front', 'left', 'right'].flatMap((v) => Array.from({ length: outfits }, (_, n) => 'portrait:' + v + n)).sort())
+  assert.deepEqual(keys.filter((k) => /^icon:/.test(k)), types.map((t) => t.replace('building:', 'icon:')).sort())
+  assert.equal(keys.length, types.length * 2 + 6 + 4 * outfits)
   // the models are GLB files; the portraits are PNGs rendered from them (tools/render-portraits.cjs)
-  for (const [k, b64] of Object.entries(r.models)) assert.equal(Buffer.from(b64, 'base64').subarray(0, 4).toString('latin1'), /^portrait:/.test(k) ? 'PNG' : 'glTF', k)
+  for (const [k, b64] of Object.entries(r.models)) assert.equal(Buffer.from(b64, 'base64').subarray(0, 4).toString('latin1'), /^(portrait|icon):/.test(k) ? 'PNG' : 'glTF', k)
 })
 
 test('every office type has its own model (twelve different files), and no file is over 6 MB or all together over 10 MB', () => {
@@ -104,4 +106,29 @@ test('a shipped file with no entry is found by the check above', (t) => {
   fs.writeFileSync(path.join(d, 'manifest.json'), '{"assets":[]}')
   const names = new Set(A.readManifest(d).assets.map((a) => a.file))
   assert.deepEqual(A.shippedFiles(d).filter((f) => !names.has(f)), ['loose.glb'])
+})
+
+test('the outfit pictures and building pictures add under 2 MB, and the old unvaried portraits are gone', () => {
+  const m = A.readManifest().assets.filter((a) => /^(portraits|icons)\//.test(a.file))
+  assert.equal(m.length, 4 * require('../pages/world/palette.cjs').OUTFIT.length + require('../campus.cjs').TYPES.length)
+  assert.ok(m.reduce((n, a) => n + a.size, 0) < 2 * 1024 * 1024, 'the rendered pictures are over 2 MB')
+  for (const a of m) assert.match(a.modified, /^derived: .*tools\/render-portraits\.cjs; CC0 as its sources?$/, a.file + ' does not say how it was made')
+  for (const old of ['front', 'left', 'right', 'desk']) assert.equal(fs.existsSync(path.join(A.DIR, 'portraits', old + '.png')), false, old + '.png is replaced by ' + old + '-<n>.png')
+})
+
+test('the outfit of an agent is a function of its id alone, one of ten distinct colours, each readable against the white shirt', () => {
+  const { OUTFIT, outfitIndex, contrast } = require('../pages/world/palette.cjs')
+  assert.equal(OUTFIT.length, 10)
+  assert.equal(new Set(OUTFIT).size, 10)
+  for (const c of OUTFIT) assert.ok(contrast(c, '#FFFFFF') >= 3, c + ' is too pale against a white shirt (3:1 for a graphic)')
+  const ids = ['version-lead', 'phase-runner', 'code-reviewer', 'security-auditor', 'docs-writer', 'qa', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n']
+  const seen = new Set()
+  for (const id of ids) {
+    const n = outfitIndex(id)
+    assert.ok(Number.isInteger(n) && n >= 0 && n < 10, id)
+    assert.equal(outfitIndex(id), n, 'stable')
+    assert.equal(outfitIndex(id + ':3'), n, 'the look a member picks changes the angle, never the outfit')
+    seen.add(n)
+  }
+  assert.ok(seen.size >= 7, 'twenty agents wear only ' + seen.size + ' of the ten outfits')
 })

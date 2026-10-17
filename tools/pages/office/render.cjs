@@ -7,6 +7,7 @@ const { WORLD_STYLE, campusArt, office3d, worldKit, WORLD_PALETTE, worldScripts 
 const { ACTIVITY_STYLE, activityView } = require('../../activity-page.cjs')
 const { VR_STYLE, versionRunView } = require('../../version-run-page.cjs')
 const { EVERYONE_STYLE, everyoneViews } = require('../../everyone-page.cjs')
+const { outfitIndex } = require('../world/palette.cjs')
 const { everyoneArt } = require('../../everyone-art.cjs')
 const { homeDesks } = require('./home-desks.cjs')
 const { OFFICE_STYLE, CR_STYLE } = require('./style.cjs')
@@ -84,6 +85,7 @@ let COMPANY = ${JSON.stringify(company).replace(/</g, '\\u003c')};
 const homeDesks = (${homeDesks.toString()});
 ${langScript(lang, live)}
 const WORLD_PALETTE = ${JSON.stringify(WORLD_PALETTE)};
+const outfitIndex = (${outfitIndex.toString()});
 const worldKit = (${worldKit.toString()});
 const campusArt = (${campusArt.toString()});
 const office3d = (${office3d.toString()});

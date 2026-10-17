@@ -103,7 +103,7 @@ test('the built file keeps the flat office and carries no three.js; the live pag
     assert.ok(!built.includes("const REVISION = '184'"), 'no three.js in the built file')
     const live = renderOffice(state, { live: true, token: 'x', lang: 'en' })
     assert.ok(live.includes("const REVISION = '184'"), 'the live page carries the pinned three.js r184')
-    assert.ok(/const ASSET_MODELS = \{("(building|furniture|character|portrait):[a-z]+":"[A-Za-z0-9+\/=]+",?)*\};/.test(live), 'and the list of real models, by building type, furniture piece and character style (one with none is drawn from shapes)')
+    assert.ok(/const ASSET_MODELS = \{("(building|furniture|character|portrait|icon):[a-z][a-z0-9]*":"[A-Za-z0-9+\/=]+",?)*\};/.test(live), 'and the list of real models, by building type, furniture piece and character style (one with none is drawn from shapes)')
     assert.ok(!/OFFICE_CHARACTERS/.test(live), 'there is one avatar style: one character style in the manifest, no per-role character files')
     assert.equal((live.match(/<\/script>/g) || []).length, (live.match(/<script>/g) || []).length, 'every script block closes where it should')
   } finally { sb.cleanup() }
@@ -119,4 +119,32 @@ test('no shadows anywhere: nothing in the 3D code asks for one', () => {
 test('three.js is pinned to r184', () => {
   const three = fs.readFileSync(path.join(__dirname, '..', 'vendor', 'three', 'three.cjs'))
   assert.equal(require('crypto').createHash('sha256').update(three).digest('hex'), '0fe243aabd03faa48e4156b51bf5b4c943fea15748aa623047aab539ab3b9624', 'three.cjs is three@0.184.0 build/three.cjs')
+})
+
+test('the figures wear a suit colour of the palette: the body gets its own atlas, the face and the shipped atlas never change', { skip: SKIP || false }, async () => {
+  const { page, base, log } = await world()
+  await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
+  await page.waitFor(READY, 20000)
+  const r = await page.eval(`(async () => {
+    const K = worldKit()
+    await new Promise((ok) => { K.loadModels((key) => { if (key === 'character:office') ok() }, ['character']); setTimeout(ok, 8000) })
+    const pix = (m) => { const c = m.map.image, x = c.getContext ? c.getContext('2d') : null; return x ? Array.from(x.getImageData(40, 400, 1, 1).data) : null }
+    const bodyOf = (o) => { const ms = []; o.traverse((n) => { if (n.isMesh) ms.push(n) }); ms.sort((a, b) => b.geometry.attributes.position.count - a.geometry.attributes.position.count); return { body: ms[0], head: ms[1] } }
+    const a = K.character('office', 'sit', 0), b = K.character('office', 'sit', 1), plain = K.character('office', 'sit')
+    if (!a) return null
+    const A = bodyOf(a), B = bodyOf(b), P = bodyOf(plain)
+    const again = K.character('office', 'sit', 0)
+    return { a: pix(A.body.material), b: pix(B.body.material), sameFace: A.head.material === P.head.material && B.head.material === P.head.material,
+      shipped: P.body.material.map === P.head.material.map, cached: bodyOf(again).body.material === A.body.material, palette: WORLD_PALETTE.OUTFIT.slice(0, 2) }
+  })()`)
+  assert.ok(r, 'the character model loaded')
+  const hex = (p) => '#' + p.slice(0, 3).map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase()
+  // the suit cell keeps its own shading, so the colour is near the palette's, not equal
+  const near = (p, h) => { const n = parseInt(h.slice(1), 16); return Math.abs(p[0] - (n >> 16)) + Math.abs(p[1] - ((n >> 8) & 255)) + Math.abs(p[2] - (n & 255)) < 120 }
+  assert.ok(near(r.a, r.palette[0]), 'outfit 0 paints the suit ' + r.palette[0] + ', got ' + hex(r.a))
+  assert.ok(near(r.b, r.palette[1]), 'outfit 1 paints the suit ' + r.palette[1] + ', got ' + hex(r.b))
+  assert.equal(r.sameFace, true, 'the head keeps the shipped material (the eyes and the mouth use the suit cell too)')
+  assert.equal(r.shipped, true, 'the shipped atlas is untouched')
+  assert.equal(r.cached, true, 'one atlas per colour, made once')
+  assert.deepEqual(pageErrors(log), [])
 })

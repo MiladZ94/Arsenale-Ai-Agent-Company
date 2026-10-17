@@ -220,6 +220,11 @@ test('the Team screen: a floor with a desk card and a name for each member, and 
   // the same look as the office: the Kenney desk picture and an initials badge on each card; people elsewhere are the round Kenney portrait
   assert.equal(await page.eval("[...document.querySelectorAll('.ev-main .floor .dsk .dkb')].map((e) => e.dataset.i).includes('IN')"), true, 'Ines has the initials IN')
   assert.equal(await page.eval("(document.getElementById('ptcss') || { textContent: '' }).textContent.includes('data:image/png;base64')"), true, 'the portrait pictures are in the page')
+  // each member wears the suit their id gives (palette.cjs outfitIndex), on the card and in the 3D office alike
+  const { outfitIndex } = require('../pages/world/palette.cjs')
+  const wear = await page.eval("[...document.querySelectorAll('.ev-main .floor .dsk[data-arg]')].map((d) => [d.dataset.arg, d.querySelector('.di').className.split(' ').find((c) => c.indexOf('dd') === 0).slice(2)])")
+  assert.equal(wear.length, 3)
+  for (const [id, k] of wear) assert.equal(k, String(outfitIndex(id)), id + ' sits in outfit ' + outfitIndex(id))
   assert.equal(await page.eval("document.querySelectorAll('.ev-main svg.scene, .ev-main .px').length"), 0, 'no pixel-art room on the Team screen')
   assert.match(await page.eval(text('.ticker')), /Ines is working on: Fix the menu page/)
   await page.eval("document.querySelector('.ev-main .floor .dsk[data-arg=implementer]').click(); 1")

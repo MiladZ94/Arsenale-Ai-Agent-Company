@@ -43,6 +43,8 @@ function office3d(h) {
   // on the 45 degree camera that needs |CELL_X - CELL_Z| of about 1.1 or more
   const CELL_X = 2.4, CELL_Z = 3.6, FREE_W = 3.4, FREE_GAP = 1.0, MAX_SEATED = 5
   const role = (z) => PAL.ROLE[z] || PAL.ROLE.guest
+  // the suit a person wears: a stable hash of the agent id (palette.cjs), so the same agent looks the same here, on the campus and on every portrait
+  const suit = (id) => (typeof outfitIndex === 'function' ? outfitIndex(id) : 0)
   const tint = (z) => PAL.TINT[z] || PAL.TINT.guest
   const stateOf = (s) => PAL.STATE[s] || PAL.STATE.quiet
 
@@ -160,7 +162,8 @@ function office3d(h) {
     seats.forEach(([x, z, ry, kind], k) => {
       if (kind === 'chair') { const c = K.furniture('chair'); if (c) { c.position.set(x, Y, z); c.rotation.y = ry; freeGroup.add(c) } }
       if (k >= idleN) return
-      const person = useModel() ? K.character('office', 'sit') : K.avatar('#9AA5B1')
+      const who = model.idle[k]
+      const person = useModel() ? K.character('office', 'sit', suit(who && who.agent)) : K.avatar('#9AA5B1')
       if (!person) return
       person.position.set(x, Y + (kind === 'sofa' ? SOFA_LIFT : 0), z + (kind === 'sofa' ? 0.05 : 0))
       person.rotation.y = ry
@@ -187,7 +190,7 @@ function office3d(h) {
     if (!o || !o.g) {
       const g = new T3.Group()
       let top = K.AVATAR_H
-      if (model) { const p = K.character('office', 'sit'); g.add(p); top = new T3.Box3().setFromObject(p).max.y } else g.add(K.avatar(color))
+      if (model) { const p = K.character('office', 'sit', suit(f.agent || f.id)); g.add(p); top = new T3.Box3().setFromObject(p).max.y } else g.add(K.avatar(color))
       const ring = new T3.Mesh(new T3.CylinderGeometry(0.41, 0.41, 0.02, 24), new T3.MeshBasicMaterial({ color: '#19795A' }))
       ring.position.y = 0.012
       g.add(ring)

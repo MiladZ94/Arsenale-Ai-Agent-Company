@@ -13,7 +13,7 @@
   const packShort = (p) => (p.office && p.office.name ? p.office.name.split(' & ')[0] : p.name)
   function wizScene(w, packs) {
     const chosen = packs.filter((p) => w.packs.includes(p.id))
-    const plots = chosen.map((p) => ({ built: true, color: packColor(p), label: esc(packShort(p)), count: fa(p.members.length), h: 70 + p.members.length * 6 }))
+    const plots = chosen.map((p) => ({ built: true, color: packColor(p), label: esc(packShort(p)), count: fa(p.members.length), type: p.type }))
     if (w.step === 1) for (let i = 0; i < 4; i++) plots.push({ built: false })
     let people = []
     if (w.step >= 4) people = chosen.flatMap((p, i) => p.members.slice(0, 2).map((m, n) => ({ seed: m.id, color: packColor(p), plot: i, n })))

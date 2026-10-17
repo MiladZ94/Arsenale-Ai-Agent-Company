@@ -1,7 +1,8 @@
 /* The drawings of the 1.0 screens: the people (the one Kenney character of the
  * office, as a round portrait with the office colour and an initials badge),
  * the assistant's round robot, the line icons, file thumbnails and the
- * isometric campus of the wizard.
+ * isometric campus of the wizard (the Kenney buildings of the 3D campus as small
+ * pre-rendered pictures on its checkerboard).
  *
  * everyoneArt is never run in Node: like everyoneViews its source is written
  * into the page, so it uses only what the browser has and returns strings.
@@ -11,7 +12,9 @@
  *
  * A person's angle is a pure function of a seed (their id, or id + ':' + the
  * look they picked), so the same member looks the same on every screen and in
- * every browser, with nothing stored but an optional small number.
+ * every browser, with nothing stored but an optional small number. Their outfit
+ * (one of ten suit colours) is a pure function of the id alone (outfitIndex in
+ * palette.cjs), the same one the 3D office puts on the same agent.
  */
 
 function everyoneArt() {
@@ -34,36 +37,37 @@ function everyoneArt() {
   }
 
   // ---------- people: the one office character, drawn from its rendered portraits
-  // The pictures are the manifest's portrait:<view> entries (tools/render-portraits.cjs
-  // renders them from the Kenney figure the office uses), reaching the page in
-  // ASSET_MODELS as base64. With none (the archive page, or a refused file) a round
-  // head on a coloured body is drawn, so a person is never missing.
+  // The pictures are the manifest's portrait:<view><outfit> entries (tools/render-portraits.cjs
+  // renders them from the Kenney figure the office uses, in each of the ten outfits),
+  // reaching the page in ASSET_MODELS as base64. With none (the archive page, or a refused
+  // file) a round head on a coloured body is drawn, so a person is never missing.
   const VIEW = ['front', 'left', 'right']
-  const pic = (v) => { try { return typeof ASSET_MODELS === 'object' && ASSET_MODELS && ASSET_MODELS['portrait:' + v] ? 'data:image/png;base64,' + ASSET_MODELS['portrait:' + v] : '' } catch (e) { return '' } }
-  /** The pictures as CSS classes, written once: a page with hundreds of faces carries each picture once. */
-  function css() {
+  const outfit = (seed) => (typeof outfitIndex === 'function' ? outfitIndex(seed) : 0)
+  const pic = (v, k) => { try { return typeof ASSET_MODELS === 'object' && ASSET_MODELS && ASSET_MODELS['portrait:' + v + (k || 0)] ? 'data:image/png;base64,' + ASSET_MODELS['portrait:' + v + (k || 0)] : '' } catch (e) { return '' } }
+  /** The picture of a view in an outfit as a CSS rule, written the first time it is used: a page with hundreds of faces carries each picture once, and the ones nobody wears not at all. */
+  function css(cls, v, k) {
     if (typeof document === 'undefined' || !document.head) return
-    const have = !!pic('front')
-    const old = document.getElementById('ptcss')
-    if (old && old.dataset.have === String(have)) return
-    if (old) old.remove()
-    const el = document.createElement('style')
-    el.id = 'ptcss'; el.dataset.have = String(have)
-    el.textContent = VIEW.map((v, i) => pic(v) ? '.pt .pv' + i + '{background-image:url(' + pic(v) + ')}' : '').join('') +
-      (pic('desk') ? '.dk .di{background-image:url(' + pic('desk') + ')}' : '')
-    document.head.appendChild(el)
+    let el = document.getElementById('ptcss')
+    if (!el) { el = document.createElement('style'); el.id = 'ptcss'; document.head.appendChild(el) }
+    const seen = el.__seen || (el.__seen = new Set())
+    if (seen.has(cls)) return
+    const u = pic(v, k)
+    if (!u) return
+    seen.add(cls)
+    el.appendChild(document.createTextNode(cls + '{background-image:url(' + u + ')}'))
   }
   /** The round head on a coloured body, when there is no picture. */
   const plainG = (h, color) => '<ellipse cx="20" cy="40" rx="15" ry="13" fill="' + color + '"/><circle cx="20" cy="18" r="9" fill="' + SKIN[h % 4] + '"/><path d="M11 17a9 9 0 0 1 18 0c-3-3-6-4-9-4s-6 1-9 4z" fill="' + HAIR[(h >> 3) % 6] + '"/>'
   /** A person: `seed` picks the angle (and the mirror) of the one figure, `color` is the office (the tint, the ring and the badge), `name` gives the initials (else the id in the seed). */
   function person(seed, color, size, back, name) {
-    css()
     size = size || 32
     color = color || '#56B6C2'
-    const h = hash(seed), v = h % 6
+    const h = hash(seed), v = h % 6, k = outfit(seed)
     const bd = size >= 32 ? Math.max(16, Math.round(size * 0.42)) : 0
     const badge = bd ? '<b class="ini" dir="auto" data-i="' + esc(initials(name || String(seed).split(':')[0])) + '" style="width:' + bd + 'px;height:' + bd + 'px;font-size:' + Math.max(9, Math.round(bd * 0.5)) + 'px;background:' + color + '"></b>' : ''
-    const inner = pic('front') ? '<span class="pi pv' + (v % 3) + (v > 2 ? ' fl' : '') + '"></span>' : '<svg viewBox="0 0 40 40" width="100%" height="100%" aria-hidden="true">' + plainG(h, color) + '</svg>'
+    const have = !!pic('front', k)
+    if (have) css('.pt .pv' + (v % 3) + 'o' + k, VIEW[v % 3], k)
+    const inner = have ? '<span class="pi pv' + (v % 3) + 'o' + k + (v > 2 ? ' fl' : '') + '"></span>' : '<svg viewBox="0 0 40 40" width="100%" height="100%" aria-hidden="true">' + plainG(h, color) + '</svg>'
     return '<span class="av pt" style="width:' + size + 'px;height:' + size + 'px"><span class="pp" style="background:' + tint(color, 0.78) + ';box-shadow:0 0 0 2px ' + color + '">' + inner + '</span>' + badge + '</span>'
   }
   const owner = (size) => person('owner-of-the-company', '#0C8A62', size, false, 'Me')
@@ -72,20 +76,21 @@ function everyoneArt() {
     size = size || 32
     return '<span class="av pt" style="width:' + size + 'px;height:' + size + 'px"><span class="pp" style="background:#E4F3EC;box-shadow:0 0 0 2px #0C8A62"><svg viewBox="0 0 40 40" width="100%" height="100%" aria-hidden="true"><line x1="20" y1="6" x2="20" y2="11" stroke="#0C8A62" stroke-width="2" stroke-linecap="round"/><circle cx="20" cy="5.5" r="2.2" fill="#0C8A62"/><rect x="8" y="11" width="24" height="19" rx="6" fill="#C6D0DA"/><circle cx="15" cy="20" r="3" fill="#1F2A36"/><circle cx="25" cy="20" r="3" fill="#1F2A36"/><rect x="15" y="25" width="10" height="2" rx="1" fill="#0C8A62"/><rect x="11" y="33" width="18" height="9" rx="4" fill="#8A97A6"/></svg></span></span>'
   }
-  /** The desk picture of the Team screen: the one figure seated at the Kenney desk, on a light tile of the office colour. */
-  const desk = (color) => { css(); return '<span class="dk"><span class="tile" style="background:' + tint(color, 0.86) + '"></span><span class="di"></span></span>' }
-  /** The same person as an SVG group, for the iso scenes (scale * 12 px across); needs personDefs(d) once in the same svg. */
-  function personG(seed, color, x, y, scale, name) {
-    const d = (scale || 3) * 12, h = hash(seed), v = h % 6, r = d / 2
+  /** The desk picture of the Team screen: the person (their id gives the outfit) seated at the Kenney desk, on a light tile of the office colour. */
+  const desk = (color, id) => { const k = outfit(id); css('.dk .dd' + k, 'desk', k); return '<span class="dk"><span class="tile" style="background:' + tint(color, 0.86) + '"></span><span class="di dd' + k + '"></span></span>' }
+  /** The same person as an SVG group, for the iso scenes (scale * 12 px across); needs personDefs(d, used) once in the same svg; `used` collects the pictures this group asks for. */
+  function personG(seed, color, x, y, scale, name, used) {
+    const d = (scale || 3) * 12, h = hash(seed), v = h % 6, r = d / 2, k = outfit(seed), pk = (v % 3) + 'o' + k
     color = color || '#56B6C2'
     const bd = Math.max(14, d * 0.42), bx = d - bd * 0.3
-    const inner = pic('front')
-      ? '<use href="#ptimg' + (v % 3) + '" transform="' + (v > 2 ? 'translate(' + d + ',0) scale(' + (-d / 192) + ',' + (d / 192) + ')' : 'scale(' + (d / 192) + ')') + '"/>'
+    if (used) used.add(pk)
+    const inner = pic('front', k)
+      ? '<use href="#ptimg' + pk + '" transform="' + (v > 2 ? 'translate(' + d + ',0) scale(' + (-d / 192) + ',' + (d / 192) + ')' : 'scale(' + (d / 192) + ')') + '"/>'
       : '<g transform="scale(' + (d / 40) + ')">' + plainG(h, color) + '</g>'
     return '<g transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ')"><circle cx="' + r + '" cy="' + r + '" r="' + r + '" fill="' + tint(color, 0.78) + '"/><g clip-path="url(#ptclip' + d + ')">' + inner + '</g><circle cx="' + r + '" cy="' + r + '" r="' + (r - 1) + '" fill="none" stroke="' + color + '" stroke-width="2"/><circle cx="' + bx + '" cy="' + bx + '" r="' + bd / 2 + '" fill="' + color + '"/><text x="' + bx + '" y="' + (bx + bd * 0.17).toFixed(1) + '" text-anchor="middle" dir="auto" style="font:700 ' + Math.round(bd * 0.46) + 'px var(--font-ui);fill:#fff">' + esc(initials(name || String(seed).split(':')[0])) + '</text></g>'
   }
-  /** The <defs> the personG people of one svg share: a round clip of d px and the three pictures. */
-  const personDefs = (d) => '<defs><clipPath id="ptclip' + d + '"><circle cx="' + d / 2 + '" cy="' + d / 2 + '" r="' + d / 2 + '"/></clipPath>' + (pic('front') ? VIEW.map((v, i) => '<image id="ptimg' + i + '" width="192" height="192" href="' + pic(v) + '"/>').join('') : '') + '</defs>'
+  /** The <defs> the personG people of one svg share: a round clip of d px and the pictures they used (used: the set of "<view>o<outfit>" personG filled). */
+  const personDefs = (d, used) => '<defs><clipPath id="ptclip' + d + '"><circle cx="' + d / 2 + '" cy="' + d / 2 + '" r="' + d / 2 + '"/></clipPath>' + Array.from(used || []).map((u) => { const m = /^(\d)o(\d+)$/.exec(u); return pic('front', +m[2]) ? '<image id="ptimg' + u + '" width="192" height="192" href="' + pic(VIEW[+m[1]], +m[2]) + '"/>' : '' }).join('') + '</defs>'
 
   const IC = {
     check: 'M5 12l5 5 9-10', x: 'M6 6l12 12M18 6L6 18', plus: 'M12 5v14M5 12h14', chev: 'M9 6l6 6-6 6', back: 'M15 6l-6 6 6 6',
@@ -135,46 +140,59 @@ function everyoneArt() {
     return '<g class="tagg"><rect x="' + (x - w / 2).toFixed(1) + '" y="' + (y - 12).toFixed(1) + '" width="' + w + '" height="22" rx="4" fill="' + (o.bg || '#FFFFFF') + '" stroke="' + (o.stroke || '#B8C3CE') + '"/>' + text(x, y + 4, s, { size: 12, fill: o.fill || '#1F2A36' }) + '</g>'
   }
 
-  /** The campus: up to six buildings on a light grey checkerboard slab. plots: [{ color, label,
-   *  count, h, built }], people: [{ seed, color, plot }] standing at a plot. */
+  // The Kenney building pictures (manifest icon:<type>, tools/render-portraits.cjs) are drawn from the
+  // office camera, so they sit on this isometric board as the models sit on the 3D campus. Every picture
+  // has the lot's centre at the same pixel: 0.5 across, ICON_Y of the way down; one picture spans ICON_UNITS
+  // camera units, and a lot of this board (two grid squares of 100 x 50 px) is two 3D lots wide.
+  const ICON_UNITS = 1.668, ICON_Y = 0.7614, ICON_PX = 190 / 220 // height / width of a picture
+  const icon = (t) => { try { return typeof ASSET_MODELS === 'object' && ASSET_MODELS && ASSET_MODELS['icon:' + t] ? 'data:image/png;base64,' + ASSET_MODELS['icon:' + t] : '' } catch (e) { return '' } }
+
+  /** The campus: up to six of the Kenney buildings on the white checkerboard of the 3D campus. plots:
+   *  [{ color, label, count, type, built }] (type: the office type, the building the 3D campus
+   *  would stand there; the colour is the office's, on the lot under it), people: [{ seed, color, plot }]
+   *  standing at a plot. */
   function campus(plots, people) {
     const SPOTS = [[1, 1], [5, 1], [1, 5], [5, 5], [3, 0.2], [3, 6.2]]
     const I = iso(450, 110, 100, 50), P = I.P, poly = I.poly, box = I.box
-    const size = 8, mid = size / 2
-    let s = poly([P(0, 0), P(size, 0), P(size, size), P(0, size)], '#EEF0F3', '#CBD1D9')
-    for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) if ((i + j) % 2) s += poly([P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], '#E3E7EC')
-    s += poly([P(mid - 0.3, 0), P(mid + 0.3, 0), P(mid + 0.3, size), P(mid - 0.3, size)], '#D5DBE1') + poly([P(0, mid - 0.3), P(size, mid - 0.3), P(size, mid + 0.3), P(0, mid + 0.3)], '#D5DBE1')
+    const size = 8, mid = size / 2, tile = 0.5
+    // the 3D campus's own floor: tiles of two near-whites, a thin edge
+    let s = poly([P(0, 0), P(size, 0), P(size, size), P(0, size)], '#F4F5F7', '#C9D0D8')
+    for (let i = 0; i < size / tile; i++) for (let j = 0; j < size / tile; j++) if ((i + j) % 2) s += poly([P(i * tile, j * tile), P((i + 1) * tile, j * tile), P((i + 1) * tile, (j + 1) * tile), P(i * tile, (j + 1) * tile)], '#DFE3E9')
     s += poly([P(0, size), P(size, size), P(size, size, -14), P(0, size, -14)], '#C9CFD6') + poly([P(size, 0), P(size, size), P(size, size, -14), P(size, 0, -14)], '#BBC2CA')
     const placed = plots.slice(0, SPOTS.length).map((p, i) => Object.assign({ x: SPOTS[i][0], y: SPOTS[i][1] }, p))
     const labels = []
     for (const p of placed.slice().sort((a, b) => (a.x + a.y) - (b.x + b.y))) {
       const w = 2, d = 2
       if (!p.built) {
-        s += poly([P(p.x, p.y), P(p.x + w, p.y), P(p.x + w, p.y + d), P(p.x, p.y + d)], 'rgba(255,255,255,.025)', '#B8C3CE', ' stroke-dasharray="6 5"')
+        s += poly([P(p.x, p.y), P(p.x + w, p.y), P(p.x + w, p.y + d), P(p.x, p.y + d)], 'rgba(255,255,255,.35)', '#8E9AA8', ' stroke-dasharray="6 5"')
         const c = P(p.x + w / 2, p.y + d / 2)
         s += text(c[0], c[1] + 8, '+', { size: 26, fill: '#6A7785', w: 400 })
         continue
       }
-      const h = p.h || 90, col = p.color
-      s += poly([P(p.x - 0.15, p.y - 0.15), P(p.x + w + 0.15, p.y - 0.15), P(p.x + w + 0.15, p.y + d + 0.15), P(p.x - 0.15, p.y + d + 0.15)], '#E3E8ED')
-      s += box(p.x, p.y, w, d, h, shade(col, 0.55), '#F2F4F6', '#E2E6EA')
-      s += box(p.x - 0.05, p.y - 0.05, w + 0.1, d + 0.1, 10, col, shade(col, 0.75), shade(col, 0.6), h)
-      const rows = Math.floor((h - 20) / 26), cols = Math.round(w * 2.2)
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) { const u = 0.22 + c * (w - 0.44) / Math.max(1, cols - 1) - 0.1, z = 14 + r * 26; s += poly([P(p.x + u, p.y + d, z), P(p.x + u + 0.22, p.y + d, z), P(p.x + u + 0.22, p.y + d, z + 15), P(p.x + u, p.y + d, z + 15)], (r + c + p.x) % 3 === 0 ? col : '#2A3A4B') }
-        for (let c = 0; c < cols; c++) { const u = 0.22 + c * (d - 0.44) / Math.max(1, cols - 1) - 0.1, z = 14 + r * 26; s += poly([P(p.x + w, p.y + u, z), P(p.x + w, p.y + u + 0.22, z), P(p.x + w, p.y + u + 0.22, z + 15), P(p.x + w, p.y + u, z + 15)], (r + c) % 4 === 1 ? col : '#223040') }
+      const col = p.color
+      // the office's colour: its lot, under the building
+      s += poly([P(p.x, p.y), P(p.x + w, p.y), P(p.x + w, p.y + d), P(p.x, p.y + d)], tint(col, 0.8), col)
+      const c = P(p.x + w / 2, p.y + d / 2), pic1 = icon(p.type)
+      let top = c[1] - 70
+      if (pic1) {
+        const wpx = ICON_UNITS * 2 * 70.7
+        s += '<image href="' + pic1 + '" x="' + (c[0] - wpx / 2).toFixed(1) + '" y="' + (c[1] - ICON_Y * wpx * ICON_PX).toFixed(1) + '" width="' + wpx.toFixed(1) + '" height="' + (wpx * ICON_PX).toFixed(1) + '"/>'
+        top = c[1] - ICON_Y * wpx * ICON_PX + 28
+      } else {
+        // no picture (a refused file): a plain block in the office colour
+        s += box(p.x + 0.3, p.y + 0.3, w - 0.6, d - 0.6, 70, '#F4F5F7', shade(col, 0.8), shade(col, 0.6))
+        top = P(p.x + w / 2, p.y + d / 2, 90)[1]
       }
-      const t = P(p.x + w / 2, p.y + d / 2, h + 10)
-      labels.push(tag(t[0], t[1] - 22, p.label + (p.count !== undefined && p.count !== '' ? ' · ' + p.count : ''), { stroke: col }))
+      labels.push(tag(c[0], top - 10, p.label + (p.count !== undefined && p.count !== '' ? ' · ' + p.count : ''), { stroke: col }))
     }
-    if ((people || []).length) s = personDefs(36) + s
+    const used = new Set(), crowd = []
     for (const a of people || []) {
       const p = placed[a.plot]
       if (!p) continue
       const q = P(p.x + 0.35 + (a.n || 0) * 0.75, p.y + 2.45)
-      s += '<ellipse cx="' + q[0].toFixed(1) + '" cy="' + (q[1] + 2).toFixed(1) + '" rx="14" ry="6" fill="rgba(0,0,0,.16)"/>' + personG(a.seed, a.color, q[0] - 18, q[1] - 40, 3, a.name)
+      crowd.push('<ellipse cx="' + q[0].toFixed(1) + '" cy="' + (q[1] + 2).toFixed(1) + '" rx="14" ry="6" fill="rgba(0,0,0,.16)"/>' + personG(a.seed, a.color, q[0] - 18, q[1] - 40, 3, a.name, used))
     }
-    return s + labels.join('')
+    return (crowd.length ? personDefs(36, used) : '') + s + crowd.join('') + labels.join('')
   }
 
   /** The assistant's laptop, next to the campus while the wizard waits for its hello. */

@@ -30,7 +30,10 @@ page before a file is added.
 `tools/test/assets.test.cjs` fails when a file here has no entry, when its
 licence is not CC0-1.0, or when its hash differs.
 
-The head-and-shoulders pictures and the seated-at-a-desk picture in `portraits/` are renders of that one
-Mini Characters figure and the Furniture Kit desk (`tools/render-portraits.cjs`), so a person on the Team,
-Tasks and Approvals screens is the same character as at the desks in the
-office. They are derived from a CC0 model and are CC0 too.
+The pictures in `portraits/` (a person's head and shoulders from three angles, and seated at the Furniture
+Kit desk) are renders of that one Mini Characters figure, once in each of ten suit colours, and the pictures
+in `icons/` (one per campus building type) are renders of the City Kit buildings above, made by
+`tools/render-portraits.cjs` from the models in this folder. A person on the Team, Tasks and Approvals
+screens is the same character, in the same suit, as at the desks in the office, and the setup wizard's
+campus stands the same buildings as the 3D campus. They are derived from CC0 models and are CC0 too; the
+manifest says how each was made.

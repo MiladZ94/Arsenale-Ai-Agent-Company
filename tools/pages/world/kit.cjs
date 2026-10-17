@@ -374,13 +374,67 @@ function worldKit() {
   /** A piece of furniture by name (desk, chair, sofa, plant, screen), or null when it has no model. */
   const furniture = (name) => { const m = models['furniture:' + name]; return m ? m.clone(true) : null }
   /** The person of a style in a still pose (a clip of the model, frozen at its first frame), or null. */
-  function character(style, pose) {
+  function character(style, pose, outfit) {
     const key = 'character:' + style, m = models[key], X = window.THREE_ADDONS
     if (!m || !X || !X.clone) return null
     const o = X.clone(m)
     const clip = (clips[key] || []).find((c) => c.name === pose)
     if (clip) { const mx = new T3.AnimationMixer(o); mx.clipAction(clip).play(); mx.update(0) }
+    if (typeof outfit === 'number') recolor(o, outfit)
     return o
+  }
+  // The Kenney figure is one 512 px colour atlas (16 columns of 32 px, 4 rows of 128): the suit is the
+  // dark cell at column 1 of the bottom row, the tie the red cell at column 9 of the third row. The
+  // eyes and the mouth use the suit's cell too, but they are in the head mesh: only the body mesh (the
+  // larger one) gets a new atlas, so a face never changes colour. One atlas is made per colour.
+  const SUIT = [32, 384], TIE = [288, 256]
+  const atlases = new Map()
+  function atlasFor(src, idx) {
+    const k = src.uuid + ':' + idx
+    if (atlases.has(k)) return atlases.get(k)
+    const img = src.map && src.map.image
+    let mat = null
+    try {
+      const c = document.createElement('canvas')
+      c.width = img.width; c.height = img.height
+      const x = c.getContext('2d', { willReadFrequently: true })
+      x.drawImage(img, 0, 0)
+      const k2 = img.width / 512
+      const paint = (cell, hex, f) => {
+        const n = parseInt(hex.slice(1), 16), base = [n >> 16, (n >> 8) & 255, n & 255]
+        const d = x.getImageData(cell[0] * k2, cell[1] * k2, 32 * k2, 128 * k2)
+        // keep the cell's own light-to-dark gradient: the new colour follows the old brightness
+        let mean = 0
+        for (let i = 0; i < d.data.length; i += 4) mean += d.data[i] + d.data[i + 1] + d.data[i + 2]
+        mean = mean / (d.data.length / 4) / 3 || 1
+        for (let i = 0; i < d.data.length; i += 4) {
+          const g = ((d.data[i] + d.data[i + 1] + d.data[i + 2]) / 3 / mean - 1) * 0.5 + 1
+          for (let j = 0; j < 3; j++) d.data[i + j] = Math.max(0, Math.min(255, Math.round(base[j] * f * g)))
+        }
+        x.putImageData(d, cell[0] * k2, cell[1] * k2)
+      }
+      const suit = WORLD_PALETTE.OUTFIT[idx % WORLD_PALETTE.OUTFIT.length]
+      paint(SUIT, suit, 1)
+      paint(TIE, suit, 0.55)
+      // a new texture, not a clone: a clone shares its source, and changing that would repaint the shipped atlas for everyone
+      const o = src.map, t = new T3.Texture(c)
+      for (const p of ['wrapS', 'wrapT', 'magFilter', 'minFilter', 'flipY', 'colorSpace', 'channel', 'rotation', 'matrixAutoUpdate']) t[p] = o[p]
+      t.offset.copy(o.offset); t.repeat.copy(o.repeat); t.center.copy(o.center); t.matrix.copy(o.matrix)
+      t.needsUpdate = true
+      mat = src.clone(); mat.map = t
+    } catch (e) { /* no canvas or an unreadable image: the model stays as shipped */ }
+    atlases.set(k, mat)
+    return mat
+  }
+  /** Gives the suit and tie of a loaded character a colour of the outfit palette (the body mesh only). */
+  function recolor(root, idx) {
+    const meshes = []
+    root.traverse((n) => { if (n.isMesh && n.material && n.material.map) meshes.push(n) })
+    if (meshes.length < 2) return root
+    meshes.sort((a, b) => b.geometry.attributes.position.count - a.geometry.attributes.position.count)
+    const mat = atlasFor(meshes[0].material, idx)
+    if (mat) meshes[0].material = mat
+    return root
   }
 
   // ---------- people and furniture
@@ -429,7 +483,7 @@ function worldKit() {
     return out
   }
 
-  return { engine, icons, building, loadModels, furniture, character, checker, avatar, desk, tree, box, cyl, cone, add, mat, SHAPES, AVATAR_H, AZ, EL, clamp, models, CHARACTER_H }
+  return { engine, icons, building, loadModels, furniture, character, recolor, checker, avatar, desk, tree, box, cyl, cone, add, mat, SHAPES, AVATAR_H, AZ, EL, clamp, models, CHARACTER_H }
 }
 
 module.exports = { worldKit }
