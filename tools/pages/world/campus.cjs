@@ -42,7 +42,7 @@ function campusArt(h) {
   // ---------- the html
   const TOOLS = [['select', 'Select', 'M5 3l14 8-6 1.6L10.5 19z'], ['move', 'Move', 'M12 3v18M3 12h18M12 3l-3 3m3-3l3 3M12 21l-3-3m3 3l3-3M3 12l3-3m-3 3l3 3M21 12l-3-3m3 3l-3 3'], ['rotate', 'Rotate', 'M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5'], ['archive', 'Archive', 'M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13']]
   const icon = (d) => '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"/></svg>'
-  const tileIcon = (t) => (icons && icons[t.id] ? '<img src="' + icons[t.id] + '" width="64" height="52" alt="">' : '<svg viewBox="0 0 40 32" width="40" height="32" aria-hidden="true"><path d="M20 4l16 8-16 8-16-8z" fill="#cfd8c4"/></svg>')
+  const tileIcon = (t) => (icons && icons[t.id] ? '<img src="' + icons[t.id] + '" width="64" height="52" alt="">' : '<svg viewBox="0 0 40 32" width="40" height="32" aria-hidden="true"><path d="M20 4l16 8-16 8-16-8z" fill="#d5dae0"/></svg>')
 
   function flat(m) {
     const g = m.campus.grid, by = new Map(m.campus.buildings.map((b) => [b.x + ',' + b.y, b]))
@@ -61,8 +61,9 @@ function campusArt(h) {
     const c = m.campus
     const used = c.buildings.length, total = c.grid.cols * c.grid.rows
     if (K && !eng) ensure()
-    if (K && !icons) icons = K.icons(96, 78) || {}
     const build = bm.on && editable() && !!K
+    // the hotbar pictures are drawn when the hotbar is first shown, and again after a model has loaded (they show the real ones)
+    if (build && !icons) icons = K.icons(96, 78) || {}
     let s = '<div class="cwrap"><div class="cmap' + (build ? ' building' : '') + '" id="cmap">'
     s += '<div class="c3bar"><span class="c3cnt" id="c3cnt">' + fa(used) + ' of ' + fa(total) + ' lots</span>'
     if (K) s += '<button type="button" class="c3b" data-c3="fit">Fit</button>'
@@ -98,11 +99,12 @@ function campusArt(h) {
       eng.zoomBy(Math.exp(-Math.max(-60, Math.min(60, e.deltaY)) * (e.ctrlKey ? 0.008 : 0.0016)), e.clientX - r.left, e.clientY - r.top)
     }, { passive: false })
     eng.onFrame = overlay
-    K.loadModels(() => { sig = ''; if (model) rebuild() })
+    K.loadModels(() => { sig = ''; icons = null; if (model) rebuild() }, ['building'])
     return eng
   }
 
-  const GROUND = '#D8CBB0', PAD = '#CFE4C6', PAD_EDGE = '#8DB58A'
+  // a white board: a light grey slab, every lot a two-tone checkerboard, a free lot with a dashed edge
+  const GROUND = '#CBD1D9', PAD = '#F4F5F7', PAD_B = '#E3E7EC', PAD_EDGE = '#8E9AA8'
   function rebuild() {
     if (!eng || !model) return
     const c = model.campus
@@ -119,6 +121,7 @@ function campusArt(h) {
     for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
       const px = (x - cols / 2 + 0.5) * PITCH, pz = (y - rows / 2 + 0.5) * PITCH
       K.box(group, 1, 0.03, 1, PAD, px, 0, pz)
+      K.checker(group, 1, 1, 0.25, PAD, PAD_B, px, 0.031, pz)
       if (!lots.has(x + ',' + y)) {
         const e = new T3.LineSegments(new T3.EdgesGeometry(new T3.BoxGeometry(0.94, 0.001, 0.94)), new T3.LineDashedMaterial({ color: PAD_EDGE, dashSize: 0.07, gapSize: 0.05 }))
         e.computeLineDistances(); e.position.set(px, 0.035, pz); group.add(e)
@@ -141,6 +144,8 @@ function campusArt(h) {
       g.position.set(p.x, 0.03, p.z)
       g.userData.id = b.id
       group.add(g)
+      // the label stands on the building's own roof, so a low hall's label does not cover the lot behind it
+      const roof = Math.max(0.45, new T3.Box3().setFromObject(g).max.y + 0.06)
       const lab = document.createElement('div')
       lab.className = 'c3lab'
       lab.dataset.b = b.id
@@ -151,7 +156,7 @@ function campusArt(h) {
       lab.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() } })
       eng.ov.appendChild(lab)
       labels.push(lab)
-      things.set(b.id, { id: b.id, group: g, b, lab })
+      things.set(b.id, { id: b.id, group: g, b, lab, roof })
     }
     hl = new T3.LineSegments(new T3.EdgesGeometry(new T3.BoxGeometry(1.04, 0.06, 1.04)), new T3.LineBasicMaterial({ color: '#2F6BE0' }))
     hl.visible = false
@@ -172,7 +177,7 @@ function campusArt(h) {
     if (!built || !model) return
     const placed = []
     const items = [...built.things.values()].map((t) => {
-      const p = eng.project(lotOf(t.b).x, 1.0, lotOf(t.b).z)
+      const p = eng.project(lotOf(t.b).x, t.roof, lotOf(t.b).z)
       return { t, p }
     }).sort((a, b) => b.p.y - a.p.y)
     for (const { t, p } of items) {

@@ -11,7 +11,7 @@ const WORLD_STYLE = `
 
 /* ---------- campus */
 .cwrap{display:flex;height:100%}
-.cmap{flex:1;position:relative;overflow:hidden;background:#DDE8D3;min-width:0;outline:none}
+.cmap{flex:1;position:relative;overflow:hidden;background:#F5F6F8;min-width:0;outline:none}
 .c3stage{position:absolute;inset:0}
 .c3bar{position:absolute;inset-inline-end:16px;top:12px;z-index:6;display:flex;gap:8px;align-items:center}
 .c3cnt{font:12px var(--font-ui);color:#4A5663;background:rgba(255,255,255,.9);border:1px solid #D3D9DF;border-radius:6px;padding:6px 10px}
@@ -47,13 +47,13 @@ const WORLD_STYLE = `
 .c3h img,.c3h svg{display:block;width:64px;height:52px;object-fit:contain}
 .c3h span{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .c3flat{position:absolute;inset:56px 20px 20px;display:grid;gap:8px;align-content:start}
-.c3flat .lot{border:1px dashed #9FB896;border-radius:6px;min-height:70px}
+.c3flat .lot{border:1px dashed #AEB8C4;border-radius:6px;min-height:70px}
 .c3flat .tile{display:flex;flex-direction:column;gap:2px;text-align:start;background:#fff;border:1px solid #CBD3DB;border-top:4px solid var(--c);border-radius:6px;padding:8px 10px;font:12px var(--font-ui);color:#4A5663;cursor:pointer;min-height:70px}
 .c3flat .tile b{color:#17212B;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .c3flat .tile i{font-style:normal;color:#19795A}
 
 /* ---------- the 3D office (C2): zone rooms and the side list */
-.stage.w3on{background:#E8E5DC}
+.stage.w3on{background:#F5F6F8}
 .stage.w3on .stage-in{display:none}
 .stage.w3on .zoombar{inset-inline-end:288px;left:auto}
 .stage.w3on .zoombar .zh{display:none}
@@ -95,6 +95,7 @@ const WORLD_STYLE = `
 .o3a:focus-visible{box-shadow:0 0 0 2px #2F6BE0}
 .o3a .n{position:absolute;left:50%;top:0;transform:translateX(-50%);width:20px;height:20px;display:block}
 .o3a .body{position:absolute;display:block}
+.o3a .body.dot{border:2px solid #fff;box-sizing:border-box;box-shadow:0 0 0 1px rgba(23,33,43,.3)}
 .o3a .ini{position:absolute;left:0;right:0;text-align:center;color:#fff;font-weight:700;line-height:1;letter-spacing:0;pointer-events:none}
 .o3a.sel{box-shadow:0 0 0 2px #2F6BE0;background:rgba(47,107,224,.08)}
 .o3t,.o3c,.o3r{position:absolute;font:700 11.5px var(--font-ui);color:#17212B;background:#fff;border:1px solid #CFCBC0;border-radius:6px;padding:2px 8px;white-space:nowrap;pointer-events:none}

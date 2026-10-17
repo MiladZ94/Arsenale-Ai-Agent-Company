@@ -61,12 +61,39 @@ test('with no asset files the page gets no models (the shapes are drawn)', (t) =
   assert.deepEqual(A.pageAssets(folder(t)).models, {})
 })
 
-test('the shipped models all load: one per office type, real GLB files, no problems', () => {
+test('the shipped models all load: one building per office type, the office furniture and one character style, real GLB files, no problems', () => {
   const r = A.pageAssets()
   assert.deepEqual(r.problems, [])
   const types = require('../campus.cjs').TYPES.map((t) => 'building:' + t.id).sort()
-  assert.deepEqual(Object.keys(r.models).sort(), types)
+  const keys = Object.keys(r.models).sort()
+  assert.deepEqual(keys.filter((k) => /^building:/.test(k)), types)
+  assert.deepEqual(keys.filter((k) => /^furniture:/.test(k)), ['furniture:chair', 'furniture:desk', 'furniture:plant', 'furniture:screen', 'furniture:sofa'])
+  assert.deepEqual(keys.filter((k) => /^character:/.test(k)), ['character:office'])
+  assert.equal(keys.length, types.length + 6)
   for (const b64 of Object.values(r.models)) assert.equal(Buffer.from(b64, 'base64').subarray(0, 4).toString(), 'glTF')
+})
+
+test('every office type has its own model (twelve different files), and no file is over 6 MB or all together over 10 MB', () => {
+  const m = A.readManifest().assets.filter((a) => /^building:/.test(a.use))
+  assert.equal(new Set(m.map((a) => a.file)).size, 12, 'twelve types, twelve files')
+  let total = 0
+  for (const f of A.shippedFiles()) { const n = fs.statSync(path.join(A.DIR, f)).size; assert.ok(n <= 6 * 1024 * 1024, f + ' is over 6 MB'); total += n }
+  assert.ok(total < 10 * 1024 * 1024, 'the shipped models are ' + total + ' bytes')
+})
+
+test('the loader takes furniture and character entries and refuses an unknown kind', (t) => {
+  const d = folder(t)
+  const buf = Buffer.from('glb')
+  fs.writeFileSync(path.join(d, 'a.glb'), buf)
+  fs.writeFileSync(path.join(d, 'manifest.json'), JSON.stringify({ assets: [
+    entry('a.glb', buf, { use: 'furniture:desk' }),
+    entry('a.glb', buf, { use: 'character:office' }),
+    entry('a.glb', buf, { use: 'vehicle:car' }),
+    entry('a.glb', buf, { use: 'furniture:Desk' }),
+  ] }))
+  const r = A.pageAssets(d)
+  assert.deepEqual(Object.keys(r.models).sort(), ['character:office', 'furniture:desk'])
+  assert.equal(r.problems.filter((p) => /bad entry/.test(p)).length, 2)
 })
 
 test('a shipped file with no entry is found by the check above', (t) => {

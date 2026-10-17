@@ -199,9 +199,11 @@ A floor has 18 desks; more agents than that take a guest desk while they work.
 ### The campus and the 3D office
 
 **The campus** is a board of lots on a grid (6 by 4 to begin with), one building per
-office, drawn in 3D (isometric, from code: no asset files). The office profile
-selects one of 12 building types (engineering, verification, security, release,
-docs, design, data, planning, legal, business, archive hall, domain lab). Click a
+office, drawn in 3D (isometric) on a light checkerboard, from real CC0 models with the
+built-in shapes as the fallback. The office profile selects one of 12 building
+types (engineering, verification, security, release, docs, design, data,
+planning, legal, business, archive hall, domain lab); each has its own model, a
+mix of commercial, industrial and suburban buildings. Click a
 building to enter its office. **Build** opens build mode: a hotbar of the 12 types
 (keys 1 to 9), a tool column (select, move, rotate, archive), a ghost building that
 follows the pointer (blue on a free lot; red with "Lot taken: <office>" on a used
@@ -230,9 +232,11 @@ campus is a flat grid of tiles.
 - **three.js r184**, pinned and served from the page itself, never a CDN:
   `tools/vendor/three/` (MIT, see `three-LICENSE.txt` and the `README.md`
   there).
-- **Nothing is downloaded.** The buildings, the avatar and the desk are made in
-  code. A real CC0 model may replace a building type: see
-  [`tools/OFFICE-WORLD-NOTE.md`](tools/OFFICE-WORLD-NOTE.md) and
+- **Nothing is downloaded at run time.** The buildings, the office furniture and
+  the person at each desk are CC0 models from Kenney (City Kit Commercial,
+  Industrial and Suburban, Furniture Kit, Mini Characters) that ship in
+  `tools/assets/`; a model that is missing or refused is drawn from code instead.
+  See [`tools/OFFICE-WORLD-NOTE.md`](tools/OFFICE-WORLD-NOTE.md) and
   `tools/assets/manifest.json`.
 
 ## Office packs

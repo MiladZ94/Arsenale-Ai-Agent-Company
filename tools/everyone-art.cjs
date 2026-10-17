@@ -107,16 +107,16 @@ function everyoneArt() {
     return '<g><rect x="' + (x - 17).toFixed(1) + '" y="' + (y - 20).toFixed(1) + '" width="34" height="20" rx="4" fill="#FFFFFF" stroke="' + c[0] + '" stroke-width="1.5"/><polygon points="' + (x - 4).toFixed(1) + ',' + y.toFixed(1) + ' ' + (x + 4).toFixed(1) + ',' + y.toFixed(1) + ' ' + x.toFixed(1) + ',' + (y + 6).toFixed(1) + '" fill="' + c[0] + '"/>' + text(x, y - 6, c[1], { size: 12, fill: c[0], w: 700, mono: true }) + '</g>'
   }
 
-  /** The campus: up to six buildings on a grass slab. plots: [{ color, label,
+  /** The campus: up to six buildings on a light grey checkerboard slab. plots: [{ color, label,
    *  count, h, built }], people: [{ seed, color, plot }] standing at a plot. */
   function campus(plots, people) {
     const SPOTS = [[1, 1], [5, 1], [1, 5], [5, 5], [3, 0.2], [3, 6.2]]
     const I = iso(450, 110, 100, 50), P = I.P, poly = I.poly, box = I.box
     const size = 8, mid = size / 2
-    let s = poly([P(0, 0), P(size, 0), P(size, size), P(0, size)], '#E6EEE8', '#D3DED6')
-    for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) if ((i + j) % 2) s += poly([P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], '#DEE7E1')
+    let s = poly([P(0, 0), P(size, 0), P(size, size), P(0, size)], '#EEF0F3', '#CBD1D9')
+    for (let i = 0; i < size; i++) for (let j = 0; j < size; j++) if ((i + j) % 2) s += poly([P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)], '#E3E7EC')
     s += poly([P(mid - 0.3, 0), P(mid + 0.3, 0), P(mid + 0.3, size), P(mid - 0.3, size)], '#D5DBE1') + poly([P(0, mid - 0.3), P(size, mid - 0.3), P(size, mid + 0.3), P(0, mid + 0.3)], '#D5DBE1')
-    s += poly([P(0, size), P(size, size), P(size, size, -14), P(0, size, -14)], '#C6D1C9') + poly([P(size, 0), P(size, size), P(size, size, -14), P(size, 0, -14)], '#B9C5BD')
+    s += poly([P(0, size), P(size, size), P(size, size, -14), P(0, size, -14)], '#C9CFD6') + poly([P(size, 0), P(size, size), P(size, size, -14), P(size, 0, -14)], '#BBC2CA')
     const placed = plots.slice(0, SPOTS.length).map((p, i) => Object.assign({ x: SPOTS[i][0], y: SPOTS[i][1] }, p))
     const labels = []
     for (const p of placed.slice().sort((a, b) => (a.x + a.y) - (b.x + b.y))) {

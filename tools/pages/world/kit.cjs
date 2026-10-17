@@ -5,11 +5,13 @@
  * Like the page's other client code this is never run in Node: its source is
  * written into the page (fn.toString()), so it may use only what a browser
  * has, plus window.THREE, window.THREE_ADDONS, WORLD_PALETTE (palette.cjs)
- * and ASSET_MODELS (tools/assets.cjs: base64 .glb by "building:<type>").
+ * and ASSET_MODELS (tools/assets.cjs: base64 .glb by "building:<type>",
+ * "furniture:<name>" or "character:<style>").
  *
  * Nothing is downloaded: every shape is made here from boxes, cylinders and
  * cones. A real model in the manifest replaces the shape of its building
- * type (loadModels), and a shape stays when the file is absent or broken.
+ * type, a piece of furniture or the person (loadModels), and the shape stays
+ * when the file is absent or broken.
  * No shadows anywhere: everything stands flush on the ground.
  */
 function worldKit() {
@@ -40,7 +42,7 @@ function worldKit() {
     ov.className = 'k3ov'
     host.append(canvas, ov)
     const scene = new T3.Scene()
-    scene.add(new T3.HemisphereLight('#ffffff', '#cdbfa8', 1.9))
+    scene.add(new T3.HemisphereLight('#ffffff', '#c3c9d2', 1.9))
     const sun = new T3.DirectionalLight('#fff6e6', 1.5)
     sun.position.set(-6, 10, 4)
     scene.add(sun)
@@ -184,6 +186,33 @@ function worldKit() {
     geo.computeVertexNormals()
     const m = new T3.Mesh(geo, mat(c)); m.position.set(x, y, z); g.add(m); return m
   }
+  /** A flat checkerboard of two light colours (tiles of `tile` units) lying on y, from one canvas texture per colour pair. */
+  const checkers = new Map()
+  function checker(g, w, d, tile, c1, c2, x, y, z) {
+    const key = c1 + c2
+    let m = checkers.get(key)
+    if (!m) {
+      const cv = document.createElement('canvas')
+      cv.width = cv.height = 128
+      const cx = cv.getContext('2d')
+      for (let i = 0; i < 2; i++) for (let j = 0; j < 2; j++) { cx.fillStyle = (i + j) % 2 ? c2 : c1; cx.fillRect(i * 64, j * 64, 64, 64) }
+      const tex = new T3.CanvasTexture(cv)
+      tex.wrapS = tex.wrapT = T3.RepeatWrapping
+      tex.colorSpace = T3.SRGBColorSpace
+      tex.anisotropy = 4
+      m = new T3.MeshLambertMaterial({ map: tex })
+      checkers.set(key, m)
+    }
+    // the texture is shared, so each plane keeps its own repeat in its UVs
+    const geo = new T3.PlaneGeometry(w, d)
+    const uv = geo.attributes.uv
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / tile / 2, uv.getY(i) * d / tile / 2)
+    const p = new T3.Mesh(geo, m)
+    p.rotation.x = -Math.PI / 2
+    p.position.set(x, y, z)
+    g.add(p)
+    return p
+  }
   const windows = (g, w, d, y, rows, cols, c, face) => {
     // small glass panes on the +z face (face 0) or the +x face (face 1)
     for (let r = 0; r < rows; r++) for (let k = 0; k < cols; k++) {
@@ -296,7 +325,7 @@ function worldKit() {
   /** The building of a type: a model from the manifest when one loaded, else the shape. */
   function building(type, accent, rot) {
     const g = new T3.Group()
-    const model = models[type]
+    const model = models['building:' + type]
     if (model) {
       const m = model.clone(true)
       g.add(m)
@@ -307,31 +336,51 @@ function worldKit() {
     return g
   }
 
-  // ---------- asset models: "building:<type>" -> a loaded glTF scene, scaled into the 0.84 square
+  // ---------- asset models, by their manifest key: "building:<type>", "furniture:<name>", "character:<style>"
   const models = {}
-  function loadModels(onLoaded) {
+  const clips = {}
+  const MAX_BUILDING_H = 0.9 // a tall model (the tower) is scaled down so it never hides the lots behind it
+  const FURNITURE_SIZE = { desk: { w: 1.0 }, chair: { w: 0.5 }, sofa: { w: 1.5 }, plant: { h: 0.9 }, screen: { w: 0.42 } }
+  const CHARACTER_H = 1.1
+  /** Loads the models of the given kinds (default all). onLoaded(key) after each one. */
+  function loadModels(onLoaded, kinds) {
     const src = typeof ASSET_MODELS === 'object' && ASSET_MODELS ? ASSET_MODELS : {}
     const X = window.THREE_ADDONS
     if (!X || !X.GLTFLoader) return
     for (const key of Object.keys(src)) {
-      if (!/^building:[a-z]+$/.test(key)) continue
+      const m = /^(building|furniture|character):([a-z]+)$/.exec(key)
+      if (!m || (kinds && !kinds.includes(m[1]))) continue
       try {
         const bin = atob(src[key]), buf = new Uint8Array(bin.length)
         for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i)
         new X.GLTFLoader().parse(buf.buffer, '', (gltf) => {
           const s = gltf.scene
-          const bb = new T3.Box3().setFromObject(s)
-          const size = bb.getSize(new T3.Vector3())
-          const k = 0.84 / Math.max(size.x, size.z, 0.001)
+          const size = new T3.Box3().setFromObject(s).getSize(new T3.Vector3())
+          let k
+          if (m[1] === 'building') k = Math.min(0.84 / Math.max(size.x, size.z, 0.001), MAX_BUILDING_H / Math.max(size.y, 0.001))
+          else if (m[1] === 'character') k = CHARACTER_H / Math.max(size.y, 0.001)
+          else { const z = FURNITURE_SIZE[m[2]] || { w: 0.5 }; k = z.h ? z.h / Math.max(size.y, 0.001) : z.w / Math.max(size.x, 0.001) }
           s.scale.setScalar(k)
           const b2 = new T3.Box3().setFromObject(s)
           s.position.set(-(b2.min.x + b2.max.x) / 2, -b2.min.y, -(b2.min.z + b2.max.z) / 2)
           const wrap = new T3.Group(); wrap.add(s)
-          models[key.slice(9)] = wrap
-          if (onLoaded) onLoaded(key.slice(9))
+          models[key] = wrap
+          clips[key] = gltf.animations || []
+          if (onLoaded) onLoaded(key)
         }, () => { /* a broken file: the shape stays */ })
       } catch (e) { /* the same */ }
     }
+  }
+  /** A piece of furniture by name (desk, chair, sofa, plant, screen), or null when it has no model. */
+  const furniture = (name) => { const m = models['furniture:' + name]; return m ? m.clone(true) : null }
+  /** The person of a style in a still pose (a clip of the model, frozen at its first frame), or null. */
+  function character(style, pose) {
+    const key = 'character:' + style, m = models[key], X = window.THREE_ADDONS
+    if (!m || !X || !X.clone) return null
+    const o = X.clone(m)
+    const clip = (clips[key] || []).find((c) => c.name === pose)
+    if (clip) { const mx = new T3.AnimationMixer(o); mx.clipAction(clip).play(); mx.update(0) }
+    return o
   }
 
   // ---------- people and furniture
@@ -364,7 +413,7 @@ function worldKit() {
     try { r = new T3.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }) } catch (e) { return null }
     r.setPixelRatio(1); r.setSize(w, h, false)
     const sc = new T3.Scene()
-    sc.add(new T3.HemisphereLight('#ffffff', '#cdbfa8', 1.9))
+    sc.add(new T3.HemisphereLight('#ffffff', '#c3c9d2', 1.9))
     const sun = new T3.DirectionalLight('#fff6e6', 1.5); sun.position.set(-6, 10, 4); sc.add(sun)
     const cam = new T3.OrthographicCamera(-0.78 * w / h, 0.78 * w / h, 0.86, -0.3, 0.1, 100)
     cam.position.set(10 * Math.cos(EL) * Math.sin(AZ), 10 * Math.sin(EL), 10 * Math.cos(EL) * Math.cos(AZ)); cam.lookAt(0, 0.3, 0)
@@ -380,7 +429,7 @@ function worldKit() {
     return out
   }
 
-  return { engine, icons, building, loadModels, avatar, desk, tree, box, cyl, cone, add, mat, SHAPES, AVATAR_H, AZ, EL, clamp, models }
+  return { engine, icons, building, loadModels, furniture, character, checker, avatar, desk, tree, box, cyl, cone, add, mat, SHAPES, AVATAR_H, AZ, EL, clamp, models, CHARACTER_H }
 }
 
 module.exports = { worldKit }

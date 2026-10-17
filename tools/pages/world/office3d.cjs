@@ -5,8 +5,10 @@
  * page keeps its flat office.
  *
  * Rules the layout keeps (spec 5.15 rules 65 to 67, 16.2 rules 12 to 14):
- *  - one avatar style (a round head on a coloured body, the person's initials
- *    on it); a person is drawn once: the figure, never a card as well;
+ *  - one avatar style: the manifest's mini-character (seated at a desk, a round
+ *    badge with the person's initials in the zone colour above the head), or,
+ *    with no model file, a round head on a coloured body with the initials on
+ *    it; a person is drawn once: the figure, never a card as well;
  *  - the figure carries a number badge only, shaped by state (circle working,
  *    triangle quiet, diamond waiting, square failed, ring done); the name,
  *    the step and the state are in the side list, same number;
@@ -16,6 +18,9 @@
  *  - labels are placed one at a time on the nearest free slot, shrink to a
  *    short form and then disappear rather than cover an avatar or another
  *    label; the list always has the full text.
+ *
+ * Desks, chairs, the lounge sofa and plants come from the manifest's furniture
+ * models when they loaded, else from shapes (kit.cjs).
  *
  * h: { esc, fa, onLost() }. model: { key, view, selected (run key),
  *   figures: [{ id, key, agent, label, tag, initials, zone, state, step,
@@ -60,6 +65,10 @@ function office3d(h) {
   let idleOpen = false
   let chips = []            // lounge, reports, groups, room labels (DOM, recreated per layout)
   let last = { ppu: 0 }
+  // models load after the first draw: when one arrives the floor and the figures are drawn again
+  const useModel = () => !!K.models['character:office']
+  K.loadModels(() => { if (!model) return; layoutSig = ''; sync(model) }, ['furniture', 'character'])
+  const mix = (hex, to, t) => { const a = parseInt(hex.slice(1), 16), b = parseInt(to.slice(1), 16); const c = (sh) => Math.round(((a >> sh) & 255) * (1 - t) + ((b >> sh) & 255) * t); return '#' + ((1 << 24) | (c(16) << 16) | (c(8) << 8) | c(0)).toString(16).slice(1) }
 
   // ---------- layout: which rooms, how big, where
   function plan() {
@@ -108,42 +117,68 @@ function office3d(h) {
     return { x: r.x + WALL / 2 + (col + 0.5) * CELL_X + (row % 2 ? CELL_X / 2 : 0), z: r.z + WALL / 2 + (row + 0.5) * CELL_Z }
   }
 
+  /** One desk with its screen, standing on y = 0 and facing +z (the person sits at its -z side once it is turned round), from the models or from shapes; with its extents for the label boxes. */
+  function makeDesk() {
+    const dk = K.furniture('desk')
+    if (!dk) return { g: K.desk(), hw: 0.5, hd: 0.25, h: 0.6 }
+    const g = new T3.Group()
+    g.add(dk)
+    const top = new T3.Box3().setFromObject(dk).max.y
+    const sc = K.furniture('screen')
+    if (sc) { sc.position.set(0, top, -0.08); g.add(sc) }
+    const b = new T3.Box3().setFromObject(g)
+    return { g, hw: Math.max(-b.min.x, b.max.x), hd: Math.max(-b.min.z, b.max.z), h: b.max.y }
+  }
+  let deskExt = { hw: 0.5, hd: 0.25, h: 0.6 }
+
   function buildShell(dims) {
     if (shell) { eng.scene.remove(shell); shell.traverse((o) => { if (o.geometry) o.geometry.dispose() }) }
     const g = new T3.Group()
     const W = dims.maxX + 1.0, D = dims.totalD + 1.0
-    K.box(g, W, 0.16, D, '#E2DDD2', 0, -0.16, 0)
-    K.box(g, W - 0.2, 0.03, D - 0.2, '#EEEAE0', 0, 0, 0)
+    // a white floor: a pale slab, and every room a two-tone checkerboard of its own tint
+    K.box(g, W, 0.16, D, '#D3D8DF', 0, -0.16, 0)
+    K.box(g, W - 0.2, 0.03, D - 0.2, '#F4F5F7', 0, 0, 0)
+    K.checker(g, W - 0.2, D - 0.2, 0.5, '#F7F8FA', '#E8EBEF', 0, 0.031, 0)
     // the two back walls of the building, with windows
     const wallH = 1.9
-    K.box(g, 0.2, wallH, D, '#DAD3C4', -W / 2 + 0.1, 0, 0)
-    K.box(g, W, wallH, 0.2, '#E4DED0', 0, 0, -D / 2 + 0.1)
+    K.box(g, 0.2, wallH, D, '#D3D8DF', -W / 2 + 0.1, 0, 0)
+    K.box(g, W, wallH, 0.2, '#E1E5EA', 0, 0, -D / 2 + 0.1)
     for (let i = 0; i < Math.floor(D / 2.2); i++) K.box(g, 0.03, 0.5, 1.1, '#B4D0E6', -W / 2 + 0.22, 1.0, -D / 2 + 1.6 + i * 2.2)
     for (let i = 0; i < Math.floor(W / 2.2); i++) K.box(g, 1.1, 0.5, 0.03, '#B4D0E6', -W / 2 + 1.6 + i * 2.2, 1.0, -D / 2 + 0.22)
     for (const r of rooms) {
-      K.box(g, r.w, 0.05, r.d, r.zone === 'lounge' ? '#E7E2D8' : tint(r.zone), r.x + r.w / 2, 0, r.z + r.d / 2)
+      const floor = r.zone === 'lounge' ? '#E4E7EC' : tint(r.zone)
+      K.box(g, r.w, 0.05, r.d, floor, r.x + r.w / 2, 0, r.z + r.d / 2)
+      K.checker(g, r.w, r.d, 0.5, mix(floor, '#FFFFFF', 0.5), floor, r.x + r.w / 2, 0.051, r.z + r.d / 2)
       // low walls; the front two (towards the camera) have a door gap and are lower, so the room stays open to the eye
-      const t = 0.1, hBack = 0.7, hFront = 0.34, c = '#F3EFE6'
+      const t = 0.1, hBack = 0.7, hFront = 0.34, c = '#F6F7F9'
       K.box(g, r.w, hBack, t, c, r.x + r.w / 2, 0, r.z + t / 2)
       K.box(g, t, hBack, r.d, c, r.x + t / 2, 0, r.z + r.d / 2)
       const door = 0.9
       for (const [x0, x1] of [[r.x, r.x + r.w / 2 - door / 2], [r.x + r.w / 2 + door / 2, r.x + r.w]]) K.box(g, x1 - x0, hFront, t, c, (x0 + x1) / 2, 0, r.z + r.d - t / 2)
       for (const [z0, z1] of [[r.z, r.z + r.d / 2 - door / 2], [r.z + r.d / 2 + door / 2, r.z + r.d]]) K.box(g, t, hFront, z1 - z0, c, r.x + r.w - t / 2, 0, (z0 + z1) / 2)
       if (r.zone === 'lounge') {
-        const sofa = new T3.Group()
-        K.box(sofa, 1.9, 0.3, 0.6, '#C8B79A', 0, 0, 0)
-        K.box(sofa, 1.9, 0.4, 0.16, '#B7A583', 0, 0.3, -0.24)
+        let sofa = K.furniture('sofa')
+        if (!sofa) {
+          sofa = new T3.Group()
+          K.box(sofa, 1.9, 0.3, 0.6, '#C8B79A', 0, 0, 0)
+          K.box(sofa, 1.9, 0.4, 0.16, '#B7A583', 0, 0.3, -0.24)
+        }
         sofa.position.set(r.x + 1.5, 0.03, r.z + 0.9)
         g.add(sofa)
-        const tr = K.tree(r.x + r.w - 0.8, r.z + r.d - 0.8, 1.4); g.add(tr)
+        const plant = K.furniture('plant')
+        if (plant) { plant.position.set(r.x + r.w - 0.8, 0.03, r.z + r.d - 0.8); g.add(plant) }
+        else g.add(K.tree(r.x + r.w - 0.8, r.z + r.d - 0.8, 1.4))
       } else {
         const n = caps.get(r.zone) || 0
         for (let i = 0; i < n; i++) {
           const p = deskPos(r.zone, i)
-          const d = K.desk()
-          d.rotation.y = Math.PI
-          d.position.set(p.x, 0.03, p.z + 0.12)
-          g.add(d)
+          const d = makeDesk()
+          deskExt = d
+          d.g.rotation.y = Math.PI
+          d.g.position.set(p.x, 0.03, p.z + 0.12)
+          g.add(d.g)
+          const chair = K.furniture('chair')
+          if (chair) { chair.position.set(p.x, 0.03, p.z - 0.52); g.add(chair) }
         }
       }
     }
@@ -157,23 +192,30 @@ function office3d(h) {
   function avatarFor(f) {
     let o = figs.get(f.id)
     const color = role(f.zone)
-    if (!o) {
-      const g = K.avatar(color)
-      const ring = new T3.Mesh(new T3.CylinderGeometry(0.34, 0.34, 0.02, 20), new T3.MeshBasicMaterial({ color: '#19795A' }))
-      ring.position.y = 0.03
+    const model = useModel()
+    if (o && o.model !== model) { eng.scene.remove(o.g); o.g = null } // a model arrived since: the figure is drawn again
+    if (!o || !o.g) {
+      const g = new T3.Group()
+      let top = K.AVATAR_H
+      if (model) { const p = K.character('office', 'sit'); g.add(p); top = new T3.Box3().setFromObject(p).max.y } else g.add(K.avatar(color))
+      const ring = new T3.Mesh(new T3.CylinderGeometry(0.41, 0.41, 0.02, 24), new T3.MeshBasicMaterial({ color: '#19795A' }))
+      ring.position.y = 0.037
       g.add(ring)
       g.userData.id = f.id
       eng.scene.add(g)
-      const el = document.createElement('div')
-      el.className = 'o3a'
-      el.dataset.id = f.id
-      const tag = document.createElement('div')
-      tag.className = 'o3t'
-      ov.append(el, tag)
-      o = { g, ring, el, tag, color }
-      figs.set(f.id, o)
+      if (o) Object.assign(o, { g, ring, model, top })
+      else {
+        const el = document.createElement('div')
+        el.className = 'o3a'
+        el.dataset.id = f.id
+        const tag = document.createElement('div')
+        tag.className = 'o3t'
+        ov.append(el, tag)
+        o = { g, ring, el, tag, color, model, top }
+        figs.set(f.id, o)
+      }
     }
-    if (o.color !== color) { o.color = color; o.g.children[0].material = K.mat(color) }
+    if (!o.model && o.color !== color) { o.color = color; o.g.children[0].children[0].material = K.mat(color) }
     o.ring.material.color.set(stateOf(f.state).fill)
     const sl = slots.get(f.id), d = deskPos(sl.zone, sl.i)
     o.g.position.set(d.x, 0.03, d.z - 0.52)
@@ -225,8 +267,8 @@ function office3d(h) {
       for (let i = 0, n = caps.get(r.zone) || 0; i < n; i++) {
         const d = deskPos(r.zone, i)
         let l = Infinity, rr = -Infinity, t = Infinity, b = -Infinity
-        // the desk of kit.cjs: 1.0 x 0.5 on the floor, 0.6 high, centred 0.12 in front of its spot
-        for (const dx of [-0.5, 0.5]) for (const dz of [-0.25, 0.25]) for (const y of [0, 0.6]) {
+        // the desk (kit.cjs 1.0 x 0.5, 0.6 high; a model's own extents, with its screen), centred 0.12 in front of its spot
+        for (const dx of [-deskExt.hw, deskExt.hw]) for (const dz of [-deskExt.hd, deskExt.hd]) for (const y of [0, deskExt.h]) {
           const p = eng.project(d.x + dx, y, d.z + 0.12 + dz)
           l = Math.min(l, p.x); rr = Math.max(rr, p.x); t = Math.min(t, p.y); b = Math.max(b, p.y)
         }
@@ -241,9 +283,11 @@ function office3d(h) {
       const d = deskPos(sl.zone, sl.i)
       const ax = d.x, az = d.z - 0.52
       o.g.position.set(ax, 0.03, az)
-      const feet = eng.project(ax, 0.03, az), top = eng.project(ax, K.AVATAR_H, az)
+      const feet = eng.project(ax, 0.03, az), top = eng.project(ax, o.top, az)
       const half = Math.max(12, 0.3 * ppu)
-      const box = { l: feet.x - half, r: feet.x + half, t: top.y - 24, b: feet.y + 2 }
+      // with a model the zone-colour badge floats above the head (dia px) and the number badge above it; else the badge is the body
+      const dia = o.model ? Math.round(Math.max(22, Math.min(30, 0.5 * ppu))) : 0
+      const box = { l: feet.x - half, r: feet.x + half, t: top.y - (o.model ? dia + 26 : 24), b: feet.y + 2 }
       o.box = box; o.desk = eng.project(d.x, 0, d.z + 0.62)
       pos.set(f.id, { feet, top })
       obstacles.push(box)
@@ -255,13 +299,18 @@ function office3d(h) {
       el.className = 'o3a' + (model.selected && model.selected === f.key ? ' sel' : '')
       el.setAttribute('role', 'button'); el.tabIndex = 0
       el.setAttribute('aria-label', f.label + ', ' + st.word + '. ' + f.step)
-      const k = f.n + '|' + f.state + '|' + f.initials + '|' + role(f.zone)
-      if (el.dataset.k !== k) { el.dataset.k = k; el.innerHTML = '<span class="n">' + shapeSvg(st.shape, st.fill, f.n) + '</span><span class="body" style="background:' + role(f.zone) + '"></span><span class="ini" dir="auto">' + esc(f.initials) + '</span>' }
-      el.querySelector('.ini').style.fontSize = fz + 'px'
-      el.querySelector('.ini').style.display = ppu < 24 ? 'none' : ''
-      const body = el.querySelector('.body')
-      body.style.cssText = 'background:' + role(f.zone) + ';left:' + (half - 0.23 * ppu).toFixed(1) + 'px;width:' + (0.46 * ppu).toFixed(1) + 'px;top:' + (top.y - box.t + 0.36 * ppu).toFixed(1) + 'px;height:' + (0.8 * ppu).toFixed(1) + 'px;border-radius:' + (0.23 * ppu).toFixed(1) + 'px'
-      el.querySelector('.ini').style.top = (top.y - box.t + 0.67 * ppu - fz / 2 - 1).toFixed(1) + 'px'
+      const k = f.n + '|' + f.state + '|' + f.initials + '|' + role(f.zone) + '|' + o.model
+      if (el.dataset.k !== k) { el.dataset.k = k; el.innerHTML = '<span class="n">' + shapeSvg(st.shape, st.fill, f.n) + '</span><span class="body' + (o.model ? ' dot' : '') + '" style="background:' + role(f.zone) + '"></span><span class="ini" dir="auto">' + esc(f.initials) + '</span>' }
+      const ini = el.querySelector('.ini'), body = el.querySelector('.body')
+      ini.style.fontSize = (o.model ? Math.max(9, dia * 0.42) : fz) + 'px'
+      ini.style.display = ppu < 24 ? 'none' : ''
+      if (o.model) {
+        body.style.cssText = 'background:' + role(f.zone) + ';left:' + (half - dia / 2).toFixed(1) + 'px;width:' + dia + 'px;height:' + dia + 'px;top:24px;border-radius:50%'
+        ini.style.top = (24 + dia / 2 - Math.max(9, dia * 0.42) / 2 - 0.5).toFixed(1) + 'px'
+      } else {
+        body.style.cssText = 'background:' + role(f.zone) + ';left:' + (half - 0.23 * ppu).toFixed(1) + 'px;width:' + (0.46 * ppu).toFixed(1) + 'px;top:' + (top.y - box.t + 0.36 * ppu).toFixed(1) + 'px;height:' + (0.8 * ppu).toFixed(1) + 'px;border-radius:' + (0.23 * ppu).toFixed(1) + 'px'
+        ini.style.top = (top.y - box.t + 0.67 * ppu - fz / 2 - 1).toFixed(1) + 'px'
+      }
     }
     // the chips of the room: groups of runs of one agent first, then the lounge, the reports, the zone names
     ov.querySelectorAll('.o3c,.o3r').forEach((c) => c.remove())

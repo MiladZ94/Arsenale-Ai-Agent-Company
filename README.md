@@ -66,4 +66,4 @@ exact command and a **Test** button. Adapters for each tool are in
 - Uninstall: `install.ps1 -Uninstall` or `./install.sh --uninstall`.
 
 More: [full reference](docs/reference.md), [CONTRIBUTING](CONTRIBUTING.md),
-[SECURITY](SECURITY.md). Version 1.0.0. License: [MIT](LICENSE).
+[SECURITY](SECURITY.md). Version 1.0.0. License: [MIT](LICENSE). The 3D buildings, furniture and characters are CC0 models by [Kenney](https://kenney.nl) (see [tools/assets/NOTICE.md](tools/assets/NOTICE.md)).

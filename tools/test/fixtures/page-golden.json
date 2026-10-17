@@ -1,19 +1,19 @@
 {
   "office-company": {
-    "sha256": "a3cb0adc4dcbca4d5a00d1f59c46e598c76bc10264c00aafc611b6cae0b0fcd2",
-    "length": 542509
+    "sha256": "f11281eedbf96941fca3ee48de187aafe76220bbabeac2a8a7c3d4a7588b8112",
+    "length": 548829
   },
   "office-company-live": {
-    "sha256": "61867408e48ce8557269f1ba796c20b640d92568d3385608f7eed63081b92b3a",
-    "length": 6394843
+    "sha256": "88741801f167233adeae4872db9964dde7f394e6c72f75f1dc66ceb6f6cda46a",
+    "length": 5628813
   },
   "office-plain": {
-    "sha256": "c2080740ec78ad79db6ddc5ae199f1192f36f1d2b82466c6f9ce24b5478e1898",
-    "length": 521798
+    "sha256": "d5f6b9407b45c0aa127b1e891bb4fcbe0119570057468d080c9ca5e7c93863b7",
+    "length": 528118
   },
   "office-plain-live": {
-    "sha256": "c01c130d4bbdabee36cbd9feb54d1fac5ac6a26cbded2fc69d93d445ef78eb0d",
-    "length": 6366731
+    "sha256": "f44a6f0975378b7fc4f2ab1d2edce32978580dabd5aaa371a6a993064917c194",
+    "length": 5600701
   },
   "archive": {
     "sha256": "44633baaf6d93070971c6793038c6c711fee16779c1b2cdd506ba8446969c175",
