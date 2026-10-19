@@ -206,28 +206,19 @@ test('settings: each sub-page draws its own part, and a safety rule is written i
   await page.waitFor("/Let Arsenale add itself[\\s\\S]*Restart Claude Code[\\s\\S]*Say hello/.test(" + text('.setw') + ")")
 })
 
-test('the Team screen: a floor with a desk card and a name for each member, and the profile at its side', { skip: SKIP || false }, async (t) => {
+test('the Team screen: an office room with a desk and a name for each member, and the profile at its side', { skip: SKIP || false }, async (t) => {
   const sb = makeSandbox({ packs: true })
   const { L, sup } = company(sb)
   sb.mod('agent-company.cjs').updateEmployee({ id: 'implementer', name: 'Ines', skills: ['Small fixes'], by: 'board' }, 'cli')
   L.startRun({ agent: 'implementer', task: 'Fix the menu page', officeId: 'studio' }, sup)
   const page = await open(t, sb, '#/team')
-  await page.waitFor(exists('.ev-main .floor .dsk'))
+  await page.waitFor(exists('.ev-main svg.scene .seat'))
   await page.eval("document.querySelector('[data-ev=team-office][data-arg=studio]').click(); 1")
-  await page.waitFor("[...document.querySelectorAll('.ev-main .floor .dsk b.hi')].some((g) => g.textContent === 'Ines')")
-  const seats = await page.eval("document.querySelectorAll('.ev-main .floor .dsk[data-arg]').length")
+  await page.waitFor("[...document.querySelectorAll('.ev-main svg.scene .tagg')].some((g) => g.textContent === 'Ines')")
+  const seats = await page.eval("document.querySelectorAll('.ev-main svg.scene .seat').length")
   assert.equal(seats, 3, 'implementer, ui-designer and the product lead sit in the studio')
-  // the same look as the office: the Kenney desk picture and an initials badge on each card; people elsewhere are the round Kenney portrait
-  assert.equal(await page.eval("[...document.querySelectorAll('.ev-main .floor .dsk .dkb')].map((e) => e.dataset.i).includes('IN')"), true, 'Ines has the initials IN')
-  assert.equal(await page.eval("(document.getElementById('ptcss') || { textContent: '' }).textContent.includes('data:image/png;base64')"), true, 'the portrait pictures are in the page')
-  // each member wears the suit their id gives (palette.cjs outfitIndex), on the card and in the 3D office alike
-  const { outfitIndex } = require('../pages/world/palette.cjs')
-  const wear = await page.eval("[...document.querySelectorAll('.ev-main .floor .dsk[data-arg]')].map((d) => [d.dataset.arg, d.querySelector('.di').className.split(' ').find((c) => c.indexOf('dd') === 0).slice(2)])")
-  assert.equal(wear.length, 3)
-  for (const [id, k] of wear) assert.equal(k, String(outfitIndex(id)), id + ' sits in outfit ' + outfitIndex(id))
-  assert.equal(await page.eval("document.querySelectorAll('.ev-main svg.scene, .ev-main .px').length"), 0, 'no pixel-art room on the Team screen')
   assert.match(await page.eval(text('.ticker')), /Ines is working on: Fix the menu page/)
-  await page.eval("document.querySelector('.ev-main .floor .dsk[data-arg=implementer]').click(); 1")
+  await page.eval("document.querySelector('.ev-main svg.scene .seat[data-arg=implementer]').dispatchEvent(new MouseEvent('click', { bubbles: true })); 1")
   await page.waitFor("/Ines/.test(" + text('.ev-drawer .ph') + ")")
   const prof = await page.eval(text('.ev-drawer'))
   assert.match(prof, /Working[\s\S]*Right now[\s\S]*Fix the menu page/)

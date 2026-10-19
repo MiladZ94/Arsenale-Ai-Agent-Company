@@ -13,7 +13,7 @@ questions waiting for you. It watches; it never runs agents.
 
 ![Build mode: the hotbar of 12 building types](docs/media/campus-build.png)
 
-![An office: one open floor, a desk and a label per run, idle people together in the free area](docs/media/office.png)
+![An office](docs/media/office.png)
 
 ![The Version run page](docs/media/version-run.png)
 
@@ -66,4 +66,4 @@ exact command and a **Test** button. Adapters for each tool are in
 - Uninstall: `install.ps1 -Uninstall` or `./install.sh --uninstall`.
 
 More: [full reference](docs/reference.md), [CONTRIBUTING](CONTRIBUTING.md),
-[SECURITY](SECURITY.md). Version 1.0.0. License: [MIT](LICENSE). The 3D buildings, furniture and characters are CC0 models by [Kenney](https://kenney.nl) (see [tools/assets/NOTICE.md](tools/assets/NOTICE.md)).
+[SECURITY](SECURITY.md). Version 1.0.0. License: [MIT](LICENSE). The default character is made by our own script and is CC0 ([tools/characters/LICENSE.txt](tools/characters/LICENSE.txt)).

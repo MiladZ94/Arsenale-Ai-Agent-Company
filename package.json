@@ -21,7 +21,7 @@
     "tools/model-prices.json",
     "tools/OFFICE-WORLD-NOTE.md",
     "tools/vendor/",
-    "tools/assets/",
+    "tools/characters/",
     "agents/",
     "autonomous/",
     "adapters/",

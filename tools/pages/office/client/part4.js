@@ -80,8 +80,6 @@
     if (w3on()) {
       const model = scene3d(S, desks, current)
       keys3 = model.keys
-      // one source for "N idle": the list the lounge shows
-      if (CO) $('ohead').innerHTML = CO.officeHead(S, officeId, model.idle.length)
       W3.sync(model)
       if ($('stage-in').firstChild) $('stage-in').innerHTML = ''
     } else {

@@ -175,7 +175,7 @@ The 1.0 screens, from the shop demo (`arsenale demo --shop`; everything invented
 |---|---|
 | ![Tasks](screenshots/tasks-en.png) **Tasks**: a board of what you asked for (To do, Working on it, Waiting for you, Done this week), or a list. A question your team asks shows on its task. **New task** is a page of its own: what you need, who should do it, when, and whether you want to check it first. Writing a task starts nothing: your assistant picks it up the next time you talk to it. | ![Task](screenshots/task-detail-en.png) **A task**: the question waiting for you with its buttons, what happened (newest first), comments, the finished work, and the time spent; the task number and tokens only under Details. |
 | ![Approvals](screenshots/approvals-en.png) **Approvals**: one letter at a time: who asks, the question in plain words, what would happen, why it matters, what happens if you say no, and whether it leaves your computer. Two clicks to answer; or ask for a change. | ![Finished work](screenshots/deliverables-en.png) **Finished work**: documents, images, spreadsheets and links your team handed in, searchable by name or person, with previews from Arsenale's own copies. |
-| ![Team](screenshots/team-profile-en.png) **Team**: each office as a flat floor of desk cards, with the Kenney desk, a name, a status and the initials badge for every member; the profile opens at the side (right now, this month, good at, asks you first before). | ![New desk](screenshots/team-hire-en.png) **New desk**: hire in plain words (name, job title, what they should do, good at, a look, what they ask first), then check the file before it is written; edits keep a backup. |
+| ![Team](screenshots/team-profile-en.png) **Team**: each office as a 3D room of desks with the named people at them, the offices on the left and the members below; the profile opens at the side (right now, this month, good at, asks you first before). | ![New desk](screenshots/team-hire-en.png) **New desk**: hire in plain words (name, job title, what they should do, good at, a look, what they ask first), then check the file before it is written; edits keep a backup. |
 | ![Settings](screenshots/settings-safety-en.png) **Settings**: Assistants (connect in three steps), Phone alerts (with what your phone shows), Safety rules in plain words, Office packs, Privacy. | ![Wizard](screenshots/wizard-offices-en.png) **First start**: four steps (welcome, offices, connect, review) while your campus builds itself on the left; nothing is saved before the last one. |
 
 
@@ -199,48 +199,51 @@ A floor has 18 desks; more agents than that take a guest desk while they work.
 ### The campus and the 3D office
 
 **The campus** is a board of lots on a grid (6 by 4 to begin with), one building per
-office, drawn in 3D (isometric) on a light checkerboard, from real CC0 models with the
-built-in shapes as the fallback. The office profile selects one of 12 building
-types (engineering, verification, security, release, docs, design, data,
-planning, legal, business, archive hall, domain lab); each has its own model, a
-mix of commercial, industrial and suburban buildings. Click a
-building to enter its office. **Build** opens build mode: a hotbar of the 12 types
-(keys 1 to 9), a tool column (select, move, rotate, archive), a ghost building that
-follows the pointer (blue on a free lot; red with "Lot taken: <office>" on a used
-one), **R** to turn, **Delete** to archive (twice, so a stray key does nothing),
-**Done building** to leave. Placing a building creates its office; archiving one
-archives the office and keeps its history. The layout is `company/campus.json`
-(see `tools/campus.cjs`); without the file it is derived from the offices, and
-nothing is written until the first change. The supervisor may place, move, turn and
-remove buildings with `arsenale campus <json>` in an autonomous run only; each
-change is also written as a decision. An agent cannot change the campus.
+office, drawn as light isometric buildings on plain white ground with a card for
+each office above its building (its name, who is working and who waits, the month's
+spend and budget, **Enter office**). Only the lots in use are on show; the first
+offices of an older company start as a block three lots wide. The office profile
+selects one of 12 building types (engineering, verification, security, release,
+docs, design, data, planning, legal, business, archive hall, domain lab); they
+share four shapes (a shop with an awning, a tower with an annex, a corner
+building, a wide block) and differ in height and in what stands on the roof (a
+tank, a mast, solar panels). A window on a top floor is one employee, lit in the
+colour of their state. Click a building to enter its office. **Build** opens build
+mode, with every lot of the grid outlined: a hotbar of the 12 types (keys 1 to
+9), a tool column (select, move, rotate, archive), a ghost building that follows
+the pointer (blue on a free lot; red with "Lot taken: <office>" on a used one),
+**R** to turn (a turned building is drawn from the other side), **Delete** to
+archive (twice, so a stray key does nothing), **Done building** to leave. Move is
+two clicks: the building, then its new lot. Placing a building creates its office;
+archiving one archives the office and keeps its history. The layout is
+`company/campus.json` (see `tools/campus.cjs`); without the file it is derived from
+the offices, and nothing is written until the first change. The supervisor may
+place, move, turn and remove buildings with `arsenale campus <json>` in an
+autonomous run only; each change is also written as a decision. An agent cannot
+change the campus.
 
-**The office floor** is one open checkerboard floor, with no rooms and no walls:
-a clean grid of desks, one per run, each on a light tile of its own in the colour
-of its zone, and a free area beside it with a sofa and chairs. A run is a figure: a round head on a body in the colour of its zone, the
-initials on it, a number badge above (a circle for working, a triangle for quiet, a
-diamond for waiting, a square for failed, a ring for done). The name, the step and
-the state are in the side list under the same number, and a small label over the
-figure says its short name (at most 14 characters, never cut with an ellipsis; "Release mgr"
-for "Release manager"); the step and the full name show as a tip when you hover or focus the figure or
-its label. Two runs of one agent are two figures at two desks ("Implementer 1", "Implementer 2";
-"run 1", "run 2" in the list), and a run keeps its figure, number and desk for
-its whole life. Idle people are not at desks: they sit together in the free area,
-under an "N idle" label, and are in the list. A label stands clear above the head
-(or, when the figure behind leaves no room, on its desk tile) and never covers a figure, a badge or another label. Wheel to zoom, drag to pan, **Fit** (or Esc) for the
-whole office; the camera stays where you left it through every redraw. Without
-WebGL, and in the built file, the office stays the flat isometric one and the
-campus is a flat grid of tiles.
+**The office floor** is a bright 3D room: a work station for each person round the
+supervisor's station, a lounge where idle people rest, a reception, windows and
+the project screens. People walk between them as their state changes (lounge,
+supervisor, desk, supervisor, lounge). A card with the person's portrait, name
+and state stands over each desk. A run is a person: two runs of one agent are two
+people at two desks ("implementer" and "implementer · run 2"), and a run keeps its
+desk for its whole life. Drag to pan, right-drag to orbit, wheel to zoom, click a
+desk to fly to it, **Fit** (or Esc) for the whole office; the camera stays where you
+left it through every redraw. Without WebGL, and in the built file, the office
+stays the flat isometric one.
 
 - **three.js r184**, pinned and served from the page itself, never a CDN:
   `tools/vendor/three/` (MIT, see `three-LICENSE.txt` and the `README.md`
   there).
-- **Nothing is downloaded at run time.** The buildings, the office furniture and
-  the person at each desk are CC0 models from Kenney (City Kit Commercial,
-  Industrial and Suburban, Furniture Kit, Mini Characters) that ship in
-  `tools/assets/`; a model that is missing or refused is drawn from code instead.
-  See [`tools/OFFICE-WORLD-NOTE.md`](tools/OFFICE-WORLD-NOTE.md) and
-  `tools/assets/manifest.json`.
+- **The default character** is `tools/characters/default.glb`: a low-poly person
+  (seated at rest, with walking and standing clips) made from three.js primitives
+  by `tools/characters/make-default-character.cjs`, our own work, released as
+  **CC0 1.0** (`tools/characters/LICENSE.txt`). No model was downloaded.
+- **Your own characters**, one per person: drop a `.glb` on their desk (kept in
+  that browser), use **Load .glb…** in the details panel, or put
+  `<agent-name>.glb` in `ARSENALE_HOME/characters/`. See
+  [`tools/OFFICE-WORLD-NOTE.md`](../tools/OFFICE-WORLD-NOTE.md).
 
 ## Office packs
 

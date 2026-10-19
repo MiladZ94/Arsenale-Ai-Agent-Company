@@ -68,11 +68,12 @@ const int = (v) => (typeof v === 'number' || (typeof v === 'string' && /^-?\d+$/
 /** Offices that can have a building: the stored ones, not archived. */
 const placeable = (co) => co.offices.filter((o) => !o.builtIn && !o.archived)
 
-/** The first free lot for an office that has none: every other lot first (a
- *  checkerboard, so the campus does not start as one crowded row), row by row,
- *  then the lots between; null when the grid is full. */
+/** The first free lot for an office that has none: row by row in the first
+ *  three columns (the campus starts as a block three lots wide, not as one
+ *  long row), then row by row over the rest of the grid; null when the grid
+ *  is full. */
 function freeLot(grid, taken) {
-  for (const parity of [0, 1]) for (let y = 0; y < grid.rows; y++) for (let x = 0; x < grid.cols; x++) if ((x + y) % 2 === parity && !taken.has(x + ',' + y)) return [x, y]
+  for (const cols of [Math.min(3, grid.cols), grid.cols]) for (let y = 0; y < grid.rows; y++) for (let x = 0; x < cols; x++) if (!taken.has(x + ',' + y)) return [x, y]
   return null
 }
 

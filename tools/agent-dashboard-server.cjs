@@ -216,7 +216,7 @@ function start(opts = {}) {
       const M = require('./mcp-server.cjs')
       return { cards: C.CLIENTS.map((c) => C.card(c)), clients: M.listClients(), customInstructions: C.CUSTOM_INSTRUCTIONS, http: { on: !!M.httpToken(), url: 'http://127.0.0.1:' + port + '/mcp' } }
     },
-    '/api/onboard': () => Object.assign(require('./onboard.cjs').status(), { packs: require('./packs.cjs').listPacks().map((p) => Object.assign({}, p, { type: require('./campus.cjs').typeOfProfile(p.office && p.office.profile) })), home: require('./paths.cjs').HOME }),
+    '/api/onboard': () => Object.assign(require('./onboard.cjs').status(), { packs: require('./packs.cjs').listPacks(), home: require('./paths.cjs').HOME }),
     '/api/notify': () => require('./notify.cjs').publicState(),
   }
 

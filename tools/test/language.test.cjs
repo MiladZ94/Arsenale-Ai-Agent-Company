@@ -64,6 +64,14 @@ function dataWords(sb) {
   for (const o of company('offices') || []) { add(o.name); for (const k of ['id', 'leadEmployeeId']) add(o[k] || '') }
   for (const p of company('projects') || []) { add(p.id); add(p.name); add(p.key); (p.aliases || []).forEach(add) }
   for (const e of Object.keys(company('employees') || {})) add(e)
+  // the characters on the 3D floor are data too: a file's name and the names of its clips
+  const chars = path.join(sb.tools, 'characters')
+  for (const f of fs.existsSync(chars) ? fs.readdirSync(chars) : []) {
+    if (!f.endsWith('.glb')) continue
+    add(f.replace(/\.glb$/, ''))
+    const b = fs.readFileSync(path.join(chars, f))
+    for (const c of JSON.parse(b.subarray(20, 20 + b.readUInt32LE(12)).toString('utf8')).animations || []) add(c.name)
+  }
   // the company log is a record on disk, written in English by the CLI: the
   // Activity screen shows its lines as written, like a task text
   try { for (const l of fs.readFileSync(path.join(sb.company, 'activity.jsonl'), 'utf8').split('\n')) if (l.trim()) walk(JSON.parse(l)) } catch { /* no company log */ }
@@ -111,7 +119,7 @@ const VIEWS = (offices) => [
   // every letter: an action, a hire, a choice, a plain approval
   ...[1, 2, 3, 4].map((n) => ['approvals letter ' + n, "location.hash = '#/approvals'; WAIT('.ai:nth-child(" + n + ")', (e) => { e.click(); WAIT('[data-ev=appr-note]', (x) => x.click()) })"]),
   ['team', "location.hash = '#/team'"],
-  ['team profile', "location.hash = '#/team'; WAIT('[data-ev=team-office][data-arg=support]', (o) => { o.click(); WAIT('.desks [data-ev=member-open][data-arg=reply-drafter]', (e) => { e.click(); WAIT('.ev-drawer details', (d) => document.querySelectorAll('.ev-drawer details').forEach((x) => { x.open = true })) }) })"],
+  ['team profile', "location.hash = '#/team'; WAIT('[data-ev=team-office][data-arg=support]', (o) => { o.click(); WAIT('.roster [data-ev=member-open][data-arg=reply-drafter]', (e) => { e.click(); WAIT('.ev-drawer details', (d) => document.querySelectorAll('.ev-drawer details').forEach((x) => { x.open = true })) }) })"],
   ['hire form', "location.hash = '#/team'; WAIT('[data-ev=hire-new]', (e) => { e.click(); WAIT('.ev-drawer details', (d) => { d.open = true }) })"],
   ['hire review', "location.hash = '#/team'; WAIT('[data-ev=hire-new]', (e) => { e.click(); WAIT('form[data-evform=hire] input[name=title]', (i) => { const f = i.form; f.elements.name.value = 'Sample'; i.value = 'sample title'; f.elements.instructions.value = 'sample instructions, sample reason'; f.requestSubmit() }) })"],
   ['deliverables', "location.hash = '#/deliverables'"],

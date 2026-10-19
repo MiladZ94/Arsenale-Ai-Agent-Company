@@ -55,7 +55,7 @@ const THEMES = { teal: '#2FA98A', blue: '#4E8BD4', violet: '#8C78C8', coral: '#D
 // reads "SEO specialist", never "Seo specialist"
 const ACRONYMS = new Set(['seo', 'ui', 'ux', 'qa', 'hr', 'faq', 'api', 'ceo', 'cli', 'cfo', 'cto', 'pr', 'crm', 'csv', 'pdf', 'it', 'kpi', 'mcp', 'sql', 'ai'])
 const titleFromId = (id) => String(id).split(/[-_]+/).filter(Boolean).map((w, i) => (ACRONYMS.has(w.toLowerCase()) ? w.toUpperCase() : i ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())).join(' ')
-// the rooms of the office floor (pages/world/palette.cjs); packs.cjs uses the same names
+// the zones an employee can sit in; packs.cjs uses the same names
 const ZONES = ['build', 'review', 'docs', 'design', 'lead', 'verify', 'ship', 'plan', 'ops', 'data', 'legal', 'guest']
 const OFFICE_ID = /^[a-z][a-z0-9-]{1,30}$/
 const AGENT_ID = /^[A-Za-z0-9][\w.-]{0,59}$/

@@ -134,20 +134,11 @@
     return '<svg class="walker" width="24" height="42" viewBox="0 0 24 42" shape-rendering="crispEdges" aria-hidden="true"' +
       ' style="offset-path:path(\'' + path + '\');animation-duration:' + dur.toFixed(2) + 's;animation-delay:' + (-el).toFixed(2) + 's"><g class="wb">' + s + '</g></svg>'
   }
-  // The one avatar, the same as on the 3D floor: a round head on a coloured
-  // body (the zone's colour) with the person's initials. Not the pixel figure.
   function portrait(agent, px, dim) {
-    const e = typeof CO === 'undefined' || !CO ? null : CO.emp(agent)
-    const zone = (e && e.zone) || (HOME[agent] && HOME[agent][0]) || (agent === 'supervisor' ? 'lead' : 'guest')
-    const body = WORLD_PALETTE.ROLE[zone] || WORLD_PALETTE.ROLE.guest
-    const name = agent === 'supervisor' ? 'Supervisor' : (e && (e.name || e.title)) || agent
-    const w = String(name).split(/[\s_-]+/).filter(Boolean)
-    const ch = (x) => Array.from(x)[0] || ''
-    const ini = (w.length > 1 ? ch(w[0]) + ch(w[1]) : Array.from(w[0] || '?').slice(0, 2).join('')).toLocaleUpperCase()
-    const d = 10 * px
-    return '<svg class="portrait" width="' + d + '" height="' + d + '" viewBox="0 0 40 40" aria-hidden="true"' + (dim ? ' opacity=".6"' : '') + '>' +
-      '<rect x="9" y="19" width="22" height="21" rx="11" fill="' + body + '"/><circle cx="20" cy="11" r="7.5" fill="#F1C9A5"/>' +
-      '<text x="20" y="34" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="' + (ini.length > 1 ? 9 : 10) + '" fill="#fff">' + esc(ini) + '</text></svg>'
+    const pal = palette(agent, dim)
+    const rows = STAND.slice(0, 9)
+    const w = 10 * px, h = rows.length * px + px
+    return '<svg class="portrait" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" shape-rendering="crispEdges" aria-hidden="true">' + grid(rows, pal, px, px, px) + '</svg>'
   }
 
   // ---------- isometric geometry

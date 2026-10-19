@@ -175,8 +175,8 @@ h1.co{white-space:nowrap;font-size:17px}
 .ost .num{font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ost .cbar{width:90px}
 .org .ocolh .ocsp{font:400 12px var(--font-ui);color:#F3F5F7;opacity:.9;margin-inline-start:auto;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
-.oav{position:relative;line-height:0;flex:none;padding:3px}
-.oav i{position:absolute;inset-inline-end:-2px;top:-1px;z-index:2;width:10px;height:10px;border-radius:50%;border:2px solid var(--panel)}
+.oav{position:relative;border-radius:8px;padding:5px 7px 0;line-height:0;flex:none}
+.oav i{position:absolute;inset-inline-end:-3px;bottom:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--panel)}
 .otx{min-width:0}
 .otx b{display:block;font-size:14.5px;color:#111A24;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .otx span{display:block;font-size:13px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -358,15 +358,36 @@ function companyViews(h) {
     let cp = C().campus
     if (!cp) {
       const list = officeList().filter((o) => !o.builtIn)
-      const cols = 6
+      const cols = 3
       cp = { grid: { cols, rows: Math.max(4, Math.ceil(list.length / cols)) }, buildings: list.map((o, i) => ({ id: 'b-' + o.id, officeId: o.id, type: 'business', x: i % cols, y: Math.floor(i / cols), rot: 0, floors: 1 })), types: [], readOnly: true }
     }
-    const cells = cp.buildings.map((b) => {
-      const o = officeById(b.officeId)
-      const c = counts(S, b.officeId)
-      return { id: b.officeId, name: o ? oname(o) : b.officeId, color: (o && o.color) || '#8A97A6', working: c.working, waiting: c.waiting }
-    })
-    return CA.draw({ campus: cp, cells, canEdit: canEdit() && !!cp.types.length, side: side(S) })
+    const cardOf = (o, small) => {
+      const c = counts(S, o.id)
+      const sd = o.standing || {}
+      return {
+        id: o.id, name: oname(o), color: o.color || '#8A97A6', small, kind: small ? 'shed' : '', wins: small ? [] : windowsOf(S, o.id),
+        label: oname(o) + T(', ') + fa(c.working) + ' ' + T('working'),
+        sign: '<h3 title="' + esc(oname(o)) + '">' + esc(oname(o)) + '</h3>' +
+          '<div class="n"><span class="a" title="' + T('working') + '">▸ ' + fa(c.working) + '</span><span class="b" title="' + T('waiting for you') + '">! ' + fa(c.waiting) + '</span>' + (small ? '' : '<span class="c">' + money(sd.spend) + '</span>') + '</div>' +
+          (small ? '' : bar(sd.budget)) +
+          '<button type="button" class="cbtn go" data-goto="office:' + esc(o.id) + '">' + T('Enter office →') + '</button>',
+      }
+    }
+    const cells = cp.buildings.map((b) => officeById(b.officeId)).filter(Boolean).map((o) => cardOf(o, false))
+    // work no project claims sits in a shed on its own plot, on a free lot
+    const un = officeById('unassigned')
+    const unC = counts(S, 'unassigned')
+    if (un && (unC.working || unC.today || unC.waiting)) cells.push(cardOf(un, true))
+    // visitors: a figure at the door for each employee working away from home
+    const visitors = []
+    for (const a of S.active) {
+      const e = emp(a.agent)
+      if (!e || !e.homeOfficeId || e.homeOfficeId === a.officeId) continue
+      visitors.push({ officeId: a.officeId, draw: (x, y) => sprite('stand', a.agent, x, y, 2) })
+    }
+    const legend = '<div class="cleg"><span>' + T('Windows on the top floors: one per employee') + '</span><span><i style="background:' + ST_COL.working + '"></i>' + T('working') + '</span><span><i style="background:' + ST_COL.waiting + '"></i>' + T('waiting') + '</span><span><i style="background:' + ST_COL.paused + '"></i>' + T('paused') + '</span><span><i style="background:' + ST_COL.idle + '"></i>' + T('idle') + '</span></div>'
+    const tip = '<div class="ctip">' + T('Lavender kiosk = ') + '<b>' + T('Supervisor desk') + '</b>. ' + T('Click a building to enter.') + '</div>'
+    return CA.draw({ campus: cp, cells, canEdit: canEdit() && !!cp.types.length, hq: { id: hqId(), lit: !ceoAway(), label: T('Supervisor desk') }, visitors, legend, tip, side: side(S) })
   }
   const hqId = () => { const o = officeList().find((x) => x.leadEmployeeId === 'supervisor') || officeList()[0]; return o ? o.id : 'unassigned' }
   const ceoAway = () => { const hb = C().heartbeat; return !hb || !hb.lastSeenAt || Date.now() - ms(hb.lastSeenAt) > 30 * 60000 }
@@ -450,7 +471,7 @@ function companyViews(h) {
     const al = b && b.on ? (b.level === 'stop' ? '<span class="alert h">' + T('HARD STOP') + '</span>' : b.level === 'over' ? '<span class="alert h">' + fa(100) + T('%') + '+</span>' : b.level === 'soft' ? '<span class="alert s">' + fa(b.softAlertPct) + T('%') + '+</span>' : '') : ''
     const num = b && b.on ? limitTxt(b) : sp && sp.tokens ? k(sp.tokens) + ' ' + T('tok') : ''
     const stat = e.kind === 'retired' || !(e.model || al || num) ? '' : '<span class="ost"><span class="ostl">' + (e.model ? '<span class="mdlc">' + esc(e.model) + '</span>' : '') + al + '</span>' + (num ? '<span class="num" dir="ltr">' + num + '</span>' : '') + bar(b) + '</span>'
-    return '<li class="opr' + (e.kind === 'retired' ? ' retired' : '') + '"><button type="button" class="opb" data-ev="member-open" data-arg="' + esc(e.id) + '" data-to-team="1"' + (e.kind === 'retired' ? ' disabled' : '') + '><span class="oav">' + ART.person(e.id + (e.look ? ':' + e.look : ''), o.color, 34, false, pname(e)) + (dot ? '<i style="background:' + dot + '" title="' + esc(T(STATUS_TXT[s])) + '"></i>' : '') + '</span><span class="otx"><b dir="auto">' + esc(pname(e)) + '</b>' + (ptitle(e) || e.kind === 'retired' ? '<span dir="auto">' + esc(e.kind === 'retired' ? T('retired: definition file removed') : ptitle(e)) + '</span>' : '') + '</span></button>' + (stat || budget ? '<span class="oside">' + stat + budget + '</span>' : '') + '</li>'
+    return '<li class="opr' + (e.kind === 'retired' ? ' retired' : '') + '"><button type="button" class="opb" data-ev="member-open" data-arg="' + esc(e.id) + '" data-to-team="1"' + (e.kind === 'retired' ? ' disabled' : '') + '><span class="oav" style="background:' + esc(ART.shade(o.color || '#56B6C2', 0.42)) + '">' + ART.person(e.id + (e.look ? ':' + e.look : ''), o.color, 30) + (dot ? '<i style="background:' + dot + '" title="' + esc(T(STATUS_TXT[s])) + '"></i>' : '') + '</span><span class="otx"><b dir="auto">' + esc(pname(e)) + '</b>' + (ptitle(e) || e.kind === 'retired' ? '<span dir="auto">' + esc(e.kind === 'retired' ? T('retired: definition file removed') : ptitle(e)) + '</span>' : '') + '</span></button>' + (stat || budget ? '<span class="oside">' + stat + budget + '</span>' : '') + '</li>'
   }
 
   function org(S) {

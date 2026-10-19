@@ -55,6 +55,7 @@
       if (r.findings && r.findings.length) html += '<ul class="finds">' + r.findings.map((f) => '<li>' + esc(f) + '</li>').join('') + '</ul>'
       if (r.files && r.files.length) html += '<div class="files">' + r.files.map((f) => '<span class="file">' + esc(f) + '</span>').join('') + '</div>'
     }
+    if (W3 && mode === 'office') html += W3.characterBox(r.agent)
     return html
   }
 
@@ -365,10 +366,11 @@
   // the built file always shows).
   let W3 = null
   try {
-    W3 = typeof office3d === 'function' ? office3d({
-      esc, fa,
+    W3 = typeof office3d === 'function' && typeof OFFICE_CHARACTERS === 'object' ? office3d({
+      esc, fa, calm, characters: OFFICE_CHARACTERS,
       // the office strip (company) over the top of the floor, the legend along its foot
       pad: { top: CO ? 104 : 8, bottom: 36 },
+      onPick: (id, p) => { if (p && p.selKey) { sel = { key: p.selKey }; remember(); renderAll() } },
       onView: (v) => { view3[(CO ? officeId : '') || 'office'] = v; remember(); const z = $('zoomv'); if (z && W3) z.textContent = fa(W3.zoomPct()) + T('%') },
       onLost: () => { W3 = null; stage.classList.remove('w3on'); renderAll() },
     }) : null

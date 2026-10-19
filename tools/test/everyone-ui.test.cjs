@@ -49,7 +49,6 @@ test('T-3.1 through the page: the wizard opens on an empty data folder, and Crea
   const ticked = await w.page.eval("[...document.querySelectorAll('.wz input[name=pack]:checked')].map((e) => e.value).sort().join(',')")
   assert.equal(ticked, 'content-marketing,customer-support,operations')
   assert.equal(await w.page.eval("document.querySelectorAll('.wz .wscene>svg .tagg').length"), 3, 'three buildings, one per ticked office')
-  assert.equal(await w.page.eval("document.querySelectorAll('.wz .wscene>svg image[href^=\"data:image/png\"]').length"), 3, 'each building is the Kenney picture of its type, not a drawn block')
   assert.equal(fs.existsSync(w.sb.company), false, 'nothing is written before Create')
   await w.submit('.wz form')
   // step 3, connect: the three steps for the assistant, and the wait for its hello
@@ -138,8 +137,8 @@ test('T-5.1 through the page: the hire form writes the member after the review; 
   await w.waitFor(exists('[data-ev=hire-new]'))
   await w.click('[data-ev=hire-new]')
   await w.waitFor(exists('form[data-evform=hire] input[name=name]'))
-  // a desk being added shows on the floor, as a dashed card
-  assert.equal(await w.page.eval("document.querySelectorAll('.ev-main .dsk.ghost').length"), 1)
+  // a desk being added shows in the room
+  assert.match(await w.page.eval("document.querySelector('.ev-main svg').textContent"), /New desk/)
   // no job title: the form says why and writes nothing
   await w.set('form[data-evform=hire] input[name=name]', 'Nora')
   await w.set('form[data-evform=hire] textarea[name=instructions]', 'Draft the weekly newsletter. Never send it.')
