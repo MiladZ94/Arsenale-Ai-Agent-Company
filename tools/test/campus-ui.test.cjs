@@ -98,10 +98,12 @@ test('a building enters its office, with the keyboard too', { skip: SKIP || fals
   const { page } = await world()
   await page.eval("document.querySelector('#cmap g.bld[data-office=docs]').dispatchEvent(new MouseEvent('click', { bubbles: true })); 1")
   await page.waitFor("location.hash === '#/office/docs'", 5000)
+  await page.waitFor('window.__office3d && window.__office3d.info()', 15000) // let the 3D office finish loading before leaving it
   await page.eval("location.hash = '#/campus'; 1")
   await page.waitFor("document.querySelector('#cmap g.bld[data-office=docs]')", 5000)
   await page.eval("document.querySelector('#cmap g.bld[data-office=hq]').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); 1")
   await page.waitFor("location.hash === '#/office/hq'", 5000)
+  await page.waitFor('window.__office3d && window.__office3d.info()', 15000)
   await page.eval("location.hash = '#/campus'; 1")
   await page.waitFor("document.querySelector('#cmap g.bld[data-office=docs]')", 5000)
 })
