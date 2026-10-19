@@ -108,6 +108,23 @@ test('a building enters its office, with the keyboard too', { skip: SKIP || fals
   await page.waitFor("document.querySelector('#cmap g.bld[data-office=docs]')", 5000)
 })
 
+test('leaving an office keeps you on the campus: a camera report that is still on its way never pulls the address back', { skip: SKIP || false }, async () => {
+  const { page } = await world()
+  await page.eval("location.hash = '#/campus'; 1")
+  await page.waitFor("document.querySelector('#cmap g.bld[data-office=hq]')", 5000)
+  await page.eval("document.querySelector('#cmap g.bld[data-office=hq]').dispatchEvent(new MouseEvent('click', { bubbles: true })); 1")
+  await page.waitFor('window.__office3d && window.__office3d.info() && window.__office3d.info().key', 15000)
+  // move the camera (its report is sent about 400 ms later), and change the address to the campus without the page being told yet
+  await page.eval("window.__office3d.aim(0, 0, 2); history.pushState(null, '', '#/campus'); 1")
+  for (let i = 0; i < 4; i++) {
+    await page.sleep(300)
+    assert.equal(await page.eval('location.hash'), '#/campus', 'the late camera report leaves the address alone')
+  }
+  await page.eval("history.replaceState(null, '', '#/office/hq'); location.hash = '#/campus'; 1")
+  await page.waitFor("document.querySelector('[data-c3=build]')", 5000)
+  assert.ok(await page.eval("!!document.querySelector('[data-c3=build]')"), 'and the campus is what is on screen')
+})
+
 test('build mode: 12 types in a hotbar, keys 1 to 9, a ghost, and "Lot taken" on a used lot', { skip: SKIP || false }, async () => {
   const { page, sb } = await world()
   await page.eval(`document.querySelector('[data-c3=build]').click(); 1`)

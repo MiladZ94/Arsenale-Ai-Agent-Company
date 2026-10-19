@@ -219,8 +219,11 @@
     if (m[2]) officeId = m[2]
     return true
   }
+  const hashFor = () => mode === 'office' ? (CO ? '#/office/' + officeId : '#/office') : '#/' + Object.keys(HASH).find((k) => HASH[k] === mode)
+  // true when the address bar still names the screen we are on; false while a hashchange to another screen is on its way
+  const hashIsCurrent = () => !/^#\/\w/.test(location.hash || '') || location.hash === hashFor()
   function syncHash() {
-    const h = mode === 'office' ? (CO ? '#/office/' + officeId : '#/office') : '#/' + Object.keys(HASH).find((k) => HASH[k] === mode)
+    const h = hashFor()
     if (location.hash !== h) try { history.replaceState(null, '', h) } catch { /* a file: page may refuse; the view still changes */ }
   }
   function fixOffice() {

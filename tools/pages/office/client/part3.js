@@ -371,7 +371,7 @@
       // the office strip (company) over the top of the floor, the legend along its foot
       pad: { top: CO ? 104 : 8, bottom: 36 },
       onPick: (id, p) => { if (p && p.selKey) { sel = { key: p.selKey }; remember(); renderAll() } },
-      onView: (v) => { view3[(CO ? officeId : '') || 'office'] = v; remember(); const z = $('zoomv'); if (z && W3) z.textContent = fa(W3.zoomPct()) + T('%') },
+      onView: (v) => { view3[(CO ? officeId : '') || 'office'] = v; if (hashIsCurrent()) remember(); /* a late camera report must not pull the address back after the person left */ const z = $('zoomv'); if (z && W3) z.textContent = fa(W3.zoomPct()) + T('%') },
       onLost: () => { W3 = null; stage.classList.remove('w3on'); renderAll() },
     }) : null
   } catch (e) { W3 = null }
@@ -399,7 +399,7 @@
     if (w3on()) { $('zoomv').textContent = fa(W3.zoomPct()) + T('%'); return }
     clampView()
     if (ease && !calm()) { inner.classList.add('ease'); clearTimeout(easeT); easeT = setTimeout(() => inner.classList.remove('ease'), 240) }
-    clearTimeout(rememberT); rememberT = setTimeout(remember, 400)
+    clearTimeout(rememberT); rememberT = setTimeout(() => { if (hashIsCurrent()) remember() }, 400)
     if (viewQueued) return
     viewQueued = true
     requestAnimationFrame(() => {
