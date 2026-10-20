@@ -48,6 +48,11 @@ section 10 and `agents/WORKFLOW.md` "Autonomous mode".
 13. Slow suites run only when stored data changed. When skipped, the review log
     says "slow suite skipped, no stored data touched".
 14. An incident found in the field becomes a test before it is fixed.
+15. Speed: builders run only targeted tests while working and one full run at the
+    end; only one full suite runs on the machine at a time (the supervisor
+    schedules them, after each merge). A builder stops as soon as its part matches
+    the mockup or spec. Small fixes (a few lines, one detail) are done by the
+    supervisor directly, not by a new agent.
 
 ## Risk tiers
 

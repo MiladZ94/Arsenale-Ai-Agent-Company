@@ -323,6 +323,21 @@ waste.
 7. **Few heavy runs at once.** At most two or three heavy-tier runs in
    parallel; standard and light runs may run alongside them. This avoids
    hitting a usage limit mid-task, which costs more than it saves.
+8. **Small work: the supervisor does it directly.** A small fix or change (one
+   screen detail, a width or style bug, a label, a few lines in one or two files,
+   a doc line) is done by the supervisor in the main session, reproduce first,
+   with the targeted test. Agents are for large phases (a new engine, data or
+   roles, a whole screen, reviews, migrations). Rule of thumb: if it fits in
+   about 15 minutes of direct work, do it directly.
+9. **One full suite on the machine at a time.** Parallel agents share one CPU.
+   Several full test runs at once make every run slow and cause time-out
+   failures. The supervisor schedules full runs; builders run only targeted
+   tests while working and leave the full run to the merge step or their one
+   final run.
+10. **Stop when it matches.** A builder commits as soon as its part matches the
+    mockup or spec and its targeted tests pass, after one final full run. No
+    extra polish rounds or extra screenshot sets; visual QA compares everything
+    once, at the end.
 
 ## 10. Autonomous runs
 
