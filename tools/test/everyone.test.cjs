@@ -441,9 +441,9 @@ test('T-8.3/T-8.4/T-8.5/T-8.9: a phone token works once, never with another key,
   // an action approval in a category the phone may approve (a bare yes/no question gets no button)
   const asked = sb.mod('policy.cjs').checkAction({ team_member: 'copywriter', category: 'post.public', summary: 'Post the autumn menu on Instagram' }, sup)
   const g = sb.read('agent-runs/gates/' + asked.question_id + '.json')
-  const tok = N.sign(g, 'approve')
+  const tok = N.sign(g, 'approve', { channel: 'ntfy' })
   // another key: refused, counted, the gate still waits
-  const other = (() => { process.env.ARSENALE_PHONE_KEY = 'z'.repeat(40); const x = N.sign(g, 'approve'); process.env.ARSENALE_PHONE_KEY = 'k'.repeat(40); return x })()
+  const other = (() => { process.env.ARSENALE_PHONE_KEY = 'z'.repeat(40); const x = N.sign(g, 'approve', { channel: 'ntfy' }); process.env.ARSENALE_PHONE_KEY = 'k'.repeat(40); return x })()
   const forged = N.accept(other, 'ntfy')
   assert.equal(forged.ok, false); assert.equal(forged.reason, 'signature')
   assert.equal(sb.read('agent-runs/gates/' + g.id + '.json').status, 'waiting')
@@ -463,13 +463,13 @@ test('T-8.3/T-8.4/T-8.5/T-8.9: a phone token works once, never with another key,
   assert.equal(again.ok, false); assert.match(again.message, /^Already answered/)
   // a question edited after sending
   const g2 = L.gate({ question: 'Open on Sunday?', kind: 'approval' }, sup)
-  const t2 = N.sign(g2, 'decline')
+  const t2 = N.sign(g2, 'decline', { channel: 'ntfy' })
   const f = path.join(sb.runs, 'gates', g2.id + '.json')
   const raw = JSON.parse(fs.readFileSync(f, 'utf8')); raw.question = 'Open on Sunday and Monday?'; fs.writeFileSync(f, JSON.stringify(raw))
   assert.equal(N.accept(t2, 'ntfy').reason, 'changed')
   // sign out all phones: every outstanding button dies
   const g3 = L.gate({ question: 'Third?', kind: 'approval' }, sup)
-  const t3 = N.sign(g3, 'approve')
+  const t3 = N.sign(g3, 'approve', { channel: 'telegram' })
   N.rotate()
   assert.equal(N.accept(t3, 'telegram').reason, 'signature')
 })

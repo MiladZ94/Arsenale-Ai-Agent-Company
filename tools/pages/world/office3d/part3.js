@@ -145,40 +145,11 @@
     return true
   }
 
-  // ---------- the portrait cards (html over the canvas)
-  const LOOKS = ['bun', 'spiky', 'long', 'bald', 'pony', 'curly', 'short']
+  // ---------- the labels (html over the canvas): one small pill over each head
+  // A status dot, the name, and a status word; no portrait. The page says which
+  // tone the pill has (working, waiting, quiet, stalled, dead, free) and what it
+  // reads; a click on it selects the person like a click on the figure.
   const cards = new Map()
-  function faceSVG(p, expr) {
-    const sk = p.skin || '#E9B994', sd = shadeHex(sk, -0.16), hr = p.hair || '#3B2A20', shirt = p.shirt || '#6F7B88', ink = '#2a2220'
-    const look = LOOKS[hash(p.agent || p.id) % LOOKS.length]
-    let back = '', front = ''
-    let body = '<path d="M12,100 C14,81 31,74 50,74 C69,74 86,81 88,100Z" fill="' + shirt + '"/><path d="M43,74 Q50,82 57,74" fill="none" stroke="' + shadeHex(shirt, -0.2) + '" stroke-width="2"/>'
-    if (look === 'spiky') body += '<path d="M33,77 C38,86 62,86 67,77" fill="none" stroke="' + shadeHex(shirt, -0.25) + '" stroke-width="3"/>'
-    if (look === 'pony') body += '<path d="M43,74 L50,88 L57,74Z" fill="#dbe6fe"/>'
-    if (look === 'bun') { back = '<circle cx="50" cy="15" r="10" fill="' + hr + '"/>'; front = '<path d="M25,48 C23,26 36,18 50,18 C64,18 77,26 75,48 C72,38 66,31 57,30 C52,34 44,34 38,31 C31,34 27,40 25,48Z" fill="' + hr + '"/>' }
-    else if (look === 'spiky') front = '<path d="M25,47 L24,30 L31,31 L32,21 L40,25 L45,15 L51,23 L58,15 L62,24 L70,21 L69,31 L76,31 L75,47 C71,37 62,32 50,32 C38,32 29,37 25,47Z" fill="' + hr + '"/>'
-    else if (look === 'long') { back = '<path d="M23,50 C21,24 35,16 50,16 C65,16 79,24 77,50 L80,82 C70,87 62,86 58,84 L57,68 L43,68 L42,84 C38,86 30,87 20,82Z" fill="' + hr + '"/>'; front = '<path d="M25,48 C24,27 37,19 52,19 C66,19 76,27 75,45 C69,35 59,29 47,30 C40,34 32,40 25,48Z" fill="' + hr + '"/>' }
-    else if (look === 'bald') front = '<ellipse cx="27" cy="44" rx="4" ry="8" fill="' + hr + '"/><ellipse cx="73" cy="44" rx="4" ry="8" fill="' + hr + '"/><ellipse cx="58" cy="27" rx="7" ry="3.5" fill="#fff" opacity=".28"/>'
-    else if (look === 'pony') { back = '<path d="M68,28 C86,28 92,48 85,68 C81,58 77,49 71,42Z" fill="' + hr + '"/>'; front = '<path d="M25,47 C24,25 37,18 50,18 C64,18 76,25 75,47 C70,35 60,29 50,29 C42,29 36,31 33,33 C29,37 26,42 25,47Z" fill="' + hr + '"/>' }
-    else if (look === 'curly') front = '<g fill="' + hr + '"><circle cx="29" cy="40" r="8"/><circle cx="36" cy="28" r="10"/><circle cx="49" cy="22" r="11"/><circle cx="63" cy="27" r="10"/><circle cx="71" cy="39" r="8"/><circle cx="26" cy="50" r="5"/><circle cx="74" cy="50" r="5"/></g>'
-    else front = '<path d="M25,46 C24,25 37,18 50,18 C64,18 76,25 75,46 C73,37 66,31 56,30 C49,33 41,33 34,31 C29,35 26,40 25,46Z" fill="' + hr + '"/>'
-    const dot = (x, y, r) => '<circle cx="' + x + '" cy="' + y + '" r="' + (r || 2.6) + '" fill="' + ink + '"/>'
-    const hl = (x, y) => '<circle cx="' + (x + 0.9) + '" cy="' + (y - 0.9) + '" r=".8" fill="#fff"/>'
-    const line = (x1, y1, x2, y2, w) => '<path d="M' + x1 + ',' + y1 + ' L' + x2 + ',' + y2 + '" stroke="' + shadeHex(hr, -0.1) + '" stroke-width="' + (w || 2.2) + '" stroke-linecap="round"/>'
-    const mpath = (d, w) => '<path d="' + d + '" fill="none" stroke="' + ink + '" stroke-width="' + (w || 2) + '" stroke-linecap="round" stroke-linejoin="round"/>'
-    let eyes, brows, mouth
-    if (expr === 'thinking') { eyes = dot(41.6, 49.5) + dot(61.6, 49.5) + hl(41.6, 49.5) + hl(61.6, 49.5); brows = line(35, 43, 44, 42.5) + line(56, 39.5, 65, 37.5); mouth = mpath('M45,65.5 L54,64') }
-    else if (expr === 'determined') { eyes = dot(40, 51.5) + dot(60, 51.5); brows = line(34.5, 40.5, 45, 44.5, 2.6) + line(65.5, 40.5, 55, 44.5, 2.6); mouth = mpath('M44,65 L56,65', 2.4) }
-    else if (expr === 'serious') { eyes = dot(40, 51.5, 2.4) + dot(60, 51.5, 2.4); brows = line(35, 42.5, 45, 44) + line(55, 44, 65, 42.5); mouth = mpath('M44,66 Q50,64 56,66') }
-    else if (expr === 'smile') { eyes = mpath('M36,52 Q40,47 44,52', 2.4) + mpath('M56,52 Q60,47 64,52', 2.4); brows = line(35, 41, 44, 40) + line(56, 40, 65, 41); mouth = '<path d="M42,62 Q50,71 58,62 Q50,65 42,62Z" fill="#7a2e2e" stroke="' + ink + '" stroke-width="1.6" stroke-linejoin="round"/>' }
-    else { eyes = dot(40, 51) + dot(60, 51) + hl(40, 51) + hl(60, 51); brows = line(35, 42, 44, 41.5) + line(56, 41.5, 65, 42); mouth = mpath('M45,65 Q50,66.5 55,65') }
-    const blush = '<circle cx="34" cy="59" r="4" fill="#f08a8a" opacity="' + (expr === 'smile' ? 0.4 : 0.22) + '"/><circle cx="66" cy="59" r="4" fill="#f08a8a" opacity="' + (expr === 'smile' ? 0.4 : 0.22) + '"/>'
-    return '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' + back + body +
-      '<rect x="43" y="63" width="14" height="14" rx="5" fill="' + sd + '"/><ellipse cx="24" cy="51" rx="5" ry="6" fill="' + sk + '"/><ellipse cx="76" cy="51" rx="5" ry="6" fill="' + sk + '"/>' +
-      '<ellipse cx="50" cy="47" rx="25" ry="27" fill="' + sk + '"/>' + front + blush +
-      '<path d="M50,53 Q53.5,58 49,59" fill="none" stroke="' + sd + '" stroke-width="1.7" stroke-linecap="round"/>' + brows + eyes + mouth + '</svg>'
-  }
-  const EXPR = { working: 'thinking', quiet: 'serious', waiting: 'serious', findings: 'serious', failed: 'serious', done: 'smile', idle: 'neutral', away: 'neutral', none: 'neutral' }
   const TRAY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M3 13h5l1.5 3h5L16 13h5v6H3zM6 13l2-8h8l2 8"/></svg>'
   function syncCards(model) {
     const seen = new Set()
@@ -188,12 +159,13 @@
       if (!c) {
         c = { el: document.createElement('button'), key: '' }
         c.el.type = 'button'
-        c.el.dataset.anchor = src.id; c.el.dataset.at = 'card'
+        c.el.dataset.anchor = src.id; c.el.dataset.at = src.kind === 'tray' ? 'card' : 'pill'
         cards.set(src.id, c)
         cardsEl.appendChild(c.el)
       }
       const glb = templates.has(src.agent)
-      const k = [src.state, src.name, src.sub, src.glyph, src.attrs, src.aria, src.shirt, src.hair, src.skin, src.present, model.selected === src.id, glb, src.count].join('|')
+      const pill = src.pill || { tone: 'idle', word: '' }
+      const k = [src.state, src.name, pill.tone, pill.word, src.attrs, src.aria, src.present, model.selected === src.id, glb, src.count].join('|')
       if (k === c.key) continue
       c.key = k
       const el = c.el
@@ -201,30 +173,12 @@
       for (const a of [...el.attributes]) if (/^data-(?!anchor$|at$)/.test(a.name)) el.removeAttribute(a.name)
       const tmp = document.createElement('div'); tmp.innerHTML = '<i ' + (src.attrs || '') + '></i>'
       for (const a of [...tmp.firstChild.attributes]) if (/^data-/.test(a.name)) el.setAttribute(a.name, a.value)
-      el.className = 'w3card st-' + src.state + (src.kind === 'tray' ? ' tray' : '') + (model.selected === src.id ? ' sel' : '') + (src.state === 'away' ? ' away' : '') + (src.present === false && src.kind !== 'tray' ? ' absent' : '') + (glb ? ' glb' : '')
-      el.style.setProperty('--sc', STATE_COL[src.state] || STATE_COL.none)
+      el.className = 'w3card tone-' + (src.kind === 'tray' ? 'tray' : pill.tone) + ' st-' + src.state + (src.kind === 'tray' ? ' tray' : '') + (model.selected === src.id ? ' sel' : '') + (src.state === 'away' ? ' away' : '') + (src.present === false && src.kind !== 'tray' ? ' absent' : '') + (glb ? ' glb' : '')
       el.setAttribute('aria-label', src.aria || src.name || '')
-      const face = src.kind === 'tray' ? TRAY_ICON : faceSVG(src, EXPR[src.state] || 'neutral')
-      const bg = src.kind === 'tray' ? '#EEF3FF' : shadeHex(src.shirt || '#94a3b8', 0.82)
-      el.innerHTML = '<span class="fr"><span class="in" style="background:' + bg + '">' + face + '</span></span>' +
-        '<span class="nm">' + (src.glyph ? '<i aria-hidden="true">' + src.glyph + '</i>' : '') + '<b dir="auto">' + esc(src.name || '') + '</b>' + (src.sub ? '<small>' + esc(src.sub) + '</small>' : '') + '</span>'
+      el.innerHTML = (src.kind === 'tray' ? '<span class="ic">' + TRAY_ICON + '</span>' : '<i class="dot" aria-hidden="true"></i>') +
+        '<b dir="auto">' + esc(src.name || '') + '</b>' + (src.kind !== 'tray' && pill.word ? '<small>' + esc(pill.word) + '</small>' : '')
     }
     for (const [id, c] of cards) if (!seen.has(id)) { c.el.remove(); cards.delete(id) }
-  }
-
-  // a small name over each person away from their desk (in the lounge, at the
-  // supervisor, on the way), so the people there are not strangers
-  const whoTags = new Map()
-  function whoTag(p, src) {
-    let t = whoTags.get(p.id)
-    if (!p.w) { if (t) { t.remove(); whoTags.delete(p.id) } return }
-    if (!t) {
-      t = document.createElement('span'); t.className = 'w3who off'; t.dataset.anchor = p.id; t.dataset.at = 'who'; t.setAttribute('aria-hidden', 'true')
-      whoEl.appendChild(t); whoTags.set(p.id, t)
-    }
-    const name = src.name || src.agent || ''
-    if (t.textContent !== name) t.textContent = name
-    t.style.setProperty('--sc', STATE_COL[src.state] || STATE_COL.none)
   }
 
   // ---------- the project screens on the side wall: the projects that had
@@ -260,6 +214,11 @@
     const p = O && O.byId.get(el.dataset.anchor)
     if (!p) return null
     const at = el.dataset.at
+    // 'pill': just over the person's head, wherever they are now; with no figure yet, over the desk
+    if (at === 'pill') {
+      if (p.ch) { const hp = p.ch.holder.position; return _v.set(hp.x, hp.y + (p.w ? p.w.h : p.ch.height) + 0.18, hp.z) }
+      return p.kind === 'lead' ? _v.set(p.x - 0.55, 2.0, p.z - 1.0) : _v.set(p.x - p.S * 0.14, 1.7, p.z - p.S * 0.14)
+    }
     if (at === 'card') return p.kind === 'tray' ? _v.set(p.x + 0.35, 1.75, p.z + 0.35) : p.kind === 'lead' ? _v.set(p.x - 0.55, 2.6, p.z - 1.0) : _v.set(p.x - p.S * 0.14, 1.95, p.z - p.S * 0.14)
     if (at === 'tray') return _v.set(p.x, 1.25, p.z)
     // 'who': the person, wherever they are now
@@ -292,15 +251,40 @@
   // A speech bubble that would cover a card or a more important bubble
   // shrinks to its name tag, and with no room even for that it waits out of
   // sight; the card still says the person is working. The selected one always shows.
+  // Pills that would touch step up, one pill-height at a time, until they clear. The
+  // selected one stays put, then the ones lower on the screen (nearer the viewer).
+  function liftPills() {
+    const els = [...cardsEl.children].filter((c) => c.style.display !== 'none')
+    for (const e of els) { e.style.marginTop = ''; e.classList.remove('w3gone') }
+    // a pill lifted up under the office strip would sit on text: it waits out of sight (the person
+    // still shows in the lounge and the list); the selected one always shows
+    const floorTop = ov.getBoundingClientRect().top + ((h.pad && h.pad.top) || 0)
+    const list = els.map((e) => ({ e, r: e.getBoundingClientRect() }))
+    list.sort((a, b) => (b.e.classList.contains('sel') - a.e.classList.contains('sel')) || b.r.bottom - a.r.bottom)
+    const placed = []
+    for (const q of list) {
+      let top = q.r.top, bottom = q.r.bottom, lift = 0
+      for (let i = 0; i < 16; i++) {
+        const hit = placed.find((p) => q.r.left < p.right - 1 && q.r.right > p.left + 1 && top < p.bottom - 1 && bottom > p.top + 1)
+        if (!hit) break
+        const d = bottom - hit.top + 2
+        top -= d; bottom -= d; lift += d
+      }
+      if (lift) q.e.style.marginTop = (-lift).toFixed(1) + 'px'
+      if (top < floorTop && !q.e.classList.contains('sel')) q.e.classList.add('w3gone')
+      placed.push({ left: q.r.left, right: q.r.right, top, bottom })
+    }
+  }
   function declutter() {
+    liftPills()
     // a bubble hangs off its own card, so that card never counts against it
     const placed = [...cardsEl.children].filter((c) => c.style.display !== 'none').map((c) => ({ r: c.getBoundingClientRect(), id: c.dataset.anchor }))
     const hit = (r, id) => placed.some(({ r: p, id: o }) => o !== id && r.left < p.right - 2 && r.right > p.left + 2 && r.top < p.bottom - 2 && r.bottom > p.top + 2)
     const bubs = [...pageEl.querySelectorAll('.bub[data-anchor]')].filter((b) => b.style.display !== 'none')
     bubs.sort((a, b) => Number(b.dataset.prio || 0) - Number(a.dataset.prio || 0))
     // a bubble that would run past the edge of the floor hangs on the card's other side
-    const edge = ov.getBoundingClientRect(), rtl = document.documentElement.dir === 'rtl'
-    const out = (r) => (rtl ? r.left < edge.left + 4 : r.right > edge.right - 4)
+    const edge = ov.getBoundingClientRect()
+    const out = (r) => r.right > edge.right - 4
     for (const b of bubs) {
       b.classList.remove('mini', 'w3gone', 'w3flip')
       if (out(b.getBoundingClientRect())) b.classList.add('w3flip')
@@ -461,7 +445,6 @@
         p.pb.material.color.set(col); p.pb.material.emissive.set(col)
         p.pb.visible = !!p.ch
       }
-      if (p.kind === 'desk') whoTag(p, src)
       if (p.trayAt) {
         const n = Math.min(src.count || 0, TRAY_MAX), m4 = new T3.Matrix4(), q = new T3.Quaternion(), e = new T3.Euler()
         for (let i = 0; i < n; i++) { e.set(0, (i % 3 - 1) * 0.07, 0); q.setFromEuler(e); m4.compose(new T3.Vector3(p.trayAt.x + (i % 2 ? 0.012 : -0.01), p.trayAt.y + i * 0.016, p.trayAt.z + (i % 3 - 1) * 0.01), q, new T3.Vector3(1, 1, 1)); trayPapers.setMatrixAt(i, m4) }
@@ -469,7 +452,6 @@
       }
     }
     for (const id of [...walkers.keys()]) if (!O.byId.has(id)) { release(walkers.get(id)); walkers.delete(id) }
-    for (const [id, t] of whoTags) if (!O.byId.has(id) || !O.byId.get(id).w) { t.remove(); whoTags.delete(id) }
     trayPapers.visible = model.podiums.some((p) => p.kind === 'tray')
     const sel = model.selected && O.byId.get(model.selected)
     selRing.visible = !!sel
@@ -530,9 +512,6 @@
           const want = w.path.length ? w.head : w.rot
           hp.rotation.y = calm ? want : hp.rotation.y + wrapA(want - hp.rotation.y) * Math.min(1, wdt * 9)
           w.h = clip === 'walk' || clip === 'stand' || !p.ch.tpl.seated ? p.ch.standH : p.ch.height
-          const tag = whoTags.get(p.id)
-          // in the lounge only the selected person's name shows: a dozen names on the sofas would be a blur
-          if (tag) tag.classList.toggle('off', !w.path.length && (w.loc === 'desk' || (w.loc === 'lounge' && lastModel && lastModel.selected !== p.id)))
         }
         if (p.ch && !calm) p.ch.mixer.update(dt)
         if (p.pb) {

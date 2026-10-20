@@ -4,10 +4,13 @@
  *
  * The only processes this ever starts: the system's browser opener, once,
  * after `serve` or `demo` is listening and for `open` (skip it with
- * --no-open); and on Windows, when it makes the launch key file, icacls once
- * (an argument list, no shell) to limit that file to the current user. The
+ * --no-open); and on Windows icacls (an argument list, no shell) once when it
+ * makes the launch key file, and once per data folder for the notify folder,
+ * to limit them to the current user. The
  * server, the run log and the MCP server (`arsenale mcp`) never start a
- * process.
+ * process, with two exceptions the caller asks for by name: `testq run` runs
+ * the command the caller gave, with the caller's console, when its turn
+ * comes, and `resume-scan` runs read-only git in each worktree.
  */
 const path = require('path')
 const fs = require('fs')
@@ -29,8 +32,12 @@ Commands
                                  --shop: a small shop with office packs and no developers
   log <mode> [json] [flags]      record agent activity; "arsenale log --help" lists the modes
   start | progress | finish | gate | decision | answers | inbox | dismiss | budget-check
-                                 | version-run | version-ledger | campus
+                                 | version-run | version-ledger | campus | alerts
                                  short for "log --start", "log --progress", "log <json>" …
+  progress <run id> "<step>" [<pct>]   a progress line for fixed text, without JSON
+  testq run --run <id> [--repo <path>] -- <command ...>  |  testq status | leave
+                                 one full test suite at a time on this machine
+  resume-scan [--dir D] [--json] unfinished runs whose worktree still has changes
   init [--dir D] [--dry-run] [--yes] [--force]
                                  install agents, rules and skills; scaffold PROJECT.md, REVIEW.md, docs/specs
   autonomous start|status|resume <version>
@@ -67,6 +74,7 @@ const ALIASES = {
   heartbeat: '--heartbeat', 'company-init': '--company-init', 'company-status': '--company-status',
   task: '--task', comment: '--comment', deliverable: '--deliverable', 'check-action': '--check-action',
   campus: '--campus', 'version-run': '--version-run', 'version-ledger': '--version-ledger',
+  testq: '--testq', 'resume-scan': '--resume-scan', alerts: '--alerts',
 }
 
 function flags(args) {
@@ -112,8 +120,23 @@ function launchKey() {
   return k
 }
 
+/** Windows: the notify folder, where Settings saves the phone channels'
+ *  secrets (tools/notify.cjs), limited to this user with inheritance, so
+ *  every file the server writes there later (atomic writes make a new file
+ *  each time) is the owner's only. Read back at every start and re-applied
+ *  when wrong (tools/owner-only.cjs): an ACL changed after the first start
+ *  must not hide behind the mark file. On macOS and Linux notify.cjs keeps
+ *  the folder 0700 and its files 0600. */
+function ownerOnlyNotifyFolder() {
+  if (process.platform !== 'win32') return
+  const dir = path.join(require(path.join(TOOLS, 'paths.cjs')).HOME, 'notify')
+  const r = require(path.join(TOOLS, 'owner-only.cjs')).ensure(dir)
+  if (!r.ok) console.warn('Warning: could not limit ' + dir + ' to your account (' + r.reason + '). Check that only you can read it before you save phone secrets in Settings.')
+}
+
 async function serve(opts, label) {
   launchKey()
+  ownerOnlyNotifyFolder()
   const { start } = require(path.join(TOOLS, 'agent-dashboard-server.cjs'))
   let s
   try { s = await start({ port: opts.port || 4310 }) } catch (e) { fail(e.message) }

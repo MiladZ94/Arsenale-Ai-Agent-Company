@@ -13,7 +13,7 @@
   const packShort = (p) => (p.office && p.office.name ? p.office.name.split(' & ')[0] : p.name)
   function wizScene(w, packs) {
     const chosen = packs.filter((p) => w.packs.includes(p.id))
-    const plots = chosen.map((p) => ({ built: true, color: packColor(p), label: esc(packShort(p)), count: fa(p.members.length), h: 70 + p.members.length * 6 }))
+    const plots = chosen.map((p) => ({ built: true, color: packColor(p), label: esc(packShort(p)), count: digits(p.members.length), h: 70 + p.members.length * 6 }))
     if (w.step === 1) for (let i = 0; i < 4; i++) plots.push({ built: false })
     let people = []
     if (w.step >= 4) people = chosen.flatMap((p, i) => p.members.slice(0, 2).map((m, n) => ({ seed: m.id, color: packColor(p), plot: i, n })))
@@ -32,11 +32,11 @@
     // the first look at the offices ticks the ones the description suggests
     if (w.step === 2 && !w.picked && packs.length) { w.picked = true; const text = w.name + ' ' + w.mission; w.packs = packs.filter((p) => KEYWORDS[p.id] && KEYWORDS[p.id].test(text)).map((p) => p.id).slice(0, 3) }
     const steps = [T('Welcome'), T('Offices'), T('Connect'), T('Review')]
-    const top = '<div class="wtop"><div class="logo">' + ic('spark', 22) + ' Arsenale <small>' + T('SETUP') + '</small></div>' + steps.map((s, i) => '<span class="stp' + (i + 1 === w.step ? ' on' : i + 1 < w.step || w.step > 4 ? ' done' : '') + '">' + (i + 1 < w.step || w.step > 4 ? ic('check', 15, 2.8) : '<span style="font:12px var(--font-ui)">' + fa(i + 1) + '</span>') + ' ' + s + '</span>' + (i < 3 ? '<span class="mut" style="line-height:0">' + ic(LANG === 'fa' ? 'back' : 'chev', 14) + '</span>' : '')).join('') +
+    const top = '<div class="wtop"><div class="logo">' + ic('spark', 22) + ' Arsenale <small>' + T('SETUP') + '</small></div>' + steps.map((s, i) => '<span class="stp' + (i + 1 === w.step ? ' on' : i + 1 < w.step || w.step > 4 ? ' done' : '') + '">' + (i + 1 < w.step || w.step > 4 ? ic('check', 15, 2.8) : '<span style="font:12px var(--font-ui)">' + digits(i + 1) + '</span>') + ' ' + s + '</span>' + (i < 3 ? '<span class="mut" style="line-height:0">' + ic('chev', 14) + '</span>' : '')).join('') +
       '<span style="flex:1"></span>' + (w.step < 5 ? '<button type="button" class="b sm ghost" data-ev="wiz-close">' + T('Close (nothing is saved)') + '</button>' : '') + '</div>'
     const say = { 1: 'Hello! I am your assistant. Tell me about your company and we will build your team together.', 2: 'Tick an office and its building appears on your campus.', 3: 'Almost there. I will wait right here until I hear from you.', 4: 'This is your campus. Everyone is ready at their desk.', 5: 'Your company is set up. Give me a first task whenever you like.' }[Math.min(5, w.step)]
     const scene = '<div class="wscene">' + wizScene(w, packs) + '<div class="guide">' + A.robot(64) + '<div class="say">' + T(say) + '</div></div></div>'
-    const lbl = (n) => '<div class="lbl">' + T('Step ') + fa(n) + T(' of 4') + '</div>'
+    const lbl = (n) => '<div class="lbl">' + T('Step ') + digits(n) + T(' of 4') + '</div>'
     const back = '<button type="button" class="b ghost" data-ev="wiz-back">' + ic('back', 16) + T('Back') + '</button>'
     const next = (label) => '<button type="submit" class="b pri big" style="margin-inline-start:auto">' + label + ' ' + ic('chev', 16, 2.4) + '</button>'
     let form = '<form data-evform="wiz" data-step="' + w.step + '" class="wform"><div class="wpad">'
@@ -53,7 +53,7 @@
       form += packs.length ? '<div style="display:flex;flex-direction:column;gap:8px">' + packs.map((p) => '<label class="oprow" style="border-color:' + (w.packs.includes(p.id) ? esc(packColor(p)) : 'var(--line)') + '"><input type="checkbox" name="pack" value="' + esc(p.id) + '"' + (w.packs.includes(p.id) ? ' checked' : '') + ' data-ev-change="wpack"><span class="bar" style="background:' + esc(packColor(p)) + '"></span><span style="flex:1;min-width:0"><b>' + esc(packName(p)) + '</b><span class="d">' + esc(SHORT[p.id] ? T(SHORT[p.id]) : p.description) + '</span></span><span style="display:flex">' + p.members.slice(0, 3).map((m, i) => '<span style="margin-inline-start:' + (i ? -8 : 0) + 'px">' + A.person(m.id, packColor(p), 22) + '</span>').join('') + '</span></label>').join('') + '</div>' : '<p class="hint">' + T('Loading…') + '</p>'
       if (w.err) form += '<p class="msg err">' + esc(errTxt(w.err)) + '</p>'
       const n = packs.filter((p) => w.packs.includes(p.id))
-      foot = back + '<span class="hint"><b style="color:var(--ink-hi)">' + fa(n.length) + ' ' + T(n.length === 1 ? 'office' : 'offices') + '</b>' + T(', ') + fa(n.reduce((s, p) => s + p.members.length, 0)) + ' ' + T('team members') + '</span>' + next(T('Connect assistant'))
+      foot = back + '<span class="hint"><b style="color:var(--ink-hi)">' + digits(n.length) + ' ' + T(n.length === 1 ? 'office' : 'offices') + '</b>' + T(', ') + digits(n.reduce((s, p) => s + p.members.length, 0)) + ' ' + T('team members') + '</span>' + next(T('Connect assistant'))
     } else if (w.step === 3) {
       form += lbl(3) + '<h1>' + T('Connect your assistant') + '</h1><p class="lead">' + T('Arsenale shows you each change before it makes it, and keeps a backup.') + '</p>'
       const c = st.data.connect
@@ -66,7 +66,7 @@
       foot = back + '<button type="button" class="b ghost" data-ev="wiz-skip" style="color:var(--cyan)">' + T('Skip for now') + '</button>' + next(T('Review'))
     } else if (w.step === 4) {
       form += lbl(4) + '<h1>' + T('Ready to open the doors?') + '</h1><p class="lead">' + T('Nothing has been saved yet. Check the summary.') + '</p>'
-      for (const p of packs.filter((x) => w.packs.includes(x.id))) form += '<div class="card rw"><span style="width:6px;height:38px;border-radius:2px;background:' + esc(packColor(p)) + ';flex:none"></span><div style="width:150px;flex:none"><b style="color:var(--ink-hi)">' + esc(packShort(p)) + '</b><div class="hint">' + fa(p.members.length) + ' ' + T('team members') + '</div></div><span style="display:flex;gap:5px;flex-wrap:wrap">' + p.members.map((m) => A.person(m.id, packColor(p), 22, true)).join('') + '</span></div>'
+      for (const p of packs.filter((x) => w.packs.includes(x.id))) form += '<div class="card rw"><span style="width:6px;height:38px;border-radius:2px;background:' + esc(packColor(p)) + ';flex:none"></span><div style="width:150px;flex:none"><b style="color:var(--ink-hi)">' + esc(packShort(p)) + '</b><div class="hint">' + digits(p.members.length) + ' ' + T('team members') + '</div></div><span style="display:flex;gap:5px;flex-wrap:wrap">' + p.members.map((m) => A.person(m.id, packColor(p), 22, true)).join('') + '</span></div>'
       const asst = ASSIST.find((x) => x[0] === w.assistant)
       form += '<div class="card rw"><div style="flex:1"><div class="lbl">' + T('Company') + '</div><b style="color:var(--ink-hi)" dir="auto">' + esc(w.name) + '</b></div><div style="flex:1"><div class="lbl">' + T('Assistant') + '</div><div class="rw" style="gap:8px">' + A.robot(22) + '<b style="color:var(--ink-hi)">' + (w.assistant === 'other' ? T('Other') : esc(asst ? asst[1] : '')) + '</b></div></div></div>'
       form += '<div class="card rw" style="border-color:var(--accent-line);background:var(--accent-soft);align-items:flex-start"><span style="color:var(--accent);line-height:0">' + ic('shield', 20) + '</span><div style="font-size:13.5px"><b style="color:var(--ink-hi)">' + T('Safe by default.') + '</b> ' + T('Your team asks you first before it sends, posts, pays or deletes anything.') + '</div></div>'
@@ -126,13 +126,20 @@
     const wait = gates().filter((g) => g.status === 'waiting')
     const tasks = ((st.data.tasksN && st.data.tasksN.tasks) || []).filter((t) => t.status === 'in_review')
     const alerts = (co() && co().activity ? co().activity : []).filter((l) => /^budget\.(alert|hardstop)$/.test(l.action))
-    const ids = { g: new Set(wait.map((g) => g.id)), t: new Set(tasks.map((t) => t.id)), b: new Set(alerts.map((a) => a.at + a.entityId)) }
+    // stalled runs, from the server's 30 s check (watch.cjs); the server sends the phone ones
+    const stalls = ((st.data.liveN && st.data.liveN.events) || []).filter((e) => e.kind === 'stalled')
+    const ids = { g: new Set(wait.map((g) => g.id)), t: new Set(tasks.map((t) => t.id)), b: new Set(alerts.map((a) => a.at + a.entityId)), s: new Set(stalls.map((e) => e.id)) }
     if (!st.notifSeen) { st.notifSeen = ids; return }
-    for (const g of wait) if (!st.notifSeen.g.has(g.id)) notify(T('Your assistant asks you something'), g.question, '#/approvals')
-    if (st.data.tasksN && st.notifSeen.tReady) for (const t of tasks) if (!st.notifSeen.t.has(t.id)) notify(T('A task is waiting for you'), t.title, '#/tasks')
-    for (const a of alerts) if (!st.notifSeen.b.has(a.at + a.entityId)) notify(T('Budget alert'), a.summary, '#/campus')
-    st.notifSeen = Object.assign(ids, { tReady: !!st.data.tasksN })
+    // the per-event switches of Settings (api/notify events.desktop); on until they are read
+    const ev = (st.data.notify && st.data.notify.events && st.data.notify.events.desktop) || {}
+    const on = (k) => ev[k] !== false
+    if (on('question')) for (const g of wait) if (!st.notifSeen.g.has(g.id)) notify(T('Your assistant asks you something'), g.question, '#/approvals')
+    if (on('task') && st.data.tasksN && st.notifSeen.tReady) for (const t of tasks) if (!st.notifSeen.t.has(t.id)) notify(T('A task is waiting for you'), t.title, '#/tasks')
+    if (on('budget')) for (const a of alerts) if (!st.notifSeen.b.has(a.at + a.entityId)) notify(T('Budget alert'), a.summary, '#/campus')
+    if (on('stalled') && st.data.liveN && st.notifSeen.sReady) for (const e of stalls) if (!st.notifSeen.s.has(e.id)) notify(T('A run has gone quiet'), (e.agent ? e.agent + ': ' : '') + T('no activity for ') + e.quietMin + ' min', '#/live')
+    st.notifSeen = Object.assign(ids, { tReady: !!st.data.tasksN, sReady: !!st.data.liveN })
     if (notifOn() && co()) load('tasksN', 'api/tasks', false, 15000)
+    if (notifOn()) { load('liveN', 'api/live', false, 15000); load('notify', 'api/notify', false, 60000) }
   }
 
   // ---------- the Today strip (campus and office)
@@ -143,13 +150,14 @@
     const d0 = new Date(); d0.setHours(0, 0, 0, 0)
     const dls = ((st.data.dlv && st.data.dlv.deliverables) || []).filter((d) => Date.parse(d.createdAt) >= d0.getTime()).length
     if (LIVE) load('dlv', 'api/deliverables', false, 30000)
-    return '<div class="today" role="status"><b>' + T('Today') + '</b><span>' + T('your team finished ') + fa(done.length) + ' ' + T(done.length === 1 ? 'job' : 'jobs') + (ms ? ' ' + T('in') + ' ' + dur(ms) : '') + '</span>·<button type="button" data-ev="goto" data-arg="dlv">' + fa(dls) + ' ' + T('finished work') + '</button>·<button type="button" data-ev="goto" data-arg="appr">' + fa(wait) + ' ' + T(wait === 1 ? 'question waiting' : 'questions waiting') + '</button></div>'
+    return '<div class="today" role="status"><b>' + T('Today') + '</b><span>' + T('your team finished ') + digits(done.length) + ' ' + T(done.length === 1 ? 'job' : 'jobs') + (ms ? ' ' + T('in') + ' ' + dur(ms) : '') + '</span>·<button type="button" data-ev="goto" data-arg="dlv">' + digits(dls) + ' ' + T('finished work') + '</button>·<button type="button" data-ev="goto" data-arg="appr">' + digits(wait) + ' ' + T(wait === 1 ? 'question waiting' : 'questions waiting') + '</button></div>'
   }
 
   // ---------- drawing
   function mainHtml(mode) {
     if (mode === 'tasks') return tasksMain()
-    if (mode === 'appr') return apprMain()
+    if (mode === 'appr') return decisionsMain()
+    if (mode === 'live') return liveMain()
     if (mode === 'team') return teamMain()
     if (mode === 'dlv') return dlvMain()
     return setMain()
@@ -160,6 +168,7 @@
     if (d.type === 'member') return profile()
     if (d.type === 'hire') return hireForm()
     if (d.type === 'dlv') return dlvPreview()
+    if (d.type === 'decision') return decisionDetail()
     return ''
   }
   /** Redraws a container, keeping what was typed into its fields. */
@@ -181,12 +190,11 @@
     if (st.lastMode !== mode) { st.lastMode = mode; if (st.drawer && !(mode === 'team' && (st.drawer.type === 'hire' || st.drawer.type === 'member'))) st.drawer = null; st.dmsg = null; if (mode !== 'tasks') { st.page = null; st.editTask = false } }
     if (!root.querySelector('.ev-main')) root.innerHTML = '<section class="ev-main"></section><aside class="ev-drawer" aria-live="polite"></aside>'
     const main = root.querySelector('.ev-main')
-    main.classList.toggle('room', mode === 'team' && !!co() && LIVE)
     paint(main, mainHtml(mode))
     const dr = root.querySelector('.ev-drawer')
     // the side panel is redrawn when it changed, never on a mere poll; fresh
     // data for the open panel redraws it too (st.at: when each set arrived)
-    const sig = st.dv + '|' + [st.at.team, st.at.member, st.at.dlv, st.at.policy].join(',') + '|' + (st.drawer ? JSON.stringify(st.drawer) : '') + '|' + (st.drawer && st.drawer.type === 'member' ? (st.data.team ? 'y' : 'n') + (st.data.member ? st.data.member.id + st.data.member.backups.length : '') + statusOf(st.drawer.id) + (DATA.runs || []).length : '') + '|' + (st.drawer && st.drawer.type === 'dlv' ? (st.data.dlv ? 'y' : 'n') : '')
+    const sig = st.dv + '|' + [st.at.team, st.at.member, st.at.dlv, st.at.policy].join(',') + '|' + (st.drawer ? JSON.stringify(st.drawer) : '') + '|' + (st.drawer && st.drawer.type === 'member' ? (st.data.team ? 'y' : 'n') + (st.data.member ? st.data.member.id + st.data.member.backups.length : '') + statusOf(st.drawer.id) + (DATA.runs || []).length : '') + '|' + (st.drawer && st.drawer.type === 'dlv' ? (st.data.dlv ? 'y' : 'n') : '') + '|' + (st.drawer && st.drawer.type === 'decision' ? gates().map((g) => g.id + g.status).join(',') + (st.data.automation ? JSON.stringify(st.data.automation.kinds) + st.data.automation.autoRun : '') : '')
     if (dr.__sig !== sig) { dr.__sig = sig; paint(dr, drawerHtml()) }
   }
   function renderWizard(box) {
@@ -301,7 +309,7 @@
     if (a === 'ans' || a === 'dis') {
       const key = 'ap|' + arg + '|' + (a === 'dis' ? 'dis' : t.dataset.val)
       if (!arm(key)) return
-      ;(a === 'ans' ? send('api/answer', { gate: arg, answer: t.dataset.val }) : send('api/dismiss', { gate: arg })).then((b) => answerSent(arg, b), (err) => { st.err['ap|' + arg] = err.message; bump() })
+      ;(a === 'ans' ? send('api/answer', answerBody(arg, t.dataset.val)) : send('api/dismiss', { gate: arg })).then((b) => answerSent(arg, b), (err) => { st.err['ap|' + arg] = err.message; bump() })
       return
     }
     if (a === 'retire') { if (!arm('retire|' + arg)) return; act(() => send('api/team-member', { op: 'retire', id: arg }), () => { st.dmsg = { ok: true, text: T('Retired. Their history stays.') }; load('team', 'api/team', true) }); return }
@@ -335,12 +343,6 @@
     if (a === 'mktoken') { const b = new Uint8Array(32); crypto.getRandomValues(b); st.token = [...b].map((x) => x.toString(16).padStart(2, '0')).join(''); bump(); return }
     if (a === 'notif-perm') { if (typeof Notification !== 'undefined') Notification.requestPermission().then(() => bump()); return }
     if (a === 'nchan') { st.channel = arg; st.dmsg = null; bump(); return }
-    if (a === 'nf') {
-      const [op, channel] = arg.split('|')
-      if (op === 'signout' && !arm('nf|signout')) return
-      act(() => send('api/notify', { op, channel }), (b) => { st.data.notify = b.result; st.dmsg = { ok: true, text: op === 'test' ? T('Test sent. Check that it arrived on your phone.') : T('Saved.') } })
-      return
-    }
     if (a === 'wiz-open') { wizOpen(); return }
     if (a === 'wiz-close') { st.wiz = null; st.test = null; h.redraw(); return }
     if (a === 'wiz-back') { st.wiz.step--; st.wiz.err = ''; st.wv++; h.redraw(); return }
@@ -362,6 +364,7 @@
   document.addEventListener('input', (e) => {
     const t = e.target.closest('[data-ev-input]')
     if (t && t.dataset.evInput === 'dq') { st.dlvQ = t.value; h.redraw() }
+    if (t && t.dataset.evInput === 'tq') { st.teamQ = t.value; h.redraw() }
   })
   document.addEventListener('keydown', (e) => {
     const t = e.target.closest && e.target.closest('[data-ev-enter]')
@@ -372,11 +375,11 @@
     if (!t) return
     const a = t.dataset.evChange
     if (a === 'toffice') { st.taskOffice = t.value; h.redraw() }
+    if (a === 'teamStatus') { st.teamStatus = t.value; h.redraw() }
+    if (a === 'teamModel') { st.teamModel = t.value; h.redraw() }
     if (a === 'notif') { setNotif(t.checked); bump() }
     if (a === 'wpack') { const f = t.closest('form'); st.wiz.packs = [...f.elements].filter((x) => x.name === 'pack' && x.checked).map((x) => x.value); st.wiz.err = ''; st.wv++; h.redraw() }
     if (a === 'phone') act(() => send('api/policy', { category: t.dataset.arg, phoneAllowed: t.checked }), () => load('policy', 'api/policy', true))
-    if (a === 'nfdetails') act(() => send('api/notify', { op: 'details', channel: t.dataset.arg, on: t.checked }), (b) => { st.data.notify = b.result })
-    if (a === 'nfon') act(() => send('api/notify', { op: t.checked ? 'enable' : 'disable', channel: t.dataset.arg }), (b) => { st.data.notify = b.result })
   })
   document.addEventListener('submit', (e) => {
     const f = e.target.closest('[data-evform]')
@@ -402,7 +405,7 @@
     } else if (a === 'ans') {
       const v = String(el.a.value || '').trim()
       // on an approval the box asks for a change: the answer says plainly it is not a yes
-      if (v) send('api/answer', { gate: f.dataset.id, answer: f.dataset.note ? T('Not yet: ') + v : v }).then((b) => answerSent(f.dataset.id, b), (err) => { st.err['ap|' + f.dataset.id] = err.message; bump() })
+      if (v) send('api/answer', answerBody(f.dataset.id, f.dataset.note ? T('Not yet: ') + v : v)).then((b) => answerSent(f.dataset.id, b), (err) => { st.err['ap|' + f.dataset.id] = err.message; bump() })
     } else if (a === 'hire') {
       readHire(f)
       const hf = st.hire
@@ -415,10 +418,6 @@
       if (hf.err.title || hf.err.instructions) { bump(); return }
       hf.err = null
       send('api/team-member', Object.assign(hireBody(), { op: 'preview', id: hf.id || 'member-1' })).then((b) => { hf.preview = b.result.text; st.dmsg = null; bump() }, (err) => { st.dmsg = { ok: false, text: errTxt(err.message) }; bump() })
-    } else if (a === 'ntfy') {
-      act(() => send('api/notify', { op: 'setup', channel: 'ntfy', server: el.server.value }), (b) => { st.data.notify = b.result; st.dmsg = { ok: true, text: T('Set up. Subscribe to the topic in the ntfy app on your phone, then send a test.') } })
-    } else if (a === 'expiry') {
-      act(() => send('api/notify', { op: 'expiry', minutes: Number(el.minutes.value) }), (b) => { st.data.notify = b.result; st.dmsg = { ok: true, text: T('Saved.') } })
     } else if (a === 'wiz') wizStep(f)
   })
   document.addEventListener('keydown', (e) => {

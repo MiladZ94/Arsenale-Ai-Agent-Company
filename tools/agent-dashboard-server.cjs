@@ -30,7 +30,8 @@
  * (api/task, api/task-comment), the team (api/team-member, api/hire-decision),
  * the safety rules (api/policy), office packs (api/pack), the first-start
  * wizard (api/onboard), "Connect your assistant" (api/connect-*), and phone
- * notifications (api/notify). GET /deliverables/<id> serves a stored copy of a
+ * notifications (api/notify), and the 1.1 data: api/live (read), api/automation,
+ * api/limits, api/resume, api/alerts. GET /deliverables/<id> serves a stored copy of a
  * deliverable, only from Arsenale's own store, under a sandbox CSP.
  *
  * /mcp is the MCP server over HTTP, for clients that take only a URL. It is
@@ -157,7 +158,8 @@ function start(opts = {}) {
       if (done) return
       let body
       try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')) } catch { return sendJson(res, 400, { error: 'bad json' }) }
-      const fault = (e) => sendJson(res, e.code >= 400 && e.code < 500 ? e.code : 500, { error: e.message })
+      // `field`: the form field a refusal names (notify.cjs), for the page to mark
+      const fault = (e) => sendJson(res, e.code >= 400 && e.code < 500 ? e.code : 500, e.field ? { error: e.message, field: String(e.field) } : { error: e.message })
       try {
         const out = handle(body)
         if (out && typeof out.then === 'function') return out.then((v) => { if (after) after(); sendJson(res, 200, { ok: true, [key || 'gate']: v }) }, fault)
@@ -193,9 +195,19 @@ function start(opts = {}) {
     '/api/mcp-forget': [(b) => require('./mcp-server.cjs').forgetClient(String(b.id || ''), BOARD)],
     '/api/notify': [(b) => require('./notify.cjs').configure(b, BOARD)],
     '/api/campus': [(b) => require('./campus.cjs').apply(b, BOARD, 'dashboard')],
+    // spec 1.1: the auto-run switch, the run limits, Resume / Dismiss of
+    // unfinished work, and hiding a stalled run's alert
+    '/api/automation': [(b) => require('./automation.cjs').set(b, BOARD)],
+    '/api/limits': [(b) => require('./watch.cjs').setLimits(b, BOARD)],
+    '/api/resume': [(b) => { const R = require('./resume.cjs'); return b.op === 'dismiss' ? R.dismiss(String(b.run || ''), BOARD) : R.resume(String(b.run || ''), BOARD) }],
+    '/api/alerts': [(b) => require('./watch.cjs').dismiss(String(b.run || ''), BOARD)],
+    // the Live buttons (Nudge, Stop, Clean) and Undo on the Decisions page
+    '/api/run-action': [(b) => require('./liveactions.cjs').act(b, BOARD, pages().snapshot().state)],
+    '/api/undo': [(b) => require('./autolog.cjs').undo(String(b.gate || ''), BOARD)],
   }
   const READS = {
-    '/api/version-runs': () => require('./version-run-page.cjs').load(),
+    // the percent comes from the same place as the Live page (watch.live -> progress.overallPercent): the mirror file has no percent of its own
+    '/api/version-runs': () => require('./version-run-page.cjs').withLive(require('./version-run-page.cjs').load(), require('./watch.cjs').live({ state: pages().snapshot().state }).versionRuns),
     '/api/tasks': () => ({ tasks: require('./tasks.cjs').listTasks() }),
     '/api/task': (q) => require('./tasks.cjs').getTask(q.get('id')),
     '/api/team': () => {
@@ -218,6 +230,10 @@ function start(opts = {}) {
     },
     '/api/onboard': () => Object.assign(require('./onboard.cjs').status(), { packs: require('./packs.cjs').listPacks(), home: require('./paths.cjs').HOME }),
     '/api/notify': () => require('./notify.cjs').publicState(),
+    '/api/live': () => require('./watch.cjs').live({ state: pages().snapshot().state }),
+    '/api/automation': () => require('./automation.cjs').read(),
+    '/api/run-actions': () => require('./liveactions.cjs').view(pages().snapshot().state),
+    '/api/auto-log': () => require('./autolog.cjs').log(),
   }
 
   const server = http.createServer((req, res) => {
@@ -260,7 +276,9 @@ function start(opts = {}) {
           // "approve": the same call as the Approvals screen's buttons.
           const hire = (() => { try { const g = JSON.parse(fs.readFileSync(require('path').join(require('./paths.cjs').GATES, id.replace(/[^\w.-]/g, '') + '.json'), 'utf8')); return g.approvalType === 'hire' && g.status === 'waiting' } catch { return false } })()
           if (hire && url === '/api/answer') return require('./team.cjs').decideProposal(id, String(body.answer) === 'approve' ? 'hire' : 'decline', null, BOARD).gate
-          return url === '/api/answer' ? act(id, String(body.answer || '')) : act(id)
+          // the gate's lock, waited for with timers (answerGate takes it again inside)
+          const gateFile = require('path').join(require('./paths.cjs').GATES, id.replace(/[^\w.-]/g, '') + '.json')
+          return S.withLockAsync(fs.existsSync(gateFile) ? [gateFile] : [], () => (url === '/api/answer' ? act(id, String(body.answer || ''), body.hash !== undefined ? { hash: String(body.hash) } : undefined) : act(id)))
         }, 'gate', fresh)
       }
       if (url === '/api/budget') {
@@ -344,10 +362,16 @@ function start(opts = {}) {
       // phone replies come back over outbound polls, and only while a channel is on
       const stopNotify = require('./notify.cjs').startLoop()
       server.on('close', stopNotify)
+      // stalled and dead runs: checked now and every 30 s (watch.cjs); it
+      // reads and writes records only, and never starts or stops a process
+      // its new alerts go to the phone channels that are on (notify.onEvents,
+      // outbound only, in the background: a slow service never holds a tick)
+      const stopWatch = require('./watch.cjs').startLoop({ after: () => { try { pages().invalidate() } catch { /* next read rebuilds */ } }, onEvents: (evs) => { require('./notify.cjs').onEvents(evs) } })
+      server.on('close', stopWatch)
       // the first start of 1.0 writes the safety defaults (spec 7, Migration)
       try { require('./policy.cjs').ensureDefaults('dashboard') } catch { /* read-only folder: every category reads as ask anyway */ }
       // a writer killed between its temp file and the rename left the temp behind
-      try { const Pt = require('./paths.cjs'); require('./store.cjs').cleanStray([Pt.RUNS, Pt.ACTIVE, Pt.GATES, Pt.DECISIONS, Pt.VERSION_RUNS, Pt.COMPANY, require('path').join(Pt.COMPANY, 'issues')]) } catch { /* nothing to clean */ }
+      try { const Pt = require('./paths.cjs'); require('./store.cjs').cleanStray([Pt.RUNS, Pt.ACTIVE, Pt.GATES, Pt.DECISIONS, Pt.VERSION_RUNS, Pt.COMPANY, require('path').join(Pt.HOME, 'alerts'), require('path').join(Pt.HOME, 'test-queue'), require('path').join(Pt.HOME, 'test-queue', 'waiting'), require('path').join(Pt.HOME, 'resume'), require('path').join(Pt.HOME, 'settings'), require('path').join(Pt.COMPANY, 'issues')]) } catch { /* nothing to clean */ }
       const url = 'http://localhost:' + port + '/'
       resolve({ server, port, url, keyUrl: url + '?k=' + KEY })
     })

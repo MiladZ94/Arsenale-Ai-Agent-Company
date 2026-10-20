@@ -1,4 +1,22 @@
   const QUIET_MIN = 10 // minutes without a step before a working agent counts as quiet
+  // ---- RUN HEALTH: the run monitor's verdict (watch.health on the server, the same
+  // classify() api/live shows), sent with each active run as `monitor`. The page only
+  // maps its words; without a verdict (a record the monitor could not read) the
+  // 10-minute quiet hint is all it shows, never "stalled" or "dead" on its own.
+  const HEALTH = { working: 'ok', quiet: 'quiet', stalled: 'stalled', dead: 'dead' }
+  function runHealth(a, quietMs) {
+    const m = a && a.monitor
+    if (m && Object.prototype.hasOwnProperty.call(HEALTH, m.state)) return HEALTH[m.state]
+    return Math.max(0, quietMs) >= QUIET_MIN * 60000 ? 'quiet' : 'ok'
+  }
+  // "26 min", "3 h 5 min", "3 d 10 h": how long a run has been silent
+  const quietSpan = (ms) => {
+    const m = Math.max(0, Math.round(ms / 60000))
+    if (m < 60) return digits(m) + ' ' + T('min')
+    if (m < 1440) return digits(Math.floor(m / 60)) + ' ' + T('h') + (m % 60 ? ' ' + digits(m % 60) + ' ' + T('min') : '')
+    const h = Math.floor((m % 1440) / 60)
+    return digits(Math.floor(m / 1440)) + ' ' + T('d') + (h ? ' ' + digits(h) + ' ' + T('h') : '')
+  }
   const STATUS = {
     running: { label: T('Working'), g: '▶' },
     ok: { label: T('No issues'), g: '✓' },
@@ -10,7 +28,7 @@
 
   const $ = (id) => document.getElementById(id)
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
-  const fa = (n) => String(n) // the page's numbers; English only, so the digits stay as they are
+  const digits = (n) => String(n) // the page's numbers; English only, so the digits stay as they are
   // date locales: the same ones the pre-i18n English-only page used (en-CA for the short
   // y-m-d dates, en-GB for the header's long weekday/day/month/year date).
   const SHORT_LOCALE = 'en-CA'
@@ -26,7 +44,7 @@
   const usd = (n) => '$' + fnum(n >= 100 ? n.toFixed(0) : n.toFixed(2))
   // a server message is shown as the server wrote it (English only)
   const errTxt = (m) => String(m == null ? '' : m)
-  const minsFa = (v) => fa(Math.max(0, Math.round(v / 60000)))
+  const quietMins = (v) => digits(Math.max(0, Math.round(v / 60000)))
   const cleanTask = (t) => String(t || '').replace(/\s*\(under\s+[^)]*\)\s*/gi, ' ').trim()
   // the heavy tier (AGENT-RULES rule 3): model names that start with one of the
   // prefixes in config.json "heavyModels" (default: Opus)
@@ -82,7 +100,7 @@
     return '#' + ((1 << 24) | (f(n >> 16) << 16) | (f((n >> 8) & 255) << 8) | f(n & 255)).toString(16).slice(1)
   }
   let AGENT = new Map()
-  const CR = controlRoom({ esc, fa, hhmm, ms, span, cleanTask, isHeavy, agents: () => AGENT, T, k, usd, errTxt })
+  const CR = controlRoom({ esc, digits, hhmm, ms, span, cleanTask, isHeavy, agents: () => AGENT, T, k, usd, errTxt })
   function palette(agent, dim) {
     let hair, skin, shirt
     if (agent === 'supervisor') { hair = '#3A3A3A'; skin = '#D9A77C'; shirt = '#56606C' } else if (agent === 'board') { hair = '#C8A24A'; skin = '#F0C8A0'; shirt = '#C9A63A' } else {
@@ -188,7 +206,7 @@
   try {
     const saved = JSON.parse(sessionStorage.getItem('agent-office') || '{}')
     sel = saved.sel || null; drawerOpen = !!saved.drawer; filter = saved.filter || ''
-    if (['office', 'dec', 'use', 'campus', 'org', 'act', 'vr', 'tasks', 'appr', 'team', 'dlv', 'set'].includes(saved.mode)) mode = saved.mode
+    if (['office', 'dec', 'use', 'campus', 'org', 'act', 'vr', 'live', 'tasks', 'appr', 'team', 'dlv', 'set'].includes(saved.mode)) mode = saved.mode
     if (typeof saved.office === 'string') officeId = saved.office
     const v = saved.view
     if (v && [v.z, v.x, v.y].every((n) => typeof n === 'number' && isFinite(n))) view = { z: v.z, x: v.x, y: v.y }
@@ -203,17 +221,19 @@
   // Every screen has an address (#/campus, #/office/<id>, #/org), so a
   // bookmark or a link opens it; the server needs no new page for that.
   const CO = COMPANY && COMPANY.configured ? companyViews({
-    esc, fa, hhmm, ms, T, isHeavy, k, usd, errTxt,
+    esc, digits, hhmm, ms, T, isHeavy, k, usd, errTxt,
     portrait: (a, px, dim) => portrait(a, px, dim), sprite: (k, a, x, y, px, o) => sprite(k, a, x, y, px, o),
     post: (u, b) => CR.post(u, b), redraw: () => renderAll(), go: (to) => navigate(to), refresh: () => fetchCompany(true),
   }) : null
-  const HASH = { campus: 'campus', org: 'org', decisions: 'dec', usage: 'use', office: 'office', activity: 'act', versionrun: 'vr', tasks: 'tasks', approvals: 'appr', team: 'team', deliverables: 'dlv', settings: 'set' }
-  const AV = activityView({ esc, fa, hhmm, ms, T, cleanTask, redraw: () => renderAll() })
+  // Live replaced the Version run tab and Decisions the Approvals tab: the old addresses still open the new screens
+  // (the first key of a screen is the one the address bar shows). #/decisions was already the older gates view.
+  const HASH = { campus: 'campus', org: 'org', decisions: 'dec', usage: 'use', office: 'office', activity: 'act', live: 'live', versionrun: 'live', rundetail: 'vr', tasks: 'tasks', inbox: 'appr', approvals: 'appr', team: 'team', deliverables: 'dlv', settings: 'set' }
+  const AV = activityView({ esc, digits, hhmm, ms, T, cleanTask, redraw: () => renderAll() })
   const VV = versionRunView({ esc, T, ms, live: () => LIVE, shown: () => mode === 'vr', answerBox: (g) => CR.answerBox(g), redraw: () => renderAll() })
   // the 1.0 screens (everyone-page.cjs): tasks, approvals, team, deliverables, settings, the wizard
-  const EV = everyoneViews({ esc, fa, T, errTxt, k, post: (u, b) => CR.post(u, b), redraw: () => redrawLater(), refresh: () => fetchCompany(true) })
+  const EV = everyoneViews({ esc, digits, T, errTxt, k, health: (a, q) => runHealth(a, q), span: (v) => quietSpan(v), post: (u, b) => CR.post(u, b), redraw: () => redrawLater(), refresh: () => fetchCompany(true) })
   function fromHash() {
-    const m = /^#\/(campus|org|decisions|usage|office|activity|versionrun|tasks|approvals|team|deliverables|settings)(?:\/([\w-]+))?/.exec(location.hash || '')
+    const m = /^#\/(campus|org|decisions|usage|office|activity|live|versionrun|rundetail|tasks|inbox|approvals|team|deliverables|settings)(?:\/([\w-]+))?/.exec(location.hash || '')
     if (!m) return false
     mode = HASH[m[1]]
     if (m[2]) officeId = m[2]
@@ -278,8 +298,9 @@
     const active = DATA.active.map((a) => {
       const steps = Array.isArray(a.steps) && a.steps.length ? a.steps : (a.doing ? [{ at: a.startedAt, text: a.doing }] : [])
       const lastAt = steps.length ? ms(steps[steps.length - 1].at) : ms(a.startedAt)
-      const quiet = now - (isNaN(lastAt) ? now : lastAt)
-      const r = Object.assign({}, a, { live: true, key: 'a:' + a.id, steps, start: ms(a.startedAt), end: now, lastAt, quiet, stale: quiet >= QUIET_MIN * 60000 })
+      // a run waiting for the test suite, or running it, is never quiet (spec 14.7)
+      const quiet = a.monitor && a.monitor.inQueue ? 0 : now - (isNaN(lastAt) ? now : lastAt)
+      const r = Object.assign({}, a, { live: true, key: 'a:' + a.id, steps, start: ms(a.startedAt), end: now, lastAt, quiet, stale: quiet >= QUIET_MIN * 60000, health: runHealth(a, quiet) })
       if (a.id) byId.set(a.id, r)
       return r
     })

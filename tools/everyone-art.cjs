@@ -65,7 +65,7 @@ function everyoneArt() {
     globe: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18', download: 'M12 4v11M7 11l5 5 5-5M5 20h14',
     search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4', plug: 'M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4', phone: 'M8 3h8a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM11 18h2',
     box: 'M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8', warn: 'M12 3l10 18H2zM12 10v5M12 18h.01', home: 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
-    copy: 'M8 8h11v12H8zM5 16V4h11', trash: 'M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13', spark: 'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z', pause: 'M8 5v14M16 5v14',
+    copy: 'M8 8h11v12H8zM5 16V4h11', trash: 'M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13', spark: 'M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z', pause: 'M8 5v14M16 5v14', play: 'M7 5l12 7-12 7z', merge: 'M6 3v10a5 5 0 0 0 5 5h7M6 3m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0M18 18m-2 0a2 2 0 1 0 4 0a2 2 0 1 0-4 0', skip: 'M5 5l9 7-9 7zM18 5v14', build: 'M3 8l9-5 9 5v8l-9 5-9-5zM3 8l9 5 9-5M12 13v8', undo: 'M9 7L4 12l5 5M4 12h11a5 5 0 0 1 0 10h-3',
   }
   /** A line icon, decorative (aria-hidden): the button or label next to it says what it is. */
   const ic = (n, s, sw) => '<svg class="ic" width="' + (s || 16) + '" height="' + (s || 16) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (sw || 1.9) + '" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + (IC[n] || '') + '"/></svg>'

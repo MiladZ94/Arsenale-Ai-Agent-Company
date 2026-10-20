@@ -43,13 +43,20 @@ test('8 runs are 8 people at work (the implementer twice), each at a desk of its
       cells: i.podiums.filter((p) => p.cell).map((p) => p.cell.join(',')),
       cards: [...document.querySelectorAll('.w3card')].map((c) => c.dataset.anchor).sort(),
       ids: i.podiums.map((p) => p.id).sort(),
-      bubbles: [...document.querySelectorAll('.w3ov .bub')].map((b) => b.dataset.anchor).sort(),
+      portraits: document.querySelectorAll('.w3card .fr, .w3card svg:not(.ic svg)').length,
+      pills: [...document.querySelectorAll('.w3card:not(.tray)')].map((c) => ({ id: c.dataset.anchor, dot: !!c.querySelector('.dot'), name: !!c.querySelector('b').textContent, word: !!c.querySelector('small').textContent })),
+      boxes: [...document.querySelectorAll('.w3card')].filter((c) => c.style.display !== 'none').map((c) => c.getBoundingClientRect()).map((r) => [r.left, r.top, r.right, r.bottom]),
     }
   })()`)
   assert.deepEqual(got.working, ['architect', 'implementer', 'implementer#2', 'planner', 'refactorer', 'releaser', 'reviewer', 'tester'], 'the implementer works twice: two people')
   assert.equal(new Set(got.cells).size, got.cells.length, 'no two people share a desk')
   assert.deepEqual(got.cards, got.ids, 'one card per person, the second implementer included')
-  assert.deepEqual(got.bubbles, got.working, 'one bubble per run, pinned to its own person')
+  assert.equal(got.portraits, 0, 'no portrait card is drawn over anyone')
+  assert.ok(got.pills.length > 0 && got.pills.every((p) => p.dot && p.name && p.word), 'every person has one pill: a dot, the name and a status word')
+  for (let i = 0; i < got.boxes.length; i++) for (let j = i + 1; j < got.boxes.length; j++) {
+    const a = got.boxes[i], b = got.boxes[j]
+    assert.ok(!(a[0] < b[2] - 1 && a[2] > b[0] + 1 && a[1] < b[3] - 1 && a[3] > b[1] + 1), 'two pills overlap: ' + JSON.stringify([a, b]))
+  }
 })
 
 test('a person keeps their desk while the page redraws; a third run of the same agent adds a person, nobody else moves', { skip: SKIP || false }, async () => {

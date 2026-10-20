@@ -55,7 +55,7 @@ function readConfig(dir) {
 }
 
 // Windows PowerShell 5.1 writes UTF-8 with a byte-order mark, which JSON.parse refuses
-const stripBom = (s) => String(s).replace(/^﻿/, '')
+const stripBom = (s) => String(s).replace(/^\uFEFF/, '')
 
 function listOf(envName, value, fallback) {
   const raw = process.env[envName]

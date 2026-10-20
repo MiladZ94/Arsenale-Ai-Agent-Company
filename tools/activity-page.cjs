@@ -30,7 +30,7 @@ const ACTIVITY_STYLE = `
 `
 
 function activityView(h) {
-  const { esc, fa, hhmm, ms, T, cleanTask } = h
+  const { esc, digits, hhmm, ms, T, cleanTask } = h
   const st = { who: '', type: '', days: 7 }
   const DAY = 86400000
 
@@ -93,7 +93,7 @@ function activityView(h) {
         '<span class="what">' + esc(e.text) + '</span><span class="k' + (e.derived ? ' der' : '') + '">' + T(e.type === 'budget' ? 'budget' : e.type === 'company' ? 'company' : e.type) + (e.derived ? ' · ' + T('derived') : '') + '</span></li>'
     }
     if (day) html += '</ol>'
-    if (older) html += '<p class="more"><button type="button" class="fchip" data-amore="1">' + T('Show 7 more days') + ' (' + fa(older) + T(' older') + ')</button></p>'
+    if (older) html += '<p class="more"><button type="button" class="fchip" data-amore="1">' + T('Show 7 more days') + ' (' + digits(older) + T(' older') + ')</button></p>'
     return html + '</div>'
   }
 

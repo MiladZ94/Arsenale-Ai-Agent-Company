@@ -38,6 +38,7 @@ const WORLD_STYLE = `
 .czoom .fitb{font:12px var(--font-ui)}
 .czoom output{font:11.5px var(--font-ui);font-variant-numeric:tabular-nums;color:#17212B;min-width:44px;text-align:center}
 .czoom .zh{font:11px var(--font-ui);color:#6A7683;padding:0 6px 0 4px;white-space:nowrap}
+@media (max-width:1500px){.czoom .zh{display:none}}
 .czoom .cbuild{font:700 12px var(--font-ui);color:#fff;background:#2F6BE0;border-color:#2F6BE0;margin-inline-start:4px}
 .czoom .cbuild:hover{background:#2A5FC9;color:#fff;border-color:#2A5FC9}
 .czoom .cbuild.on{background:#17212B;border-color:#17212B}
@@ -68,7 +69,7 @@ const WORLD_STYLE = `
 .c3h:hover{border-color:#8FA0B2}
 .c3h.on{border:2px solid #2F6BE0;background:#E8F0FD;padding:2px 1px 3px}
 .c3h em{position:absolute;left:6px;top:3px;font:700 10px var(--font-ui);color:#5A6673;font-style:normal}
-.c3h svg{display:block;width:62px;height:50px}
+.c3h svg{display:block;width:66px;height:58px}
 .c3h span{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 
 /* ---------- the 3D office: a room standing on the light ground grid */
@@ -81,22 +82,42 @@ const WORLD_STYLE = `
 .w3ov div{pointer-events:none}
 .w3ov [data-anchor],.w3ov [data-anchor] *{pointer-events:auto}
 .w3ov [data-anchor]{will-change:left,top}
-.w3card{position:absolute;transform:translate(-50%,-100%) scale(var(--bs,1));transform-origin:50% 100%;display:flex;flex-direction:column;align-items:center;background:none;border:0;padding:0;cursor:pointer;font:11px var(--font-ui);color:#0F172A;transition:opacity .25s;z-index:1}
-.w3card .fr{width:58px;height:58px;border-radius:14px;padding:3px;background:#fff;border:2px solid var(--sc,#A3AAB5);display:block}
-.w3card .fr .in{display:block;width:100%;height:100%;border-radius:10px;overflow:hidden}
-.w3card .fr svg{width:100%;height:100%;display:block}
-.w3card .nm{margin-top:5px;display:flex;gap:5px;align-items:center;font-weight:700;background:rgba(255,255,255,.88);padding:1px 7px;border-radius:6px;white-space:nowrap;max-width:190px}
-.w3card .nm b{overflow:hidden;text-overflow:ellipsis}
-.w3card .nm small{font-weight:400;color:#64748B}
-.w3card .nm i{font-style:normal;color:var(--sc,#64748B)}
-.w3card.sel .fr{box-shadow:0 0 0 3px rgba(37,99,235,.3)}
-.w3who{position:absolute;transform:translate(-50%,-100%) scale(var(--bs,1));transform-origin:50% 100%;font:700 10.5px/1.2 var(--font-ui);color:#334155;background:rgba(255,255,255,.9);border:1px solid #D7DCE3;border-bottom:2px solid var(--sc,#A3AAB5);border-radius:6px;padding:1px 6px;white-space:nowrap;pointer-events:none!important}
-.w3card.away .fr{border-style:dashed}
-.w3card.absent{opacity:.62}
+/* the label over a head: one small pill, a status dot, the name, a status word.
+   The tone is the state: green working, amber waiting or quiet, red stalled,
+   dashed grey dead, plain grey free. The page's script lifts overlapping pills apart (liftPills). */
+.w3card{position:absolute;transform:translate(-50%,-100%) scale(var(--bs,1));transform-origin:50% 100%;display:flex;align-items:center;gap:6px;height:22px;padding:0 10px 0 8px;background:#fff;border:1px solid #CBD3DB;border-radius:11px;cursor:pointer;font:11.5px/1 var(--font-ui);color:#17212B;white-space:nowrap;transition:opacity .25s;z-index:1;box-shadow:0 1px 2px rgba(23,33,43,.08)}
+.w3card .dot{flex:none;width:8px;height:8px;border-radius:50%;background:#98A2AD}
+.w3card b{font-weight:700;max-width:130px;overflow:hidden;text-overflow:ellipsis;unicode-bidi:plaintext}
+.w3card small{font:11.5px/1 var(--font-ui);color:#4A5663}
+.w3card.tone-work .dot{background:#0C8A62}
+.w3card.tone-wait{border-color:#E3BE79;background:#FFFAF0}.w3card.tone-wait .dot{background:#D98C1E}.w3card.tone-wait small{color:var(--warn-ink)}
+.w3card.tone-quiet{border-color:#E3BE79;background:#FFFAF0}.w3card.tone-quiet .dot{background:#D98C1E}.w3card.tone-quiet small{color:var(--warn-ink);font-weight:700}
+.w3card.tone-stalled{border-color:#D9625A;background:#FFF3F2}.w3card.tone-stalled .dot{background:#C8372D}.w3card.tone-stalled small{color:#B3261E;font-weight:700}
+.w3card.tone-dead{border:1px dashed #8C97A3;background:#F4F6F8;box-shadow:none}.w3card.tone-dead .dot{background:#98A2AD}.w3card.tone-dead b,.w3card.tone-dead small{color:#5A6673}
+.w3card.tone-tray{border-color:#9DB7EE;background:#EEF3FF}.w3card.tone-tray .ic{display:grid;place-items:center;color:#2563EB;line-height:0}.w3card.tone-tray .ic svg{width:14px;height:14px}
+.w3card.sel{box-shadow:0 0 0 2px #2563EB}
+.w3card.away{border-style:dashed}
+.w3card.absent{display:none!important}
 .w3card.dim{opacity:.55}
-.w3card.glb .nm::after{content:"GLB";font-size:9px;color:#fff;background:#0F172A;border-radius:4px;padding:0 4px}
-.w3card.tray .fr{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;color:#2563EB;border-color:#2563EB}
-.w3card.tray .fr svg{width:24px;height:24px}
+.w3card.w3gone{visibility:hidden}
+/* "Needs a look": stalled and dead runs of the floor, top right under the zoom bar */
+.needs{position:absolute;inset-inline-start:14px;bottom:44px;z-index:4;width:300px;background:#fff;border:1px solid #D3D9DF;border-radius:8px;padding:10px 12px;font:12.5px/1.4 var(--font-ui);color:#26323F}
+.needs[hidden]{display:none}
+.needs .nh{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.needs .nn{background:#FDECEA;color:#B3261E;border:1px solid #E8A9A4;border-radius:4px;padding:0 6px;font-weight:700}
+.needs .nr{display:flex;gap:8px;align-items:center;padding:5px 0;border-top:1px solid #E6EAEE}
+.needs .nt{flex:none;border-radius:4px;padding:1px 6px;font-size:11.5px;border:1px solid #E8A9A4;color:#B3261E;background:#FFF3F2}
+.needs .nt.dead{border-color:#C3CBD3;color:#5A6673;background:#F4F6F8}
+.needs .nx{flex:1;min-width:0}
+.needs .nx button{text-align:start;font:700 12.5px var(--font-ui);color:#17212B;background:none;border:0;padding:0;cursor:pointer}
+.needs .nb{flex:none;font:700 12px var(--font-ui);border:1px solid #CBD3DB;border-radius:4px;background:#F4F6F8;color:#26323F;padding:2px 9px}
+.needs .nb:disabled{opacity:.55;cursor:default}
+.needs .nb:not(:disabled){cursor:pointer}.needs .nb:not(:disabled):hover{border-color:#8C99A6}
+.needs .nm{margin:0 0 6px;font-size:12px;color:#1C6B50}.needs .nm.bad{color:#B3261E}
+.iact{display:flex;gap:8px;align-items:center;margin:8px 0 2px;font:12.5px/1.4 var(--font-ui)}
+.iact span{flex:1;min-width:0}.iact .warn{color:#9A5F08}
+.iact .nb{flex:none;font:700 12px var(--font-ui);border:1px solid #CBD3DB;border-radius:4px;background:#F4F6F8;color:#26323F;padding:2px 9px;cursor:pointer}
+.iact .nb:disabled{opacity:.55;cursor:default}
 .w3drop{position:absolute;inset:10px;border:2px dashed rgba(37,99,235,.6);border-radius:18px;display:none;align-items:flex-start;justify-content:center;pointer-events:none;z-index:9}
 .w3drop.on{display:flex}
 .w3drop span,.w3toast{margin-top:64px;background:#2563EB;color:#fff;font:700 12.5px var(--font-ui);padding:8px 14px;border-radius:10px}
@@ -107,10 +128,8 @@ const WORLD_STYLE = `
 .stage.w3on .bub{background:rgba(255,255,255,.96);color:#0F172A;border:1px solid #D7DCE3;border-radius:12px;box-shadow:none;padding:6px 10px 7px}
 .stage.w3on .bub::after{display:none}
 .stage.w3on .bub[data-at=card]{transform:translate(34px,calc(-100% - 22px)) scale(var(--bs,1));transform-origin:0 100%}
-[dir=rtl] .stage.w3on .bub[data-at=card]{transform:translate(calc(-100% - 34px),calc(-100% - 22px)) scale(var(--bs,1));transform-origin:100% 100%}
 .stage.w3on .bub.w3gone{visibility:hidden}
 .stage.w3on .bub[data-at=card].w3flip{transform:translate(calc(-100% - 34px),calc(-100% - 22px)) scale(var(--bs,1));transform-origin:100% 100%}
-[dir=rtl] .stage.w3on .bub[data-at=card].w3flip{transform:translate(34px,calc(-100% - 22px)) scale(var(--bs,1));transform-origin:0 100%}
 .stage.w3on .bub.stale{background:#FFF7E6;border:1px dashed #D97706}
 .stage.w3on .bub.mini{box-shadow:none;border-radius:9px}
 .stage.w3on .bub.sel{outline:2px solid #2563EB}

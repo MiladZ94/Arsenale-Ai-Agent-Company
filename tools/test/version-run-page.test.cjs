@@ -99,7 +99,7 @@ test('page from fixture records: owner gates first, phases, one row per running 
   assert.match(html, /D3/)
   assert.match(html, /Retry capped at 5 min/)
   assert.match(html, /dir="auto"/)
-  assert.doesNotMatch(html, /[؀-ۿ]/)
+  assert.doesNotMatch(html, new RegExp('[' + String.fromCharCode(0x600) + '-' + String.fromCharCode(0x6ff) + ']'))
 })
 
 test('two runs: two header cards, one compare table with both runs, nothing merged', () => {
@@ -145,6 +145,21 @@ test('GET api/version-runs serves the records to the owner only', async (t) => {
   assert.equal((await ok.json()).runs.length, 1)
 })
 
+test('GET api/version-runs carries the same overall and phase percent as api/live', async (t) => {
+  const sb = box(t, { flat: false })
+  seed(sb)
+  const s = await startServer(sb)
+  t.after(() => s.child.kill())
+  const get = async (u) => (await fetch(s.base + u, { headers: { cookie: s.cookie } })).json()
+  const live = (await get('api/live')).versionRuns, pages = (await get('api/version-runs')).runs
+  assert.ok(live.length && live.some((v) => v.percent > 0), 'the fixture has progress')
+  for (const v of live) {
+    const r = pages.find((x) => x.id === v.id)
+    assert.equal(r.percent, v.percent, v.id + ': overall')
+    assert.deepEqual(r.phases.map((p) => [p.id, p.percent]), v.phases.map((p) => [p.id, p.percent]), v.id + ': phases')
+  }
+})
+
 // UI tier: needs a Chrome or Edge, skipped without one. The only browser test of this page.
 test('UI tier: the Version run tab draws the page from the live server', { skip: browser.unavailable() || false }, async (t) => {
   const sb = box(t, { flat: false, packs: true })
@@ -154,7 +169,8 @@ test('UI tier: the Version run tab draws the page from the live server', { skip:
   t.after(async () => { await page.close(); s.child.kill() })
   await page.goto(s.url)
   await page.goto('about:blank')
-  await page.goto(s.base + '#/versionrun')
+  // #/versionrun now opens Live; the full page of phases and requests is #/rundetail
+  await page.goto(s.base + '#/rundetail')
   await page.waitFor('document.querySelectorAll("#v-vr .vr h1").length === 2', 15000)
   const text = await page.eval('document.getElementById("v-vr").innerText')
   assert.match(text, /waiting for you/i)

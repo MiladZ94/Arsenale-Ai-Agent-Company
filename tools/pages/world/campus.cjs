@@ -13,11 +13,11 @@
  * "Lot taken" on a used one) and "Done building". Every change goes through
  * POST api/campus, the only write path; the page only asks.
  *
- * h: { esc, fa, go(to), post(url, body), refresh(), redraw() }. Never run in
+ * h: { esc, digits, go(to), post(url, body), refresh(), redraw() }. Never run in
  * Node: the source is written into the page.
  * ====================================================================== */
 function campusArt(h) {
-  const { esc, fa, post, refresh } = h
+  const { esc, digits, post, refresh } = h
   // the window colours: an idle person's window is "lights off", darker than
   // the plain glass of a window nobody has
   const ST_COL = { working: '#3BE8B0', quiet: '#E5A33D', waiting: '#E5A33D', paused: '#FF5F5F', idle: '#6B7A8A', away: '#8E9BA8' }
@@ -28,16 +28,20 @@ function campusArt(h) {
   const ROOF = '#DCE1E6'
   const GLASS = ['#C3D1DD', '#AEBDCB']
   const PLINTH = ['#F7F8FA', '#DEE3E8', '#CBD2D9']
-  // The 12 office types in the four shapes of the campus (0 shop, 1 tower with
-  // an annex, 2 corner, 3 wide block): a type that shares a shape is told
-  // apart by its height and by what stands on its roof.
+  // The 12 office types. A building's shape comes from how many desks the office has
+  // (a tower, a glass block or a long bar, see building()); the type picks which of the two
+  // a size has (v 0 or 1), what stands on the roof, and one storey more (up).
   const ART = {
-    engineering: { k: 0 }, verification: { k: 0, up: 1, crown: 'tank' }, docs: { k: 0, crown: 'solar' },
-    planning: { k: 1 }, design: { k: 1, crown: 'solar' },
-    domain: { k: 2 }, release: { k: 2, crown: 'mast' }, legal: { k: 2, up: 1 },
-    business: { k: 3 }, security: { k: 3, crown: 'mast' }, data: { k: 3, up: 1 }, archive: { k: 3, crown: 'tank' },
+    engineering: { v: 0 }, verification: { v: 1, up: 1, crown: 'tank' }, docs: { v: 0, crown: 'solar' },
+    planning: { v: 1 }, design: { v: 0, crown: 'solar' },
+    domain: { v: 1 }, release: { v: 0, crown: 'mast' }, legal: { v: 1, up: 1 },
+    business: { v: 0 }, security: { v: 1, crown: 'mast' }, data: { v: 0, up: 1 }, archive: { v: 1, crown: 'tank' },
   }
-  const artOf = (type) => ART[type] || ART.business
+  const ART_DEFAULT = ART.business
+  // the hotbar and the ghost have no staff: they show the 12 types in the three sizes in turn
+  const SIZES = [9, 5, 2]
+  const artOf = (type, n) => Object.assign({}, ART[type] || ART_DEFAULT, n === undefined ? {} : { n })
+  const iconN = (type) => SIZES[Math.max(0, Object.keys(ART).indexOf(type)) % 3]
   const bm = { on: false, tool: 'select', type: '', rot: 0, sel: '', armed: '', msg: '', bad: false }
   let model = null, lay = null, ghostLot = null, msgT = 0
   const $ = (id) => document.getElementById(id)
@@ -64,66 +68,60 @@ function campusArt(h) {
   }
   const shade = (hex, f) => '#' + [1, 3, 5].map((i) => Math.max(0, Math.min(255, Math.round(parseInt(hex.substr(i, 2), 16) * f))).toString(16).padStart(2, '0')).join('')
 
-  /** One building on its plot. `kind` picks the shape (0 shop with an awning,
-   *  1 tower with a low annex, 2 corner L, 3 wide low block, 'shed'). The panes
-   *  of the blocks marked `staff` are the people's, one each, filled from the
-   *  top floor down. Returns the svg, its highest point (the card hangs there)
-   *  and the door (visitors stand there). */
+  /** One building on its plot, drawn from the office's size:
+   *  8 or more desks: a tower (0 slab on a podium, 1 stepped);
+   *  4 to 7: a glass block (0 cantilever over the lobby, 1 block with a low wing);
+   *  3 or fewer: a long bar with a glass atrium; 'shed' is the unassigned work.
+   *  The office type picks which of the two a size has, and what stands on the roof.
+   *  One window pane belongs to each employee, coloured by state, filled from the
+   *  top floor down. The way in is a flat canopy in the office colour over glass
+   *  doors. Returns the svg, its highest point (the card hangs there) and the door
+   *  (visitors stand there). */
   function building(I, art, c, wins) {
-    const kind = art.k, up = art.up || 0
+    const up = art.up || 0
     const { P, poly, box, onL, onR } = I
-    const FH = 30
-    let s = '', n = 0, top = Infinity
-    const pane = (f, side) => { const who = wins[n++]; return who ? (side ? shade(ST_COL[who.s], 0.86) : ST_COL[who.s]) : f }
-    const per = (b) => Math.max(1, Math.round(b.w / 0.62)) + Math.max(1, Math.round(b.d / 0.62))
-    const floorsFor = (b, min, max) => Math.max(min + up, Math.min(max + up, Math.ceil(wins.length / per(b))))
+    const FH = 26
+    let s = '', top = Infinity
+    // the employees' panes are given out after the drawing: highest first, so the busiest people
+    // sit on the top floor whichever block that is. A pane is a placeholder until then.
+    const slots = []
+    const pane = (z, f, side) => { slots.push({ z, f, side }); return '\u0001' + (slots.length - 1) + '\u0001' }
+    // the tallest a roof may stand: so a tower never rises over the name sign of the plot behind it
+    const capFloors = (x, y, z0, fh, want) => Math.max(1, Math.min(want, Math.floor((124 + 14 * (x + y) - z0 - 8) / fh)))
     function block(b) {
-      const z = b.z || 0, base = b.base || 0, hgt = base + b.floors * FH + 8
+      const fh = b.fh || FH, z = b.z || 0, base = b.base || 0, hgt = base + b.floors * fh + 8
       s += box(b.x, b.y, b.w, b.d, z, hgt, WALL)
       const i = 0.17
       s += poly([P(b.x + i, b.y + i, z + hgt), P(b.x + b.w - i, b.y + i, z + hgt), P(b.x + b.w - i, b.y + b.d - i, z + hgt), P(b.x + i, b.y + b.d - i, z + hgt)], b.roof || ROOF)
       if (b.band) s += onL(b.y + b.d, b.x, b.x + b.w, z + hgt - 8, z + hgt - 2, c) + onR(b.x + b.w, b.y, b.y + b.d, z + hgt - 8, z + hgt - 2, shade(c, 0.8))
-      const nl = Math.max(1, Math.round(b.w / 0.62)), nr = Math.max(1, Math.round(b.d / 0.62))
+      const pw = b.pw || 0.62
+      const nl = Math.max(1, Math.round(b.w / pw)), nr = Math.max(1, Math.round(b.d / pw))
+      const lo = fh >= 24 ? 8 : 4, hi = fh >= 24 ? 14 : 8 // a tall storey has a window with a sill; a ribbon storey is nearly all glass
       for (let f = b.floors - 1; f >= 0; f--) {
-        const z0 = z + base + f * FH + 8, z1 = z0 + FH - 14
-        for (let k = 0; k < nl; k++) s += onL(b.y + b.d, b.x + (k + 0.16) * b.w / nl, b.x + (k + 0.84) * b.w / nl, z0, z1, b.staff ? pane(GLASS[0]) : GLASS[0])
-        for (let k = 0; k < nr; k++) s += onR(b.x + b.w, b.y + (k + 0.16) * b.d / nr, b.y + (k + 0.84) * b.d / nr, z0, z1, b.staff ? pane(GLASS[1], 1) : GLASS[1])
+        const z0 = z + base + f * fh + lo, z1 = z0 + fh - hi
+        for (let k = 0; k < nl; k++) s += onL(b.y + b.d, b.x + (k + 0.16) * b.w / nl, b.x + (k + 0.84) * b.w / nl, z0, z1, b.staff ? pane(z0, k, 0) : GLASS[0])
+        for (let k = 0; k < nr; k++) s += onR(b.x + b.w, b.y + (k + 0.16) * b.d / nr, b.y + (k + 0.84) * b.d / nr, z0, z1, b.staff ? pane(z0, k, 1) : GLASS[1])
       }
       top = Math.min(top, P(b.x, b.y, z + hgt)[1])
       return z + hgt
     }
-    // a glazed ground floor, its glass split by thin mullions
-    function shopL(Y, x0, x1, z0, z1) {
+    // a glazed lobby, its glass split by thin mullions
+    function lobbyL(Y, x0, x1, z0, z1) {
       s += onL(Y, x0, x1, z0, z1, GLASS[0])
       const k = Math.max(2, Math.round((x1 - x0) / 0.7))
       for (let j = 1; j < k; j++) { const a = x0 + j * (x1 - x0) / k; s += onL(Y, a - 0.03, a + 0.03, z0, z1, WALL[1]) }
     }
-    function shopR(X, y0, y1, z0, z1) {
+    function lobbyR(X, y0, y1, z0, z1) {
       s += onR(X, y0, y1, z0, z1, GLASS[1])
       const k = Math.max(2, Math.round((y1 - y0) / 0.7))
       for (let j = 1; j < k; j++) { const a = y0 + j * (y1 - y0) / k; s += onR(X, a - 0.03, a + 0.03, z0, z1, WALL[2]) }
     }
-    // striped awnings in the office colour, over a street face or a side face
-    function awningL(Y, x0, x1, za) {
-      const k = Math.max(3, Math.round((x1 - x0) / 0.26))
-      for (let j = 0; j < k; j++) {
-        const a = x0 + j * (x1 - x0) / k, e = a + (x1 - x0) / k
-        s += poly([P(a, Y, za), P(e, Y, za), P(e, Y + 0.42, za - 9), P(a, Y + 0.42, za - 9)], j % 2 ? '#FFFFFF' : c)
-        s += poly([P(a, Y + 0.42, za - 9), P(e, Y + 0.42, za - 9), P(e, Y + 0.42, za - 13), P(a, Y + 0.42, za - 13)], j % 2 ? '#E6E9EC' : shade(c, 0.84))
-      }
-    }
-    function awningR(X, y0, y1, za) {
-      const k = Math.max(3, Math.round((y1 - y0) / 0.26))
-      for (let j = 0; j < k; j++) {
-        const a = y0 + j * (y1 - y0) / k, e = a + (y1 - y0) / k
-        s += poly([P(X, a, za), P(X, e, za), P(X + 0.42, e, za - 9), P(X + 0.42, a, za - 9)], j % 2 ? '#E9ECEF' : shade(c, 0.86))
-        s += poly([P(X + 0.42, a, za - 9), P(X + 0.42, e, za - 9), P(X + 0.42, e, za - 13), P(X + 0.42, a, za - 13)], j % 2 ? '#D3D9DF' : shade(c, 0.7))
-      }
-    }
-    // the way in: a door, and a flat canopy in the office colour on two posts
+    // the way in: glass doors, and a flat canopy in the office colour on two posts
     function entrance(Y, x0, x1, za) {
-      s += onL(Y, x0 + 0.2, x1 - 0.2, 0, za - 2, '#5F7385')
-      s += onL(Y, (x0 + x1) / 2 - 0.02, (x0 + x1) / 2 + 0.02, 0, za - 2, '#8FA1B2')
+      const mid = (x0 + x1) / 2
+      s += onL(Y, x0 + 0.2, x1 - 0.2, 0, za - 2, '#8FA9BE')
+      s += onL(Y, mid - 0.02, mid + 0.02, 0, za - 2, '#4F6578')
+      s += onL(Y, x0 + 0.2, x1 - 0.2, za - 5, za - 2, '#4F6578')
       for (const px of [x0 + 0.08, x1 - 0.12]) s += box(px, Y + 0.62, 0.05, 0.05, 0, za, ['#B8C1CA', '#AAB4BE', '#97A2AD'])
       s += box(x0, Y, x1 - x0, 0.7, za, 4, [shade(c, 1.12), c, shade(c, 0.74)])
     }
@@ -138,72 +136,95 @@ function campusArt(h) {
       else if (art.crown === 'mast') { s += box(x, y, 0.08, 0.08, z, 40, post) + box(x - 0.05, y - 0.05, 0.18, 0.18, z + 40, 5, cap); top = Math.min(top, P(x, y, z + 45)[1]) }
       else if (art.crown === 'solar') { for (const dx of [0, 1.1]) s += box(x + dx, y, 1.0, 0.7, z, 4, ['#8FA6C4', '#6F88AA', '#586F90']) }
     }
+    const n = art.n !== undefined ? art.n : wins.length
+    const v = art.v || 0
     let door
-    if (kind === 'shed') {
+    if (art.k === 'shed') {
       const b = { x: 1.4, y: 1.5, w: 2.6, d: 2.1, base: 28, floors: 0, roof: '#D3D9DF' }
       block(b)
       s += onL(b.y + b.d, b.x + 0.5, b.x + 1.9, 0, 17, '#C5CDD5')
       for (let z = 3; z < 17; z += 3) s += onL(b.y + b.d, b.x + 0.5, b.x + 1.9, z, z + 0.8, '#B2BCC6')
       unit(b.x + 1.6, b.y + 0.4, 30, 0.6, 0.6, 6, true)
       door = [b.x + 1.2, b.y + b.d + 0.7]
-    } else if (kind === 1) {
-      // a tower with ribbon windows over a low glazed annex
-      const m = { x: 2.3, y: 1.2, w: 3.6, d: 3.2, staff: 1, band: 1 }
-      m.floors = floorsFor(m, 3, 6)
+    } else if (n >= 8 && v === 0) {
+      // B1: a ribbon-window slab on a dark glass podium
+      const pd = { x: 1.0, y: 1.2, w: 5.6, d: 5.0, base: 26, floors: 0, band: 1 }
+      const pz = block(pd)
+      lobbyL(pd.y + pd.d, pd.x + 0.2, pd.x + pd.w - 0.2, 3, 24)
+      lobbyR(pd.x + pd.w, pd.y + 0.2, pd.y + pd.d - 0.2, 3, 24)
+      const sl = { x: 2.2, y: 1.8, w: 3.4, d: 2.2, z: pz, base: 0, fh: 16, pw: 0.5, staff: 1, band: 1 }
+      sl.floors = capFloors(sl.x, sl.y, pz, 16, 8 + up)
+      const rz = block(sl)
+      crown(sl.x + 0.6, sl.y + 0.7, rz)
+      unit(sl.x + 1.9, sl.y + 0.6, rz, 0.8, 0.8, 9, true)
+      entrance(pd.y + pd.d, pd.x + 2.0, pd.x + 3.4, 26)
+      door = [pd.x + 2.7, pd.y + pd.d + 0.9]
+    } else if (n >= 8) {
+      // B2: three set-backs over a glazed lobby, each with its own band
+      const lb = { x: 1.2, y: 1.3, w: 5.0, d: 4.6, base: 26, floors: 0, band: 1 }
+      const lz = block(lb)
+      lobbyL(lb.y + lb.d, lb.x + 0.2, lb.x + lb.w - 0.2, 3, 24)
+      lobbyR(lb.x + lb.w, lb.y + 0.2, lb.y + lb.d - 0.2, 3, 24)
+      const t1 = { x: 1.5, y: 1.6, w: 4.4, d: 3.8, z: lz, base: 0, fh: 16, pw: 0.5, staff: 1, band: 1 }
+      t1.floors = 3
+      const z1 = block(t1)
+      const t2 = { x: 2.2, y: 2.2, w: 3.0, d: 2.6, z: z1, base: 0, fh: 16, pw: 0.5, staff: 1, band: 1 }
+      t2.floors = 3
+      const z2 = block(t2)
+      const t3 = { x: 2.8, y: 2.8, w: 1.8, d: 1.5, z: z2, base: 0, fh: 16, pw: 0.5, staff: 1, band: 1 }
+      t3.floors = capFloors(t3.x, t3.y, z2, 16, 2 + up)
+      const rz = block(t3)
+      crown(t3.x + 0.5, t3.y + 0.4, rz)
+      entrance(lb.y + lb.d, lb.x + 1.6, lb.x + 3.0, 26)
+      door = [lb.x + 2.3, lb.y + lb.d + 0.9]
+    } else if (n >= 4 && v === 0) {
+      // A1: a curtain-wall box that overhangs a dark glass lobby; the overhang is the way in
+      const lb = { x: 1.8, y: 2.2, w: 3.2, d: 2.6, base: 28, floors: 0 }
+      const lz = block(lb)
+      lobbyL(lb.y + lb.d, lb.x + 0.2, lb.x + lb.w - 0.2, 3, 26)
+      lobbyR(lb.x + lb.w, lb.y + 0.2, lb.y + lb.d - 0.2, 3, 26)
+      const u = { x: 1.2, y: 1.4, w: 4.6, d: 4.4, z: lz, base: 0, band: 1, staff: 1, fh: 22, pw: 0.55 }
+      u.floors = n >= 6 ? 3 : 2
+      const rz = block(u)
+      crown(u.x + 0.9, u.y + 1.0, rz)
+      unit(u.x + 2.8, u.y + 0.8, rz, 1.1, 0.8, 8)
+      entrance(lb.y + lb.d, lb.x + 0.9, lb.x + 2.3, 26)
+      door = [lb.x + 1.6, u.y + u.d + 0.9]
+    } else if (n >= 4) {
+      // A2: a tall block and a low wing; the way in is on the wing, so the tall block stays clear
+      const m = { x: 1.2, y: 1.2, w: 3.4, d: 3.4, base: 0, band: 1, staff: 1, fh: 20, pw: 0.55 }
+      m.floors = n >= 6 ? 4 : 3
       const rz = block(m)
-      crown(m.x + 1.0, m.y + 1.7, rz)
-      s += box(m.x + 0.5, m.y + 0.45, 1.7, 0.18, rz, 13, [shade(c, 1.1), c, shade(c, 0.72)])
-      unit(m.x + 2.4, m.y + 1.2, rz, 0.8, 0.8, 9, true)
-      const a = { x: 1.2, y: 4.4, w: 3.6, d: 1.9, base: 32, floors: 0, band: 1 }
-      block(a)
-      shopL(a.y + a.d, a.x + 0.15, a.x + a.w - 0.15, 4, 23)
-      shopR(a.x + a.w, a.y + 0.2, a.y + a.d - 0.2, 4, 23)
-      entrance(a.y + a.d, a.x + 1.3, a.x + 2.4, 26)
-      door = [a.x + 1.85, a.y + a.d + 0.9]
-    } else if (kind === 2) {
-      // a corner building: a long back wing and a front wing, an awning along both
-      const bk = { x: 1.2, y: 1.2, w: 5.2, d: 2.1, base: 34, staff: 1, band: 1 }
-      bk.floors = floorsFor(bk, 1, 4)
-      const rz = block(bk)
-      crown(bk.x + 2.0, bk.y + 0.9, rz)
-      shopL(bk.y + bk.d, bk.x + 2.4, bk.x + bk.w - 0.15, 4, 24)
-      shopR(bk.x + bk.w, bk.y + 0.2, bk.y + bk.d - 0.2, 4, 24)
-      awningL(bk.y + bk.d, bk.x + 2.35, bk.x + bk.w - 0.1, 33)
-      unit(bk.x + 3.2, bk.y + 0.4, rz, 1.1, 0.8, 8)
-      unit(bk.x + 0.5, bk.y + 0.5, rz, 0.6, 0.6, 6, true)
-      const fr = { x: 1.2, y: 3.3, w: 2.3, d: 3.0, base: 34, staff: 1, band: 1, floors: Math.max(1, bk.floors - 1) }
-      block(fr)
-      shopL(fr.y + fr.d, fr.x + 0.15, fr.x + fr.w - 0.15, 4, 24)
-      shopR(fr.x + fr.w, fr.y + 0.2, fr.y + fr.d - 0.2, 4, 24)
-      awningL(fr.y + fr.d, fr.x + 0.1, fr.x + fr.w - 0.1, 33)
-      awningR(fr.x + fr.w, fr.y + 0.1, fr.y + fr.d - 0.1, 33)
-      door = [fr.x + fr.w + 1.0, bk.y + bk.d + 0.8]
-    } else if (kind === 3) {
-      // a wide low block with a deep fascia and a plant room on the roof
-      const m = { x: 1.0, y: 1.7, w: 5.4, d: 4.4, staff: 1, base: 0 }
-      m.floors = floorsFor(m, 1, 3)
-      const rz = block(m)
-      crown(m.x + 4.2, m.y + 2.7, rz)
-      s += onL(m.y + m.d, m.x, m.x + m.w, rz - 12, rz - 2, c) + onR(m.x + m.w, m.y, m.y + m.d, rz - 12, rz - 2, shade(c, 0.8))
-      block({ x: m.x + 1.6, y: m.y + 1.0, w: 2.2, d: 1.8, z: rz, base: 10, floors: 0, roof: '#D3D9DF' })
-      unit(m.x + 0.5, m.y + 0.6, rz, 0.7, 0.7, 7, true)
-      unit(m.x + 4.2, m.y + 0.7, rz, 0.8, 1.2, 8)
-      entrance(m.y + m.d, m.x + 2.2, m.x + 3.4, 27)
-      door = [m.x + 2.8, m.y + m.d + 0.9]
+      crown(m.x + 0.8, m.y + 0.8, rz)
+      unit(m.x + 1.8, m.y + 0.6, rz, 0.9, 0.8, 8, true)
+      const w = { x: 3.4, y: 3.0, w: 3.0, d: 3.4, base: 0, band: 1, staff: 1, fh: 20, pw: 0.55, floors: 2 }
+      block(w)
+      lobbyL(w.y + w.d, w.x + 0.2, w.x + w.w - 0.2, 3, 12)
+      entrance(w.y + w.d, w.x + 0.9, w.x + 2.1, 26)
+      door = [w.x + 1.5, w.y + w.d + 0.9]
     } else {
-      // a two-storey shop: glazed ground floor under a full-width awning
-      const m = { x: 1.3, y: 1.3, w: 4.6, d: 4.0, base: 36, staff: 1, band: 1 }
-      m.floors = floorsFor(m, 1, 4)
-      const rz = block(m)
-      crown(m.x + 1.9, m.y + 1.5, rz)
-      shopL(m.y + m.d, m.x + 0.15, m.x + m.w - 0.15, 3, 26)
-      shopR(m.x + m.w, m.y + 0.25, m.y + m.d - 0.25, 5, 26)
-      s += onL(m.y + m.d, m.x + 1.9, m.x + 2.7, 0, 26, '#5F7385')
-      awningL(m.y + m.d, m.x + 0.05, m.x + m.w - 0.05, 35)
-      unit(m.x + 0.6, m.y + 0.5, rz, 1.1, 0.8, 9)
-      unit(m.x + 3.0, m.y + 0.6, rz, 0.7, 0.7, 7, true)
-      door = [m.x + 2.3, m.y + m.d + 0.9]
+      // C2: a three-storey bar with a glass atrium that projects at the front, a flat canopy over its doors
+      const b = { x: 1.0, y: 2.0, w: 5.6, d: 3.0, base: 0, band: 1, staff: 1, fh: 22, pw: 0.6, floors: 3 }
+      const rz = block(b)
+      // the second variant has the atrium at the other end, so two types of one size still read apart
+      const ax = v ? 4.2 : 1.4
+      crown(b.x + (v ? 0.8 : 4.2), b.y + 1.0, rz)
+      unit(b.x + (v ? 4.6 : 0.5), b.y + 0.5, rz, 0.8, 0.8, 7, true)
+      const at = { x: ax, y: b.y + b.d, w: 2.0, d: 1.3, base: 0, floors: 2, fh: 22, roof: '#D3D9DF' }
+      block(at)
+      lobbyL(at.y + at.d, at.x + 0.15, at.x + at.w - 0.15, 3, 40)
+      lobbyR(at.x + at.w, at.y + 0.15, at.y + at.d - 0.15, 3, 40)
+      entrance(at.y + at.d, at.x + 0.3, at.x + 1.7, 28)
+      door = [at.x + 1.0, at.y + at.d + 0.9]
     }
+    // hand the panes out, highest first, then paint them by state
+    const order = slots.map((q, i) => i).sort((a, b) => slots[b].z - slots[a].z || a - b)
+    const fill = []
+    order.forEach((idx, rank) => {
+      const who = wins[rank], q = slots[idx]
+      fill[idx] = who ? (q.side ? shade(ST_COL[who.s], 0.86) : ST_COL[who.s]) : GLASS[q.side]
+    })
+    s = s.replace(/\u0001(\d+)\u0001/g, (m, i) => fill[Number(i)])
     return { svg: s, top, door }
   }
 
@@ -328,9 +349,9 @@ function campusArt(h) {
     s += '</svg>'
     const html = signs.map(({ cell, x, y }) => '<div class="sign' + (cell.small ? ' small' : '') + '" style="--c:' + esc(cell.color || '#8A97A6') + ';left:' + x + 'px;top:' + Math.round(y) + 'px">' + cell.sign + '</div>').join('')
     const total = c.grid.cols * c.grid.rows
-    const zoom = '<div class="czoom" id="czoom" role="group" aria-label="' + T('Campus zoom') + '"><button type="button" data-czoom="out" title="' + T('Zoom out (-)') + '" aria-label="' + T('Zoom out') + '">−</button><output id="czoomv">' + fa(Math.round(cv.z * 100)) + T('%') + '</output><button type="button" data-czoom="in" title="' + T('Zoom in (+)') + '" aria-label="' + T('Zoom in') + '">+</button><button type="button" class="fitb" data-czoom="fit" title="' + T('Fit whole campus (0)') + '">' + T('Fit all') + '</button>' +
+    const zoom = '<div class="czoom" id="czoom" role="group" aria-label="' + T('Campus zoom') + '"><button type="button" data-czoom="out" title="' + T('Zoom out (-)') + '" aria-label="' + T('Zoom out') + '">−</button><output id="czoomv">' + digits(Math.round(cv.z * 100)) + T('%') + '</output><button type="button" data-czoom="in" title="' + T('Zoom in (+)') + '" aria-label="' + T('Zoom in') + '">+</button><button type="button" class="fitb" data-czoom="fit" title="' + T('Fit whole campus (0)') + '">' + T('Fit all') + '</button>' +
       (editable() ? '<button type="button" class="cbuild' + (L.build ? ' on' : '') + '" data-c3="build">' + (L.build ? 'Done building' : 'Build') + '</button>' : '') +
-      '<span class="zh">' + (L.build ? fa(c.buildings.length) + ' of ' + fa(total) + ' lots' : c.readOnly ? 'Read-only: newer file' : T('Mouse wheel: zoom · Drag: pan')) + '</span></div>'
+      '<span class="zh">' + (L.build ? digits(c.buildings.length) + ' of ' + digits(total) + ' lots' : c.readOnly ? 'Read-only: newer file' : T('Mouse wheel: zoom · Drag: pan')) + '</span></div>'
     let tools = ''
     if (L.build) {
       tools = '<div class="c3tools" role="toolbar" aria-label="Tools">' + TOOLS.map(([id, name, d]) => '<button type="button" class="c3t' + (bm.tool === id && !bm.type ? ' on' : '') + '" data-c3tool="' + id + '" title="' + name + '">' + icon(d) + '<span>' + name + '</span></button>').join('') + '</div>' +
@@ -348,7 +369,7 @@ function campusArt(h) {
   const icons = {}
   /** A type's tile in the hotbar: the same drawing as on the campus, small. */
   function tileIcon(id) {
-    if (!icons[id]) icons[id] = '<svg viewBox="-155 -75 312 255" width="62" height="50" aria-hidden="true">' + building(iso(0, 0), artOf(id), '#4E7FD6', []).svg + '</svg>'
+    if (!icons[id]) icons[id] = '<svg viewBox="-150 -155 300 330" width="66" height="58" aria-hidden="true">' + building(iso(0, 0), artOf(id, iconN(id)), '#4E7FD6', []).svg + '</svg>'
     return icons[id]
   }
   const freeName = (base) => {
@@ -383,7 +404,7 @@ function campusArt(h) {
     if (!svg) return
     const [ox, oy] = origin(lay, lot.x, lot.y, PLOT), I = iso(ox, oy), { P, flat } = I
     let g = ''
-    if (free) { g = building(I, artOf(type), '#3B6FE0', []).svg; if (rot % 2 === 1) g = mirrored(g, ox) }
+    if (free) { g = building(I, artOf(type, iconN(type)), '#3B6FE0', []).svg; if (rot % 2 === 1) g = mirrored(g, ox) }
     svg.insertAdjacentHTML('beforeend', '<g id="cghost" pointer-events="none">' + flat([P(E, E, 3), P(PLOT - E, E, 3), P(PLOT - E, PLOT - E, 3), P(E, PLOT - E, 3)], free ? '#3B6FE0' : '#D64545', ' fill-opacity=".3"') + '<g opacity=".66">' + g + '</g></g>')
     const lab = document.createElement('div')
     lab.id = 'cghost-lab'; lab.className = 'c3gl' + (free ? '' : ' bad'); lab.textContent = text
@@ -487,6 +508,8 @@ function campusArt(h) {
 
   // ---------- zoom and pan; z is relative to "the whole campus fits"
   const CZ_MIN = 0.5, CZ_MAX = 4
+  // the Today strip and the zoom control lie over the top of the map: "fit" keeps the campus below them
+  const CZ_TOP = 56
   function campusClamp(v, SW, SH, W, H) {
     const k = Math.max(0.05, Math.min(SW / W, SH / H))
     const z = Math.min(CZ_MAX, Math.max(CZ_MIN, Number(v.z) || 1))
@@ -507,19 +530,20 @@ function campusArt(h) {
   function applyCampus(ease) {
     const box = document.getElementById('cmap'), inner = document.getElementById('cmap-in')
     if (!box || !inner) return
-    cv.SW = box.clientWidth; cv.SH = box.clientHeight
+    cv.SW = box.clientWidth; cv.SH = Math.max(120, box.clientHeight - CZ_TOP)
     const v = campusClamp(cv, cv.SW, cv.SH, cv.W, cv.H)
     cv.z = v.z; cv.x = v.x; cv.y = v.y
     if (ease && !calmMotion()) { inner.classList.add('ease'); clearTimeout(cEaseT); cEaseT = setTimeout(() => { const i = document.getElementById('cmap-in'); if (i) i.classList.remove('ease') }, 240) }
-    inner.style.transform = 'translate(' + ((cv.SW - cv.W * v.s) / 2 + v.x).toFixed(1) + 'px,' + ((cv.SH - cv.H * v.s) / 2 + v.y).toFixed(1) + 'px) scale(' + v.s.toFixed(4) + ')'
+    inner.style.transform = 'translate(' + ((cv.SW - cv.W * v.s) / 2 + v.x).toFixed(1) + 'px,' + ((cv.SH - cv.H * v.s) / 2 + v.y + CZ_TOP).toFixed(1) + 'px) scale(' + v.s.toFixed(4) + ')'
     inner.style.setProperty('--bs', campusCardScale(v.s).toFixed(3))
     // far out, full cards would cover each other: they shrink to the name and the counts
     inner.classList.toggle('far', v.s < 0.5)
     const out = document.getElementById('czoomv')
-    if (out) out.textContent = fa(Math.round(v.z * 100)) + T('%')
+    if (out) out.textContent = digits(Math.round(v.z * 100)) + T('%')
   }
   /** Zoom by f, keeping the campus point under (mx, my) where it is. */
   function campusZoomAt(mx, my, f, ease) {
+    my -= CZ_TOP // box coordinates in, the fitted area's out
     const k = Math.max(0.05, Math.min(cv.SW / cv.W, cv.SH / cv.H)), s = k * cv.z
     const tx = (cv.SW - cv.W * s) / 2 + cv.x, ty = (cv.SH - cv.H * s) / 2 + cv.y
     const z2 = Math.min(CZ_MAX, Math.max(CZ_MIN, cv.z * f)), s2 = k * z2
@@ -597,7 +621,7 @@ function campusArt(h) {
     const b = e.target.closest && e.target.closest('[data-czoom]')
     if (!b) return
     if (b.dataset.czoom === 'fit') campusFit()
-    else campusZoomAt(cv.SW / 2, cv.SH / 2, b.dataset.czoom === 'in' ? 1.25 : 0.8, true)
+    else campusZoomAt(cv.SW / 2, cv.SH / 2 + CZ_TOP, b.dataset.czoom === 'in' ? 1.25 : 0.8, true)
   })
   // the keyboard, while the map has the focus; the redraw would drop that
   // focus, so it is given back to the new map (see fit)
@@ -606,8 +630,8 @@ function campusArt(h) {
     if (!e.target || e.target.id !== 'cmap') return
     const pans = { ArrowLeft: [60, 0], ArrowRight: [-60, 0], ArrowUp: [0, 60], ArrowDown: [0, -60] }
     if (pans[e.key]) { cv.x += pans[e.key][0]; cv.y += pans[e.key][1]; applyCampus(true) }
-    else if (e.key === '+' || e.key === '=') campusZoomAt(cv.SW / 2, cv.SH / 2, 1.25, true)
-    else if (e.key === '-' || e.key === '_') campusZoomAt(cv.SW / 2, cv.SH / 2, 0.8, true)
+    else if (e.key === '+' || e.key === '=') campusZoomAt(cv.SW / 2, cv.SH / 2 + CZ_TOP, 1.25, true)
+    else if (e.key === '-' || e.key === '_') campusZoomAt(cv.SW / 2, cv.SH / 2 + CZ_TOP, 0.8, true)
     else if (e.key === '0') campusFit()
     else return
     e.preventDefault()

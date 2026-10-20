@@ -15,31 +15,92 @@
     const list = d ? d.members.filter((m) => m.kind !== 'ceo' && m.status !== 'retired') : []
     return list.filter((m) => (m.homeOfficeId || 'unassigned') === officeId)
   }
+  // ---------- the directory: every person in one table, grouped by office
+  const DAY = 86400000
+  /** Runs of one person over the last 30 days, and per day over the last 14 (oldest first). */
+  function usage(id) {
+    const d0 = new Date(); d0.setHours(0, 0, 0, 0)
+    const from = Date.now() - 30 * DAY
+    const runs = runsOf((r) => r.agent === id && Date.parse(r.finishedAt) >= from)
+    const days = new Array(14).fill(0)
+    for (const r of runs) {
+      const t = Date.parse(r.finishedAt)
+      const off = t >= d0.getTime() ? 0 : Math.ceil((d0.getTime() - t) / DAY)
+      if (off < 14) days[13 - off]++
+    }
+    const ms = runs.reduce((n, r) => n + (r.durMs || 0), 0)
+    return { runs: runs.length, good: runs.filter((r) => r.status === 'ok').length, tok: runs.reduce((n, r) => n + (r.tokTotal || 0), 0), avg: runs.length ? ms / runs.length : 0, days, dead: runs.filter((r) => r.closedBy === 'arsenale').length }
+  }
+  const lastStepAt = (r) => { const t = Date.parse(Array.isArray(r.steps) && r.steps.length ? r.steps[r.steps.length - 1].at : r.startedAt); return isNaN(t) ? Date.now() : t }
+  /** What the directory shows for a person: the state, with the silence of a working one told in words. */
+  function rowState(id) {
+    const s = statusOf(id)
+    if (s !== 'working') return { key: s, word: T(STATUS_WORD[s]) }
+    const runs = (DATA.active || []).filter((r) => r.agent === id).sort((a, b) => lastStepAt(b) - lastStepAt(a))
+    // waiting for the test suite (or running it) is not silence: the timer is paused
+    const q = runs[0] && runs[0].monitor && runs[0].monitor.inQueue ? 0 : Date.now() - lastStepAt(runs[0])
+    if (q < 600000) return { key: 'working', word: T(STATUS_WORD.working) }
+    const key = h.health(runs[0], q)
+    if (key === 'ok') return { key: 'working', word: T(STATUS_WORD.working) }
+    return key === 'dead' ? { key, word: T('Dead') + ' · ' + h.span(q) } : key === 'stalled' ? { key, word: T('Stalled') + ' ' + h.span(q) } : { key: 'quiet', word: T('Quiet') + ' ' + h.span(q) }
+  }
+  function spark(days) {
+    const mx = Math.max(1, ...days), w = 104, ht = 22
+    const pts = days.map((n, i) => (i * w / 13).toFixed(1) + ',' + (ht - 2 - n / mx * (ht - 4)).toFixed(1)).join(' ')
+    return '<svg class="spark" width="' + w + '" height="' + ht + '" viewBox="0 0 ' + w + ' ' + ht + '" aria-hidden="true"><polyline points="' + pts + '" fill="none" stroke="#1F7A8C" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+  }
+  function lastTask(id) {
+    const r = (DATA.active || []).find((x) => x.agent === id)
+    if (r) return esc(r.doing || r.task)
+    const d = runsOf((x) => x.agent === id).sort((a, b) => String(b.finishedAt).localeCompare(String(a.finishedAt)))[0]
+    return d ? esc(String(d.task || '').replace(/\s*\(under\s+[^)]*\)\s*/gi, ' ').trim()) + ' <span class="mut">(' + (isToday(d.finishedAt) ? T('done') + ' ' + hm(d.finishedAt) : esc(day(d.finishedAt))) + ')</span>' : '<span class="mut">—</span>'
+  }
   function teamMain() {
     if (!LIVE) return liveOnly()
     if (!co()) return head(T('Team')) + '<p class="empty">' + T('No team members yet. Install an office pack or hire someone.') + '</p><p><button type="button" class="b pri" data-ev="wiz-open">' + T('Set up your company') + '</button></p>'
     load('team', 'api/team')
     const d = st.data.team
     if (!d) return '<p class="empty" style="padding:24px">' + T('Loading…') + '</p>'
-    const offs = offices().concat(d.members.some((m) => m.kind !== 'ceo' && m.status !== 'retired' && !officeById(m.homeOfficeId || '')) ? [{ id: 'unassigned' }] : [])
-    if (!offs.some((o) => o.id === st.teamOffice)) st.teamOffice = (offs.find((o) => teamMembers(o.id).length) || offs[0] || { id: '' }).id
-    const here = teamMembers(st.teamOffice)
-    // the busiest first at the desks: someone waiting for the owner, then working
-    const rank = { waiting: 0, working: 1, done: 2, idle: 3, paused: 4 }
-    const seated = here.slice().sort((a, b) => rank[statusOf(a.id)] - rank[statusOf(b.id)] || nameOf(a.id).localeCompare(nameOf(b.id))).slice(0, A.SEATS)
+    const people = d.members.filter((m) => m.kind !== 'ceo' && m.status !== 'retired')
+    const offs = offices().concat(people.some((m) => !officeById(m.homeOfficeId || '')) ? [{ id: 'unassigned' }] : [])
+    if (st.teamOffice && !offs.some((o) => o.id === st.teamOffice)) st.teamOffice = ''
+    const rows = people.map((m) => ({ m, off: officeById(m.homeOfficeId || '') ? m.homeOfficeId : 'unassigned', rs: rowState(m.id) }))
+    const models = [...new Set(rows.map((r) => r.m.model).filter(Boolean))].sort()
+    const q = st.teamQ.trim().toLowerCase()
+    const shown = rows.filter((r) => (!st.teamOffice || r.off === st.teamOffice) && (!st.teamStatus || r.rs.key === st.teamStatus) && (!st.teamModel || r.m.model === st.teamModel) &&
+      (!q || (nameOf(r.m.id) + ' ' + r.m.id + ' ' + titleOf(r.m) + ' ' + lastTask(r.m.id).replace(/<[^>]*>/g, '')).toLowerCase().includes(q)))
+    const rank = { waiting: 0, working: 1, stalled: 2, quiet: 3, dead: 4, done: 5, idle: 6, paused: 7 }
+    const order = offs.map((o) => o.id)
+    shown.sort((a, b) => order.indexOf(a.off) - order.indexOf(b.off) || rank[a.rs.key] - rank[b.rs.key] || nameOf(a.m.id).localeCompare(nameOf(b.m.id)))
+    const working = rows.filter((r) => ['working', 'quiet', 'stalled'].includes(r.rs.key)).length
     const hot = st.drawer && st.drawer.type === 'member' ? st.drawer.id : ''
-    const color = st.teamOffice === 'unassigned' ? '#8A97A6' : colorOf(st.teamOffice)
-    const ghost = st.drawer && st.drawer.type === 'hire' && st.hire && st.hire.op !== 'edit' && seated.length < A.SEATS ? seated.length : undefined
-    const svg = A.room(color, seated.map((m) => ({ id: esc(m.id), seed: seedOf(m.id), label: esc(nameOf(m.id).length > 18 ? nameOf(m.id).slice(0, 17) + '…' : nameOf(m.id)), status: statusOf(m.id), hot: m.id === hot })), { ghost, ghostLabel: esc(T('New desk')), sign: esc((st.teamOffice === 'unassigned' ? T('No office') : officeName(st.teamOffice)).toUpperCase()) })
-    let html = '<svg class="scene" viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges" role="img" aria-label="' + esc(T('The office room') + ': ' + (st.teamOffice === 'unassigned' ? T('No office') : officeName(st.teamOffice))) + '">' + svg + '</svg>'
-    html += '<div class="float camp"><div class="lbl" style="margin-bottom:8px">' + T('Your campus') + '</div>' + offs.map((o) => {
-      const list = teamMembers(o.id)
-      return '<button type="button" data-ev="team-office" data-arg="' + esc(o.id) + '" aria-current="' + (o.id === st.teamOffice) + '"><span class="sw" style="background:' + esc(o.id === 'unassigned' ? '#8A97A6' : colorOf(o.id)) + '"></span><span class="sp ell">' + esc(o.id === 'unassigned' ? T('No office') : officeName(o.id)) + '</span><span class="mut" style="font:12px var(--font-ui)">' + fa(list.length) + '</span>' + (list.some((m) => statusOf(m.id) === 'waiting') ? '<i style="width:8px;height:8px;background:var(--warn);display:block" title="' + T('Waiting for you') + '"></i>' : '') + '</button>'
-    }).join('') + (notSetUp() ? '<p class="mut" style="font-size:12.5px;padding:8px 8px 0;border-top:1px solid var(--line);margin-top:6px">' + esc(notSetUp()) + '</p>' : '') + '<div class="rw" style="gap:6px;border-top:1px solid var(--line);margin-top:6px;padding-top:8px;flex-wrap:wrap"><button type="button" class="b sm ghost" data-goto="org" style="padding:0 6px">' + T('Org chart') + '</button><button type="button" class="b sm ghost" data-ev="goto-packs" style="padding:0 6px">' + T('Add an office') + '</button></div></div>'
-    html += '<div class="float roster"><span class="lbl" style="width:90px;flex:none">' + T('In this office') + '</span>' + (here.length ? here.map((m) => '<button type="button" class="m" data-ev="member-open" data-arg="' + esc(m.id) + '" aria-current="' + (m.id === hot) + '">' + face(m.id, 26) + '<span><b class="hi" style="font-size:13px;display:block">' + esc(nameOf(m.id)) + '</b><span class="mut" style="font-size:11.5px;line-height:1.1">' + esc(m.name && titleOf(m) && m.name !== titleOf(m) ? titleOf(m) : T(STATUS_WORD[statusOf(m.id)])) + '</span></span></button>').join('') : '<span class="mut">' + T('No one works here yet.') + '</span>') +
-      (canWrite() && st.teamOffice !== 'unassigned' ? '<button type="button" class="b pri sm" data-ev="hire-new" style="margin-inline-start:auto;flex:none">' + ic('plus', 14, 2.4) + T('New desk') + '</button>' : '') + '</div>'
-    const busy = d.members.filter((m) => ['working', 'waiting'].includes(statusOf(m.id))).slice(0, 4)
-    html += '<div class="ticker" role="status">' + (busy.length ? busy.map((m) => { const s = statusOf(m.id); const r = (DATA.active || []).find((x) => x.agent === m.id); return '<span><i style="background:' + (s === 'waiting' ? '#B8720F' : '#0C8A62') + '"></i><b class="hi">' + esc(nameOf(m.id)) + '</b> ' + (s === 'waiting' ? T('is waiting for you') : r ? T('is working on: ') + '<span dir="auto">' + esc(r.doing || r.task) + '</span>' : T('is working')) + '</span>' }).join('') : '<span>' + T('Everyone is free right now.') + '</span>') + '</div>'
+    const oname = (id) => (id === 'unassigned' ? T('No office') : officeName(id))
+    const ocol = (id) => (id === 'unassigned' ? '#8A97A6' : colorOf(id))
+    const sel = (name, label, val, opts) => '<label class="tf">' + label + '<select name="' + name + '" data-ev-change="' + name + '"><option value="">' + T('Any') + '</option>' + opts.map(([v, t]) => '<option value="' + esc(v) + '"' + (val === v ? ' selected' : '') + '>' + esc(t) + '</option>').join('') + '</select></label>'
+    let html = '<div class="eh"><div><h1>' + T('Team') + '</h1><div class="sub">' + digits(rows.length) + ' ' + T(rows.length === 1 ? 'employee' : 'employees') + ' · ' + digits(offs.length) + ' ' + T(offs.length === 1 ? 'office' : 'offices') + ' · ' + digits(working) + ' ' + T('working now') + '</div></div><div class="ea"><button type="button" class="b sm" data-goto="org">' + T('Org chart') + '</button><button type="button" class="b sm" data-ev="goto-packs">' + T('Add an office') + '</button>' +
+      (canWrite() ? '<button type="button" class="b pri sm" data-ev="hire-new">' + ic('plus', 14, 2.4) + T('Hire an employee') + '</button>' : '') + '</div></div>'
+    html += '<div class="tfil"><span class="rw" style="gap:6px;flex-wrap:wrap"><button type="button" class="chip" data-ev="team-office" data-arg="" aria-pressed="' + !st.teamOffice + '">' + T('All offices') + ' ' + digits(rows.length) + '</button>' +
+      offs.map((o) => '<button type="button" class="chip" data-ev="team-office" data-arg="' + esc(o.id) + '" aria-pressed="' + (st.teamOffice === o.id) + '"><span class="sw" style="background:' + esc(ocol(o.id)) + '"></span><span class="tnm">' + esc(oname(o.id)) + '</span> ' + digits(rows.filter((r) => r.off === o.id).length) + '</button>').join('') +
+      // the packs not installed yet; an office that exists is never listed here
+      (notSetUp() ? '<span class="mut sm tnsu">' + esc(notSetUp()) + '</span>' : '') + '</span>' +
+      sel('teamStatus', T('Status'), st.teamStatus, [['working', T('Working')], ['waiting', T('Waiting for you')], ['quiet', T('Quiet')], ['stalled', T('Stalled')], ['dead', T('Dead')], ['done', T('Finished today')], ['idle', T('Free')], ['paused', T('Paused')]]) +
+      sel('teamModel', T('Model'), st.teamModel, models.map((x) => [x, x])) +
+      '<label class="rw" style="gap:0;position:relative;margin:0"><span style="position:absolute;inset-inline-start:12px;color:var(--ink-dim);line-height:0">' + ic('search', 15) + '</span><input type="search" name="tq" data-ev-input="tq" value="' + esc(st.teamQ) + '" placeholder="' + T('Search by name or task') + '" aria-label="' + T('Search by name or task') + '" style="width:260px;padding-inline-start:36px"></label></div>'
+    html += '<div class="card tdir"><table class="dir"><thead><tr><th>' + T('Employee') + '</th><th>' + T('Office') + '</th><th>' + T('Model') + '</th><th>' + T('Status') + '</th><th>' + T('Current or last task') + '</th><th class="n">' + T('Runs, 30 d') + '</th><th class="n">' + T('Tokens, 30 d') + '</th><th>' + T('Last 14 days') + '</th><th class="n">' + T('Good runs') + '</th><th></th></tr></thead><tbody>'
+    let lastOff = null
+    for (const r of shown) {
+      const m = r.m, u = usage(m.id)
+      if (!st.teamOffice && r.off !== lastOff) { lastOff = r.off; html += '<tr class="grp"><th colspan="10"><span class="sw" style="background:' + esc(ocol(r.off)) + '"></span> ' + esc(oname(r.off)) + ' <span class="mut">' + digits(shown.filter((x) => x.off === r.off).length) + '</span></th></tr>' }
+      const pct = u.runs ? Math.round(u.good / u.runs * 100) : null
+      html += '<tr class="trow" tabindex="0" data-ev="member-open" data-arg="' + esc(m.id) + '" aria-current="' + (m.id === hot) + '"><td><span class="rw" style="gap:10px">' + face(m.id, 32) + '<span style="min-width:0"><b class="hi ell" dir="auto" style="display:block">' + esc(nameOf(m.id)) + '</b>' + (m.name && titleOf(m) && m.name !== titleOf(m) ? '<span class="mut ell" dir="auto" style="display:block;font-size:12px">' + esc(titleOf(m)) + '</span>' : '') + '</span></span></td>' +
+        '<td><span class="sw" style="background:' + esc(ocol(r.off)) + '"></span> ' + esc(oname(r.off)) + '</td><td class="soft">' + esc(m.model || '—') + '</td>' +
+        '<td><span class="pill ' + r.rs.key + '">' + esc(r.rs.word) + '</span></td><td dir="auto" class="tkx">' + lastTask(m.id) + '</td>' +
+        '<td class="n">' + digits(u.runs) + '</td><td class="n">' + tokens(u.tok) + '</td><td>' + spark(u.days) + '</td><td class="n' + (pct !== null && pct < 90 ? ' lo' : '') + '">' + (pct === null ? '—' : digits(pct) + ' %') + '</td>' +
+        '<td><button type="button" class="b sm" data-ev="member-open" data-arg="' + esc(m.id) + '">' + T('Open') + '</button></td></tr>'
+    }
+    html += '</tbody></table>'
+    if (!shown.length) html += '<p class="empty" style="padding:24px">' + T('No one matches these filters.') + '</p>'
+    html += '</div><p class="note" style="margin-top:10px">' + T('Good runs: finished with no findings and no failure. Sorted by office, then working first. A row opens the person’s profile.') + '</p>'
     return html
   }
   /** "Operations, Research, Design: not set up": the packs not installed yet. */
@@ -66,8 +127,12 @@
     html += '<div class="rw"><span class="pill ' + s + '">' + T(STATUS_WORD[s]) + '</span>' + (m.reportsTo ? '<span class="mut" style="font-size:13px">' + T('Reports to ') + esc(nameOf(m.reportsTo)) + '</span>' : '') + '</div>'
     if (g) html += '<div class="stat now w"><div class="lbl" style="color:#F2C06B">' + T('Waiting for you') + '</div><div class="hi" dir="auto" style="font-size:15px;font-weight:700;margin-top:2px">' + esc(plainQ(g)) + '</div><button type="button" class="b sm" data-ev="goto-appr" data-arg="' + esc(g.id) + '" style="margin-top:8px">' + T('Answer') + '</button></div>'
     else if (r) html += '<div class="stat now"><div class="lbl" style="color:var(--accent)">' + T('Right now') + '</div><div class="hi" dir="auto" style="font-size:16px;font-weight:700;margin-top:2px">' + esc(r.doing || r.task) + '</div><div class="soft" style="font-size:13px">' + T('Started ') + esc(ago(r.startedAt)) + '</div></div>'
-    const cost = co().company.payModel === 'plan' ? T('Included in your plan') : runs.some((x) => typeof x.costUsd === 'number') ? '$' + fa(runs.reduce((n, x) => n + (x.costUsd || 0), 0).toFixed(2)) : T('not counted')
-    html += '<div class="rw" style="gap:12px;align-items:stretch"><div class="stat"><div class="lbl">' + T('This month') + '</div><div class="hi" style="font-size:24px;font-weight:700">' + (ms ? esc(dur(ms)) : '—') + '</div><div class="mut" style="font-size:12.5px">' + fa(runs.length) + ' ' + T(runs.length === 1 ? 'job finished' : 'jobs finished') + '</div></div><div class="stat"><div class="lbl">' + T('Details') + '</div><div class="mut" style="font-size:12.5px;line-height:1.6;margin-top:4px">' + tokens(tok) + ' ' + T('tokens') + '<br>' + T('Cost: ') + esc(cost) + '<br>' + T('Role file: ') + ltr(m.id) + (m.tier ? '<br>' + T('Strength: ') + T(TIER[m.tier]) : '') + '</div></div></div>'
+    const cost = co().company.payModel === 'plan' ? T('Included in your plan') : runs.some((x) => typeof x.costUsd === 'number') ? '$' + digits(runs.reduce((n, x) => n + (x.costUsd || 0), 0).toFixed(2)) : T('not counted')
+    const u = usage(m.id)
+    const tile = (lbl, val, cls) => '<div class="stat"><div class="lbl">' + lbl + '</div><div class="hi' + (cls ? ' ' + cls : '') + '" style="font-size:22px;font-weight:700;margin-top:4px">' + val + '</div></div>'
+    html += '<div class="rw tiles" style="gap:10px;align-items:stretch">' + tile(T('Runs, 30 days'), digits(u.runs)) + tile(T('Good runs'), u.runs ? digits(Math.round(u.good / u.runs * 100)) + ' %' : '—', u.runs && u.good / u.runs >= 0.9 ? 'ok' : '') + tile(T('Average run'), u.avg ? esc(dur(u.avg)) : '—') + tile(T('Tokens, 30 days'), tokens(u.tok)) + tile(T('Dead runs'), digits(u.dead), u.dead ? 'bad' : '') + '</div>'
+    const mx = Math.max(1, ...u.days)
+    html += '<div><div class="sec" style="margin-bottom:8px">' + T('Runs per day, last 14 days') + '</div><div class="bars" role="img" aria-label="' + T('Runs per day, last 14 days') + '">' + u.days.map((n) => '<i style="height:' + (n ? Math.max(8, Math.round(n / mx * 100)) : 3) + '%" class="' + (n ? '' : 'z') + '" title="' + digits(n) + '"></i>').join('') + '</div><div class="mut" style="font-size:12px;margin-top:6px">' + T('Cost this month: ') + esc(cost) + ' · ' + T('Role file: ') + ltr(m.id) + (m.tier ? ' · ' + T('Strength: ') + T(TIER[m.tier]) : '') + '</div></div>'
     const def = (DATA.agents || []).find((x) => x.name === m.id) || {}
     const what = String(def.descriptionEn || def.description || '').replace(/^"|"$/g, '')
     if ((m.skills || []).length) html += '<div><div class="sec" style="margin-bottom:8px">' + T('Good at') + '</div><div class="rw" style="flex-wrap:wrap;gap:6px">' + m.skills.map((x) => '<span class="chip" dir="auto" style="height:28px;font-size:13px">' + esc(x) + '</span>').join('') + '</div></div>'
@@ -134,7 +199,7 @@
       html += '<label class="fl" style="margin:0">' + esc(T('What should ') + name + T(' do?')) + '<textarea name="instructions" maxlength="8000" dir="auto" style="min-height:110px"' + (err.instructions ? ' class="bad" aria-invalid="true"' : '') + '>' + v('instructions') + '</textarea></label>'
       if (err.instructions) html += '<p class="msg err" style="margin-top:-8px">' + ic('warn', 14) + ' ' + T('Describe the job in a few more words (at least 10 characters).') + '</p>'
       html += '<div><div class="hi" style="font-weight:700;font-size:13px;margin-bottom:6px">' + T('Good at') + '</div><div class="rw" style="gap:6px;flex-wrap:wrap">' + (f.skills || []).map((x, i) => '<button type="button" class="chip" data-ev="skill-del" data-arg="' + i + '" title="' + T('Remove') + '" dir="auto">' + esc(x) + ' ×</button>').join('') + ((f.skills || []).length < 8 ? '<input type="text" name="skill" maxlength="40" dir="auto" placeholder="' + T('+ Add') + '" style="width:150px;padding:4px 10px;border-style:dashed" data-ev-enter="skill-add">' : '') + '</div></div>'
-      html += '<div><div class="hi" style="font-weight:700;font-size:13px;margin-bottom:6px">' + T('Pick a look') + '</div><div class="looks" role="radiogroup" aria-label="' + T('Pick a look') + '">' + [0, 1, 2, 3, 4, 5].map((i) => '<label><input type="radio" name="look" value="' + i + '"' + ((f.look || 0) === i ? ' checked' : '') + ' aria-label="' + T('Look ') + fa(i + 1) + '">' + A.person((f.id || slug(f.name) || 'new-member') + (i ? ':' + i : ''), colorOf(f.officeId), 30, true) + '</label>').join('') + '</div></div>'
+      html += '<div><div class="hi" style="font-weight:700;font-size:13px;margin-bottom:6px">' + T('Pick a look') + '</div><div class="looks" role="radiogroup" aria-label="' + T('Pick a look') + '">' + [0, 1, 2, 3, 4, 5].map((i) => '<label><input type="radio" name="look" value="' + i + '"' + ((f.look || 0) === i ? ' checked' : '') + ' aria-label="' + T('Look ') + digits(i + 1) + '">' + A.person((f.id || slug(f.name) || 'new-member') + (i ? ':' + i : ''), colorOf(f.officeId), 30, true) + '</label>').join('') + '</div></div>'
       if (f.op !== 'edit') {
         const cats = (st.data.team && st.data.team.categories) || []
         const def = (st.data.team && st.data.team.policy && st.data.team.policy.defaults) || {}
@@ -201,7 +266,7 @@
     if (n) return n[1].toUpperCase()
     return ({ 'text/markdown': 'MD', 'text/plain': 'TXT', 'text/csv': 'CSV', 'image/png': 'PNG', 'image/jpeg': 'JPG', 'image/gif': 'GIF', 'image/webp': 'WEBP', 'application/pdf': 'PDF' })[String(d.mime || '').split(';')[0]] || T('File')
   }
-  const sizeOf = (b) => (b >= 1048576 ? fa((b / 1048576).toFixed(1)) + T(' MB') : fa(Math.max(1, Math.round(b / 1024))) + T(' KB'))
+  const sizeOf = (b) => (b >= 1048576 ? digits((b / 1048576).toFixed(1)) + T(' MB') : digits(Math.max(1, Math.round(b / 1024))) + T(' KB'))
   function dlvMain() {
     if (!LIVE) return liveOnly()
     load('dlv', 'api/deliverables')
@@ -211,9 +276,9 @@
     let html = head(T('Finished work'), T('Everything your team has made for you, newest first.'), '<label class="rw" style="gap:0;position:relative;margin:0"><span style="position:absolute;inset-inline-start:12px;color:var(--ink-dim);line-height:0">' + ic('search', 15) + '</span><input type="search" name="dq" data-ev-input="dq" value="' + esc(st.dlvQ) + '" placeholder="' + T('Search by name or person') + '" aria-label="' + T('Search by name or person') + '" style="width:260px;padding-inline-start:36px"></label>')
     if (!list.length) return html + '<p class="empty">' + T('What your team hands in appears here: documents, pictures, tables and links.') + '</p>'
     const n = (k) => list.filter((d) => groupOf(d) === k).length
-    const chip = (v, label, icon) => '<button type="button" class="chip" data-ev="dkind" data-arg="' + v + '" aria-pressed="' + (st.dlvKind === v) + '">' + (icon ? ic(icon, 12) : '') + label + ' ' + fa(v ? n(v) : list.length) + '</button>'
+    const chip = (v, label, icon) => '<button type="button" class="chip" data-ev="dkind" data-arg="' + v + '" aria-pressed="' + (st.dlvKind === v) + '">' + (icon ? ic(icon, 12) : '') + label + ' ' + digits(v ? n(v) : list.length) + '</button>'
     const fresh = list.filter((d) => isToday(d.createdAt)).length
-    html += '<div class="rw" style="gap:8px;margin:-6px 0 20px;flex-wrap:wrap">' + chip('', T('All')) + chip('document', T(KIND.document), 'doc') + chip('image', T(KIND.image), 'image') + chip('sheet', T(KIND.sheet), 'table') + chip('link', T(KIND.link), 'link') + '<span class="sp"></span><span class="mut" style="font-size:13px">' + T('Today') + ' <b class="hi">' + fa(fresh) + ' ' + T('new') + '</b></span></div>'
+    html += '<div class="rw" style="gap:8px;margin:-6px 0 20px;flex-wrap:wrap">' + chip('', T('All')) + chip('document', T(KIND.document), 'doc') + chip('image', T(KIND.image), 'image') + chip('sheet', T(KIND.sheet), 'table') + chip('link', T(KIND.link), 'link') + '<span class="sp"></span><span class="mut" style="font-size:13px">' + T('Today') + ' <b class="hi">' + digits(fresh) + ' ' + T('new') + '</b></span></div>'
     if (!shown.length) html += '<p class="empty">' + T('Nothing matches.') + '</p>'
     html += '<div class="gal">' + shown.slice(0, 80).map((d) => {
       const c = colorOfMember(d.agent)
@@ -223,7 +288,7 @@
         (d.state === 'missing' ? '<span class="chip warn" style="margin-top:8px;align-self:flex-start">' + T('File no longer there') + '</span>' : '') +
         '<div class="rw" style="margin-top:12px;gap:8px">' + open + '<button type="button" class="b sm ghost" data-ev="dlv-open" data-arg="' + esc(d.id) + '" aria-label="' + T('Preview') + '" title="' + T('Preview') + '">' + ic('eye', 15) + '</button></div></div></div>'
     }).join('') + '</div>'
-    if (st.data.dlv.store) html += '<p class="mut" style="font-size:12.5px;margin-top:18px">' + T('Arsenale keeps its own copies: ') + fa(st.data.dlv.store.files) + ' · ' + sizeOf(st.data.dlv.store.bytes) + (st.data.dlv.store.warn ? ' · ' + T('over 2 GB: consider deleting old ones') : '') + '</p>'
+    if (st.data.dlv.store) html += '<p class="mut" style="font-size:12.5px;margin-top:18px">' + T('Arsenale keeps its own copies: ') + digits(st.data.dlv.store.files) + ' · ' + sizeOf(st.data.dlv.store.bytes) + (st.data.dlv.store.warn ? ' · ' + T('over 2 GB: consider deleting old ones') : '') + '</p>'
     return html
   }
   function dlvPreview() {
@@ -272,13 +337,14 @@
   }
 
   // ========== settings
-  const SETTABS = [['assistants', 'Assistants', 'plug'], ['phone', 'Phone alerts', 'phone'], ['safety', 'Safety rules', 'shield'], ['packs', 'Office packs', 'box'], ['privacy', 'Privacy', 'lock']]
+  const SETTABS = [['assistants', 'Assistants', 'plug'], ['notifications', 'Notifications', 'bell'], ['decisions', 'Decisions', 'check'], ['safety', 'Safety rules', 'shield'], ['packs', 'Office packs', 'box'], ['privacy', 'Privacy', 'lock']]
   function setMain() {
     if (!LIVE) return liveOnly()
     if (!SETTABS.some((x) => x[0] === st.setTab)) st.setTab = 'assistants'
     let html = head(T('Settings')) + '<div class="setw"><nav class="snav" aria-label="' + T('Settings') + '">' + SETTABS.map((x) => '<button type="button" data-ev="stab" data-arg="' + x[0] + '" aria-pressed="' + (st.setTab === x[0]) + '">' + ic(x[2], 18) + T(x[1]) + '</button>').join('') + '</nav><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:22px">'
     if (st.setTab === 'assistants') html += assistantsTab()
-    else if (st.setTab === 'phone') html += phoneTab()
+    else if (st.setTab === 'notifications') html += notificationsTab()
+    else if (st.setTab === 'decisions') html += decisionsTab()
     else if (st.setTab === 'safety') html += safetyTab()
     else if (st.setTab === 'packs') html += packsTab()
     else html += privacyTab()
@@ -307,7 +373,7 @@
     html += '</div></div>'
     const known = new Set(d.cards.map((c) => (seenFor(c, d.clients) || {}).id).filter(Boolean))
     const rest = d.clients.filter((x) => !known.has(x.id))
-    if (d.clients.length) html += '<div><div class="sec">' + T('What Arsenale remembers') + ' <small>' + T('The name an assistant gives is a label, not proof of who it is.') + '</small></div><div class="card rows">' + d.clients.map((c) => { const quiet = Date.now() - Date.parse(c.lastSeen) > 7 * 86400000; return '<div class="r"><b class="hi" dir="ltr">' + esc(c.name || c.id) + '</b><span class="mut sp" style="font-size:13px">' + esc(c.transport) + ' · ' + T('last call ') + esc(ago(c.lastSeen)) + ' · ' + fa(c.callsToday) + ' ' + T('calls today') + (quiet ? ' <span class="chip warn">' + T('quiet') + '</span>' : '') + (rest.includes(c) ? '' : '') + '</span><button type="button" class="b sm ghost' + armedCls('forget|' + c.id) + '" data-ev="forget" data-arg="' + esc(c.id) + '" title="' + T('A forgotten assistant can connect again; this only clears what Arsenale remembers about it.') + '">' + esc(armedLabel('forget|' + c.id, T('Forget'))) + '</button></div>' }).join('') + '</div></div>'
+    if (d.clients.length) html += '<div><div class="sec">' + T('What Arsenale remembers') + ' <small>' + T('The name an assistant gives is a label, not proof of who it is.') + '</small></div><div class="card rows">' + d.clients.map((c) => { const quiet = Date.now() - Date.parse(c.lastSeen) > 7 * 86400000; return '<div class="r"><b class="hi" dir="ltr">' + esc(c.name || c.id) + '</b><span class="mut sp" style="font-size:13px">' + esc(c.transport) + ' · ' + T('last call ') + esc(ago(c.lastSeen)) + ' · ' + digits(c.callsToday) + ' ' + T('calls today') + (quiet ? ' <span class="chip warn">' + T('quiet') + '</span>' : '') + (rest.includes(c) ? '' : '') + '</span><button type="button" class="b sm ghost' + armedCls('forget|' + c.id) + '" data-ev="forget" data-arg="' + esc(c.id) + '" title="' + T('A forgotten assistant can connect again; this only clears what Arsenale remembers about it.') + '">' + esc(armedLabel('forget|' + c.id, T('Forget'))) + '</button></div>' }).join('') + '</div></div>'
     html += '<details><summary>' + T('Advanced: custom instructions and MCP over HTTP') + '</summary><div style="margin-top:12px;display:flex;flex-direction:column;gap:10px"><p class="soft">' + T('Some assistants ignore the instructions Arsenale sends. Paste this into your assistant\'s custom instructions:') + '</p><pre>' + esc(T(d.customInstructions)) + '</pre><div><button type="button" class="b sm" data-ev="copy" data-arg="' + esc(T(d.customInstructions)) + '">' + T('Copy') + '</button></div>'
     html += '<p class="hi" style="font-weight:700">' + T('MCP over HTTP') + '</p><p class="soft">' + T('For assistants that need a web address. Needs a token.') + '</p>'
     html += d.http.on ? '<p class="soft">' + T('On, at ') + ltr(d.http.url) + '</p>' : '<p class="soft">' + T('Off. Set ARSENALE_MCP_TOKEN (32+ characters) and restart.') + '</p><div><button type="button" class="b sm" data-ev="mktoken">' + T('Make a random token to copy') + '</button></div>' + (st.token ? '<pre>' + esc(st.token) + '</pre>' : '')
@@ -318,7 +384,7 @@
   function connectSteps(c, clients, wizard) {
     const seen = seenFor(c, clients)
     const testing = st.test && st.test.client === c.id
-    const num = (n, ok) => '<span class="num' + (ok ? ' ok' : '') + '">' + fa(n) + '</span>'
+    const num = (n, ok) => '<span class="num' + (ok ? ' ok' : '') + '">' + digits(n) + '</span>'
     const B = wizard ? 'b' : 'b'
     let html = '<div style="display:flex;flex-direction:column;gap:14px">'
     let one = ''
@@ -339,39 +405,6 @@
     if (wizard || testing) html += '<div class="wt rw' + (ok ? ' ok' : '') + '" role="status"><span class="dot"></span><div><b style="color:' + (ok ? 'var(--accent)' : '#F2C06B') + '">' + esc(ok ? T('Connected. Arsenale heard from ') + T(c.name) + '.' : testing && st.test.failed ? T('Not yet. Check the steps, then press Test.') : T('Waiting to hear from ') + T(c.name) + '…') + '</b><div class="soft" style="font-size:13px">' + (ok ? T('Every job it does now shows up here.') : T('Turns green when it answers.')) + '</div></div>' + (!ok && !testing ? '<button type="button" class="' + B + ' sm" data-ev="ctest" data-arg="' + esc(c.id) + '" style="margin-inline-start:auto">' + T('Test') + '</button>' : '') + '</div>'
     else if (!wizard) html += '<div><button type="button" class="' + B + ' sm" data-ev="ctest" data-arg="' + esc(c.id) + '">' + T('Test') + '</button></div>'
     return html + '</div>'
-  }
-  function phoneTab() {
-    load('notify', 'api/notify')
-    load('policy', 'api/policy', false, 30000)
-    const d = st.data.notify
-    const perm = typeof Notification === 'undefined' ? 'unsupported' : Notification.permission
-    let html = '<div><div class="sec">' + T('On this computer') + ' <small>' + T('While this page is open in a tab') + '</small></div><div class="card pad rw" style="flex-wrap:wrap"><div class="sp"><b class="hi">' + T('Desktop notifications') + '</b><div class="mut" style="font-size:12.5px">' + T('When your assistant asks you something, when a task waits for you, or when a budget alert comes in.') + '</div></div>' +
-      (perm === 'default' ? '<button type="button" class="b sm" data-ev="notif-perm">' + T('Allow notifications in this browser') + '</button>' : perm === 'denied' ? '<span class="chip warn">' + T('Blocked in the browser settings') + '</span>' : perm === 'unsupported' ? '<span class="chip warn">' + T('This browser has no notifications') + '</span>' : '<span class="chip ok">' + T('Allowed') + '</span>') +
-      '<input type="checkbox" class="tgl" data-ev-change="notif" aria-label="' + T('Desktop notifications') + '"' + (notifOn() ? ' checked' : '') + '></div></div>'
-    html += '<div><div class="sec">' + T('Phone alerts') + ' <span class="exp">' + T('experimental') + '</span> <small>' + T('Get a buzz when your team needs you') + '</small></div>'
-    if (!d) return html + '<p class="empty">' + T('Loading…') + '</p></div>'
-    const ch = st.channel
-    const c = d[ch]
-    html += '<div class="rw" style="gap:8px;margin-bottom:12px">' + [['ntfy', 'ntfy'], ['telegram', 'Telegram'], ['pushover', 'Pushover']].map((x) => '<button type="button" class="chip" data-ev="nchan" data-arg="' + x[0] + '" aria-pressed="' + (ch === x[0]) + '" style="height:32px;padding:0 14px;font-size:13.5px">' + (d[x[0]].enabled ? ic('check', 12, 3) + ' ' : '') + x[1] + '</button>').join('') + '</div>'
-    html += '<div class="card pad" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,330px);gap:24px"><div style="display:flex;flex-direction:column;gap:14px">'
-    const lock = !canWrite()
-    html += '<label class="rw" style="margin:0;cursor:pointer"><span class="sp"><b class="hi">' + T('Send alerts to my phone') + '</b><span class="mut" style="font-size:12.5px;display:block">' + (ch === 'ntfy' ? T('Using the free ntfy app. No account with Arsenale.') : ch === 'telegram' ? T('Through a Telegram bot you create.') : T('Through the Pushover app. It only notifies: no buttons.')) + (c.testedAt || c.enabled ? '' : ' ' + T('Send a test first.')) + '</span></span><input type="checkbox" class="tgl" data-ev-change="nfon" data-arg="' + ch + '"' + (c.enabled ? ' checked' : '') + (lock || !(c.testedAt || c.enabled) ? ' disabled' : '') + '></label>'
-    if (ch !== 'pushover') html += '<label class="rw" style="margin:0;cursor:pointer"><span class="sp"><b class="hi">' + T('Show the question, with Approve and Decline') + '</b><span class="mut" style="font-size:12.5px;display:block">' + (ch === 'ntfy' ? T('The ntfy server you use sees the question text. A server of your own keeps it private.') : T('Telegram sees the question text; bot chats are not end-to-end encrypted.')) + '</span></span><input type="checkbox" class="tgl" data-ev-change="nfdetails" data-arg="' + ch + '"' + (c.details ? ' checked' : '') + (lock ? ' disabled' : '') + '></label>'
-    if (ch === 'ntfy') html += '<div><p class="mut" style="font-size:12.5px">' + T('Server: ') + ltr(d.ntfy.server) + (d.ntfy.topic ? ' · ' + T('subscribe to: ') + ltr(d.ntfy.topic) : '') + '</p>' + (canWrite() ? '<form data-evform="ntfy" class="rw" style="gap:8px;margin-top:6px"><input type="text" name="server" dir="ltr" value="' + esc(d.ntfy.server) + '" aria-label="' + T('ntfy server') + '" style="flex:1"><button type="submit" class="b sm">' + T('Set up') + '</button></form>' : '') + '</div>'
-    if (ch === 'telegram') {
-      const tg = d.telegram
-      html += '<div class="soft" style="font-size:13px">' + (tg.paired ? T('Paired with ') + '<b class="hi" dir="auto">' + esc(tg.pairedName || T('one private chat')) + '</b>.' : tg.pairLink ? T('Open this link on your phone within 10 minutes, and press Start in Telegram:') + '<br><a href="' + esc(tg.pairLink) + '" target="_blank" rel="noopener noreferrer" dir="ltr" style="color:var(--cyan);word-break:break-all">' + esc(tg.pairLink) + '</a>' : tg.pairCommand ? T('Within 10 minutes, send this to your bot in a private chat:') + '<br>' + ltr(tg.pairCommand) + ' <button type="button" class="b sm" data-ev="copy" data-arg="' + esc(tg.pairCommand) + '">' + T('Copy') + '</button>' : !d.env.telegram ? T('Create a bot with BotFather, set its token, then pair.') : T('Pair your phone: Arsenale makes a one-time link for your bot.')) + '</div>' + (canWrite() && d.env.telegram ? '<div><button type="button" class="b sm" data-ev="nf" data-arg="pair|telegram">' + (tg.paired ? T('Pair another phone') : T('Pair a phone')) + '</button></div>' : '')
-    }
-    if (canWrite()) html += '<div class="rw" style="gap:10px;flex-wrap:wrap"><button type="button" class="b sm" data-ev="nf" data-arg="test|' + ch + '">' + T('Send a test alert') + '</button>' + (c.testedAt ? '<span class="chip ok">' + ic('check', 12, 3) + ' ' + T('Last test: ') + esc(day(c.testedAt)) + '</span>' : '') + '</div>'
-    html += '<p class="mut" style="font-size:12.5px">' + T('Last sent: ') + esc(c.lastSentAt ? day(c.lastSentAt) : '—') + (c.lastDecisionAt !== undefined ? ' · ' + T('last decision: ') + esc(c.lastDecisionAt ? day(c.lastDecisionAt) : '—') : '') + (c.invalidToday ? ' · ' + fa(c.invalidToday) + ' ' + T('invalid messages ignored today') : '') + '</p></div>'
-    // what the phone shows, in the mode chosen: minimal unless details are on
-    const sample = waiting()[0]
-    html += '<div class="phone"><div class="lbl" style="margin-bottom:10px">' + T('What your phone shows') + '</div><div class="n">' + (c.details && sample ? '<b class="hi" dir="auto" style="font-size:13.5px">' + esc(nameOf(askerOf(sample)) + T(' asks: ') + plainQ(sample)) + '</b><div class="mut" style="font-size:12.5px;margin-top:2px">' + (phoneButtons(sample) ? T('Tap to Approve or Decline.') : T('Open Arsenale to answer: payments, hires and plain approvals are never answered from a phone.')) + '</div>' + (phoneButtons(sample) ? '<div class="rw" style="margin-top:10px;gap:8px"><span class="chip ok">' + T('Approve') + '</span><span class="chip bad">' + T('Decline') + '</span></div>' : '') : '<b class="hi" style="font-size:13.5px">' + fa(Math.max(1, waiting().length)) + ' ' + T('questions waiting') + '</b><div class="mut" style="font-size:12.5px;margin-top:2px">' + esc(co() ? co().company.name : 'Arsenale') + ' · ' + T('Open Arsenale to answer.') + '</div>') + '</div></div></div></div>'
-    html += '<p class="note">' + ic('info', 13) + T('Secrets come from environment variables only: ARSENALE_PHONE_KEY, ARSENALE_TELEGRAM_TOKEN, ARSENALE_NTFY_TOKEN, ARSENALE_PUSHOVER_TOKEN, ARSENALE_PUSHOVER_USER.') + '</p>'
-    html += '<p class="mut" style="font-size:12.5px">' + T('Signing key: ') + (d.env.key ? '<span class="chip ok">' + T('set') + '</span>' : '<span class="chip warn">' + T('not set: messages are sent without buttons') + '</span>') + ' · ' + T('Your computer must be on, with Arsenale running.') + '</p>'
-    if (canWrite()) html += '<form data-evform="expiry" class="rw" style="gap:10px;flex-wrap:wrap"><label class="rw" style="gap:8px;margin:0;font-size:13px" class="soft">' + T('A phone request expires after (minutes)') + '<input type="number" name="minutes" min="5" max="1440" value="' + esc(d.expiryMin) + '" style="width:100px"></label><button type="submit" class="b sm">' + T('Save') + '</button><span class="sp"></span><button type="button" class="b sm bad' + armedCls('nf|signout') + '" data-ev="nf" data-arg="signout|">' + esc(armedLabel('nf|signout', T('Sign out all phones'))) + '</button></form>'
-    html += '<p class="mut" style="font-size:12.5px">' + T('Email notifications are not built yet (help wanted). Payments are never approved from a phone.') + '</p>'
-    return html + '</div>' + msgHtml()
   }
   /** Whether a phone gets Approve / Decline for this question: an action whose
    *  rule allows phone approval (never a payment), or a choice; never a hire
@@ -403,12 +436,12 @@
     html += '<div class="packs">' + d.packs.map((p) => {
       const c = th[p.office && p.office.theme] || '#56B6C2'
       const lead = (p.members.find((m) => m.lead) || p.members[0] || { id: p.id }).id
-      return '<button type="button" class="card pk' + (p.installed ? '' : ' off') + '" data-ev="pack-open" data-arg="' + esc(p.id) + '" aria-current="' + (st.openPack === p.id) + '"><span class="rw" style="gap:8px">' + A.person(lead, c, 24, true) + '<b class="hi" style="font-size:13.5px;line-height:1.2">' + esc(p.name) + '</b></span><span class="rw" style="margin-top:12px;justify-content:space-between"><span class="mut" style="font-size:12.5px">' + fa(p.members.length) + ' ' + T('members') + '</span>' + (p.installed ? '<span class="chip ok">' + T('Installed') + '</span>' : p.needs ? '<span class="chip warn">' + T('Needs a newer Arsenale') + '</span>' : '<span class="b sm">' + T('Add') + '</span>') + '</span></button>'
+      return '<button type="button" class="card pk' + (p.installed ? '' : ' off') + '" data-ev="pack-open" data-arg="' + esc(p.id) + '" aria-current="' + (st.openPack === p.id) + '"><span class="rw" style="gap:8px">' + A.person(lead, c, 24, true) + '<b class="hi" style="font-size:13.5px;line-height:1.2">' + esc(p.name) + '</b></span><span class="rw" style="margin-top:12px;justify-content:space-between"><span class="mut" style="font-size:12.5px">' + digits(p.members.length) + ' ' + T('members') + '</span>' + (p.installed ? '<span class="chip ok">' + T('Installed') + '</span>' : p.needs ? '<span class="chip warn">' + T('Needs a newer Arsenale') + '</span>' : '<span class="b sm">' + T('Add') + '</span>') + '</span></button>'
     }).join('') + '</div>'
     const p = d.packs.find((x) => x.id === st.openPack)
     if (p) {
       let b = '<div class="card pad" style="margin-top:14px"><div class="rw"><b class="hi" style="font-size:15px">' + esc(p.name) + '</b><span class="mut" style="font-size:12px">' + T('version ') + ltr(p.version) + '</span><span class="sp"></span><button type="button" class="x" data-ev="pack-open" data-arg="" aria-label="' + T('Close') + '" style="width:30px;height:30px">' + ic('x', 15) + '</button></div>'
-      b += '<p class="soft" dir="auto" style="margin:8px 0 12px">' + esc(p.description) + '</p><div class="rw" style="flex-wrap:wrap;gap:8px">' + p.members.map((m) => '<span class="chip" dir="auto">' + esc(LANG === 'fa' && m.titleFa ? m.titleFa : m.title || m.id) + (m.lead ? ' ★' : '') + '</span>').join('') + '</div><div class="rw" style="gap:8px;margin-top:14px">'
+      b += '<p class="soft" dir="auto" style="margin:8px 0 12px">' + esc(p.description) + '</p><div class="rw" style="flex-wrap:wrap;gap:8px">' + p.members.map((m) => '<span class="chip" dir="auto">' + esc(m.title || m.id) + (m.lead ? ' ★' : '') + '</span>').join('') + '</div><div class="rw" style="gap:8px;margin-top:14px">'
       if (p.installed) b += (canWrite() ? '<button type="button" class="b sm bad' + armedCls('pack|remove|' + p.id) + '" data-ev="pack" data-arg="remove|' + esc(p.id) + '">' + esc(armedLabel('pack|remove|' + p.id, T('Remove'))) + '</button>' : '') + (p.update && canWrite() ? '<button type="button" class="b sm pri" data-ev="pack" data-arg="update|' + esc(p.id) + '">' + T('Update') + '</button>' : '')
       else if (!p.needs && co() && canWrite()) b += '<button type="button" class="b sm pri" data-ev="pack" data-arg="install|' + esc(p.id) + '">' + T('Add this office') + '</button>'
       b += '</div>'

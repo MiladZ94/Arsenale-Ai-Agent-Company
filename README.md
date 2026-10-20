@@ -13,9 +13,13 @@ questions waiting for you. It watches; it never runs agents.
 
 ![Build mode: the hotbar of 12 building types](docs/media/campus-build.png)
 
-![An office](docs/media/office.png)
+![An office: a stalled run wears a pill and the Needs a look box offers Nudge](docs/media/office.png)
 
-![The Version run page](docs/media/version-run.png)
+![Live: every run working now, with its step, percent and time left](docs/screenshots/live-en.png)
+
+![Decisions: every waiting question and approval in three columns](docs/screenshots/inbox-en.png)
+
+![The Version run page, opened from Live](docs/media/version-run.png)
 
 ![Office packs](docs/media/packs.png)
 
@@ -61,9 +65,16 @@ exact command and a **Test** button. Adapters for each tool are in
   accounts, no telemetry.
 - Safety rules (`policy.json`) are advisory: your assistant is asked to check
   before an outside action, and you approve on the dashboard.
+- **Live** shows every run working now, with its step, a percent and the time
+  left; a run that goes quiet is flagged, and one whose process ended is
+  closed. **Decisions** collects every question and approval in one inbox.
+- Notifications on the desktop and, optionally, on your phone (ntfy, Telegram,
+  Pushover), set up and tested in Settings.
+- `arsenale testq run --run <id> -- <command>` keeps to one full test suite at
+  a time on a machine.
 - `arsenale --help` lists every command.
 - Autonomous runs: `arsenale init`, then `arsenale autonomous start <version>`; `arsenale awake start --pid N` keeps a Mac or Linux machine awake while that process lives. The essential rules are in `autonomous/RULES.md`; `arsenale log --help` lists the run fields (`versionRun`, `phase`, `pid`, `tier`).
 - Uninstall: `install.ps1 -Uninstall` or `./install.sh --uninstall`.
 
 More: [full reference](docs/reference.md), [CONTRIBUTING](CONTRIBUTING.md),
-[SECURITY](SECURITY.md). Version 1.0.0. License: [MIT](LICENSE). The default character is made by our own script and is CC0 ([tools/characters/LICENSE.txt](tools/characters/LICENSE.txt)).
+[SECURITY](SECURITY.md). Version 1.1.0. License: [MIT](LICENSE). The default character is made by our own script and is CC0 ([tools/characters/LICENSE.txt](tools/characters/LICENSE.txt)).

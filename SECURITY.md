@@ -54,6 +54,12 @@ Arsenale runs on your own machine. Its model, in short (details in the README,
   hire or a plain yes/no question. Telegram pairs through a one-time link
   from a private chat, and afterwards listens only to that person in that
   chat.
+- **Phone secrets** saved in Settings live in `<data>/notify/secrets.json`:
+  mode 0600 on macOS and Linux; on Windows the launcher limits the `notify`
+  folder to the owner's account once, with inheritance. They are write-only:
+  the page and the API show only whether a secret is set, and error texts
+  have every secret value replaced before they are shown or printed. An
+  environment variable of the same name wins over the file.
 - **Connecting an assistant** edits only that client's fixed settings file,
   after the owner saw the change, never a file with comments, with a backup.
   The file keeps its permissions, and the preview shows only the Arsenale

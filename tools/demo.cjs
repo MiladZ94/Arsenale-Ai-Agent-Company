@@ -61,13 +61,15 @@ const DONE = [
   ['dev-docs', 'Sonnet 5.5', 'tooling', 'README quick start for the new launcher', 'ok', 31000, 45, 9],
   ['release-manager', 'Sonnet 5.5', 'ledger', 'Plan release 2.4.0', 'failed', 15000, 20, 5],
 ]
-// [agent, model, project, task, minutes since start, minutes since last step, steps]
+// [agent, model, project, task, minutes since start, minutes since last step, steps, extra fields of the record]
+// The extras show the Live page's three kinds of run: one with a plan, one with only a percent, one with nothing.
 const ACTIVE = [
-  ['implementer', 'Sonnet 5.5', 'atlas', 'Build the offline queue for the Atlas app', 34, 1, ['reading src/sync/queue.ts', 'writing the retry loop', 'running the sync tests: 41 pass, 2 fail', 'fixing the timestamp order in replay()']],
-  ['tester', 'Sonnet 5.5', 'ledger', 'Regression test for the empty-page bug', 18, 2, ['reproducing with page=0', 'the new test fails on the old code, as it should', 'running the whole suite']],
-  ['ux-reviewer', 'Sonnet 5.5', 'orbit', 'Walk the signup flow on a 375 px screen', 26, 14, ['opening the signup page at 375 px', 'step 3 of 5: the code field hides behind the keyboard']],
-  ['data-migration', 'Opus 5.5', 'ledger', 'Old exports into the 2.4 importer', 9, 1, ['building invented 2.2 and 2.3 export files', 'importing the 2.2 file into the new build']],
-  ['explore', 'Haiku', 'search', 'Find every place the ranking weights are read', 4, 0, ['searching for weight lookups']],
+  ['implementer', 'Sonnet 5.5', 'atlas', 'Build the offline queue for the Atlas app', 34, 1, ['reading src/sync/queue.ts', 'writing the retry loop', 'running the sync tests: 41 pass, 2 fail', 'fixing the timestamp order in replay()'], { versionRun: 'atlas-app-1.2', phase: 'P2', plan: [{ name: 'read the code', weight: 1 }, { name: 'write the retry loop', weight: 2 }, { name: 'fix and test', weight: 2 }], stepIndex: 2, stepPct: 70, files: 7, plannedFiles: 12, testsRun: 2, plannedTests: 5 }],
+  ['tester', 'Sonnet 5.5', 'ledger', 'Regression test for the empty-page bug', 18, 2, ['reproducing with page=0', 'the new test fails on the old code, as it should', 'running the whole suite'], { pct: 60, files: 2 }],
+  ['ux-reviewer', 'Sonnet 5.5', 'orbit', 'Walk the signup flow on a 375 px screen', 26, 14, ['opening the signup page at 375 px', 'step 3 of 5: the code field hides behind the keyboard'], { pct: 40 }],
+  ['data-migration', 'Opus 5.5', 'ledger', 'Old exports into the 2.4 importer', 9, 1, ['building invented 2.2 and 2.3 export files', 'importing the 2.2 file into the new build'], { pct: 25, files: 4, plannedFiles: 9 }],
+  ['implementer', 'Sonnet 5.5', 'atlas', 'Settings page: autosave of the draft', 52, 26, ['waiting for the first report'], { versionRun: 'atlas-app-1.2', phase: 'P3', pct: 40, files: 5 }],
+  ['explore', 'Haiku', 'search', 'Find every place the ranking weights are read', 4, 0, ['searching for weight lookups'], {}],
 ]
 
 const iso = (msAgo) => new Date(Date.now() - msAgo).toISOString()
@@ -115,14 +117,26 @@ function makeDemoHome() {
       ...(agent === 'codex-cli' ? { usage: { tokens, toolUses: 9, durationMs: took * M, model } } : { transcript: transcriptOf(model, tokens, { Read: 14, Grep: 6, Edit: 4, Bash: 3 }) }),
     })
   }
-  for (const [agent, model, project, task, since, quiet, steps] of ACTIVE) {
+  for (const [agent, model, project, task, since, quiet, steps, extra] of ACTIVE) {
     const id = rid(since * M)
     write(path.join(runs, 'active', id + '.json'), {
       id, agent, model, effort: 'medium', project, task, parent: '', doing: steps[steps.length - 1],
       steps: steps.map((text, i) => ({ at: iso(i === steps.length - 1 ? quiet * M : (since - (i + 1) * (since - quiet) / steps.length) * M), text })),
       startedAt: iso(since * M),
+      ...(extra || {}),
     })
   }
+  // two runs Arsenale closed because their process had ended (the Live page's "Dead runs")
+  for (const [agent, model, project, task, startedAgo, quietMin] of [['implementer', 'Sonnet 5.5', 'atlas', 'Retry loop for the sync engine', 23 * 60 + 40, 23 * 60 + 16], ['implementer', 'Opus 5.5', 'ledger', 'Page tokens for /entries', 3 * 1440 + 9 * 60, 3 * 1440 + 9 * 60 - 20]]) {
+    const id = rid(startedAgo * M)
+    write(path.join(runs, id + '-' + agent + '.json'), { id, agent, model, project, task, status: 'stopped', closedBy: 'arsenale', summary: 'The process ended; closed by Arsenale', findings: [], files: [], startedAt: iso(startedAgo * M), finishedAt: iso(30 * M), steps: [{ at: iso((startedAgo - 5) * M), text: 'reading the brief' }, { at: iso(quietMin * M + 30 * M), text: 'writing the first change' }] })
+  }
+  // a version run of the Atlas app, with its phases (the Live page's header)
+  write(path.join(home, 'version-runs', 'atlas-app-1.2.json'), { id: 'atlas-app-1.2', app: 'Atlas app', version: '1.2', status: 'running', budget: 2000000, integrationBranch: 'auto/1.2/integration', startedAt: iso(105 * M), phases: [
+    { id: 'P1', name: 'Storage layer', requests: ['R1', 'R2'], merged: 2, status: 'merged' },
+    { id: 'P2', name: 'Sync engine', requests: ['R3', 'R4', 'R5'], merged: 1, status: 'gate B, 2 of 3' },
+    { id: 'P3', name: 'Settings page', requests: ['R6'], status: 'building' },
+    { id: 'P4', name: 'Release notes', requests: ['R7'], status: 'waiting' }] })
   const gates = [
     ['C', 'ledger', 'Push the pagination fix and tag 2.3.1?', 'push + tag', ['Approve', 'Decline'], 25],
     ['A', 'atlas', 'Offline queue: keep at most 500 changes, or no limit?', 'queue limit', ['500', 'no limit'], 50],
@@ -131,6 +145,17 @@ function makeDemoHome() {
   for (const [kind, project, question, label, choices, ago] of gates) {
     const id = 'g-' + rid(ago * M)
     write(path.join(runs, 'gates', id + '.json'), { id, project, kind, question, label, choices, round: '', status: 'waiting', answer: '', by: '', run: '', askedBy: 'supervisor', askedAt: iso(ago * M), answeredAt: '', history: [{ at: iso(ago * M), status: 'waiting', via: 'log' }] })
+  }
+  // typed approvals (spec 1.1): a merge and a next phase may run by themselves once approved; a build and a release never
+  const typed = [
+    ['atlas', 'Merge offline-queue into auto/1.2/integration', 'merge', 'feature/offline-queue', true, 26],
+    ['ledger', 'Start phase 4: Release notes', 'next-phase', 'P4', true, 19],
+    ['atlas', 'Build the Atlas app 1.2 installer (Windows x64)', 'build', 'atlas-1.2', true, 8],
+    ['ledger', 'Publish Ledger API 2.4.0', 'publish', 'ledger-2.4.0', true, 3],
+  ]
+  for (const [project, question, type, ref, passed, ago] of typed) {
+    const id = 'g-' + rid(ago * M)
+    write(path.join(runs, 'gates', id + '.json'), { id, project, kind: 'approval', approvalType: 'action', question, label: type, choices: [], round: '', status: 'waiting', answer: '', by: '', run: '', askedBy: 'supervisor', askedAt: iso(ago * M), answeredAt: '', versionRun: 'atlas-app-1.2', action: { category: 'other.external', target: ref, summary: question, member: '', type, ref, versionRun: 'atlas-app-1.2', gatesPassed: passed }, history: [{ at: iso(ago * M), status: 'waiting', via: 'log' }] })
   }
   const answeredId = 'g-' + rid(380 * M)
   write(path.join(runs, 'gates', answeredId + '.json'), { id: answeredId, project: 'atlas', kind: 'A', question: 'Should offline mode cover attachments in v1?', label: 'scope', choices: ['yes', 'not yet'], round: '', status: 'answered', answer: 'not yet', by: 'user', run: '', askedBy: 'supervisor', askedAt: iso(400 * M), answeredAt: iso(380 * M), history: [] })
@@ -311,6 +336,17 @@ function demoPng() {
 
 /** Moves the floor along: a new step now and then, a run that finishes and
  *  another that starts. Returns a stop function. */
+// A run kept quiet on purpose (the stalled example) is left alone, so Live always shows one.
+const quietRun = (r) => { const st = r && r.steps && r.steps[r.steps.length - 1]; return !!st && Date.now() - Date.parse(st.at) > 15 * 60000 }
+// One step forward: a planned run moves through its steps, a percent-only run gains a little; a run with neither stays as it is.
+function advance(r) {
+  if (Array.isArray(r.plan) && r.plan.length) {
+    r.stepPct = Math.min(100, (r.stepPct || 0) + 30)
+    if (r.stepPct >= 100 && (r.stepIndex || 1) < r.plan.length) { r.stepIndex = (r.stepIndex || 1) + 1; r.stepPct = 0 }
+  } else if (typeof r.pct === 'number') r.pct = Math.min(95, r.pct + 7)
+  if (typeof r.files === 'number' && (r.plannedFiles == null || r.files < r.plannedFiles)) r.files += 1
+}
+
 function simulate(home) {
   const active = path.join(home, 'agent-runs', 'active')
   const lines = ['reading the next file', 'running the focused tests', 'one test fails: looking at the cause', 'the fix is in, re-running', 'writing the report']
@@ -324,20 +360,28 @@ function simulate(home) {
     try {
       if (n % 4 === 0 && files.length > 3) {
         // the longest-running agent hands in its report
-        const runs = files.map((f) => JSON.parse(fs.readFileSync(path.join(active, f), 'utf8'))).sort((a, b) => a.startedAt.localeCompare(b.startedAt))
+        const runs = files.map((f) => JSON.parse(fs.readFileSync(path.join(active, f), 'utf8'))).filter((x) => !quietRun(x)).sort((a, b) => a.startedAt.localeCompare(b.startedAt))
         const r = runs[0]
+        if (!r) return
         fs.unlinkSync(path.join(active, r.id + '.json'))
         const now = new Date().toISOString()
         write(path.join(home, 'agent-runs', now.replace(/[:.]/g, '-') + '-' + r.agent.replace(/[^\w.-]/g, '') + '.json'), Object.assign({}, r, { status: 'ok', summary: 'Done; details in the report file.', findings: [], files: [], finishedAt: now, transcript: transcriptOf(r.model, 60000 + n * 977, { Read: 9, Edit: 3 }) }))
         const [agent, model, project, task] = extra[n % extra.length]
         const id = now.replace(/[:.]/g, '-') + '-' + crypto.randomBytes(2).toString('hex')
-        write(path.join(active, id + '.json'), { id, agent, model, effort: 'medium', project, task, parent: '', doing: 'reading the brief', steps: [{ at: now, text: 'reading the brief' }], startedAt: now })
+        // New runs report progress too, alternately with a plan and with a plain percent, so Live keeps all its columns filled.
+        const progress = n % 8 === 0
+          ? { plan: [{ name: 'read', weight: 1 }, { name: 'build', weight: 2 }, { name: 'test', weight: 1 }], stepIndex: 1, stepPct: 10, files: 0, plannedFiles: 6 }
+          : { pct: 5, files: 0 }
+        write(path.join(active, id + '.json'), Object.assign({ id, agent, model, effort: 'medium', project, task, parent: '', doing: 'reading the brief', steps: [{ at: now, text: 'reading the brief' }], startedAt: now }, progress))
       } else {
-        const f = files[n % files.length]
+        const live = files.filter((f) => !quietRun(JSON.parse(fs.readFileSync(path.join(active, f), 'utf8'))))
+        if (!live.length) return
+        const f = live[n % live.length]
         const r = JSON.parse(fs.readFileSync(path.join(active, f), 'utf8'))
         const text = lines[(n + r.steps.length) % lines.length]
         r.steps.push({ at: new Date().toISOString(), text })
         r.doing = text
+        advance(r)
         write(path.join(active, f), r)
       }
     } catch { /* a demo hiccup is not worth stopping for */ }

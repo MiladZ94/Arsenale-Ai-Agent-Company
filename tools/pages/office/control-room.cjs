@@ -2,21 +2,21 @@
  *  into the page as source, so it must not use anything that only Node has.
  *  officeClient calls it once with its helpers and gets the renderers back. */
 function controlRoom(h) {
-  const { esc, fa, hhmm, ms, span, cleanTask, isHeavy, T, k, usd, errTxt } = h
+  const { esc, digits, hhmm, ms, span, cleanTask, isHeavy, T, k, usd, errTxt } = h
   const LATE_MS = 2 * 3600000 // a gate waiting longer than this turns red
   const STALE_MS = 24 * 3600000 // older than this, "dismiss all" offers to close it
   const TOOLS = ['Read', 'Grep', 'Glob', 'Edit', 'Write', 'Bash', 'PowerShell', 'Agent']
   const TOOL_SHORT = { PowerShell: 'PS' }
   const KIND = { A: 'A', B: 'B', C: 'C', approval: T('OK') }
   const WHO = { user: 'u', supervisor: 's', agent: 'a' }
-  const WHO_FA = { u: T('You'), s: T('Supervisor'), a: T('Agents'), o: T('Waiting for you') }
+  const WHO_LABEL = { u: T('You'), s: T('Supervisor'), a: T('Agents'), o: T('Waiting for you') }
 
   const st = { armed: '', msg: {}, busy: '', sent: [], dwho: '', dproj: '', dsel: '', hl: '' }
   const hm = (v) => { const m = Math.max(0, Math.round(v / 60000)); return Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0') }
   const clip = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s }
   const id4 = (id) => String(id || '').slice(-4)
-  const APPROVAL_FA = { approve: T('Approve'), decline: T('Decline') }
-  const said = (g, a) => (g && g.kind === 'approval' && APPROVAL_FA[a] ? APPROVAL_FA[a] : a)
+  const APPROVAL_LABEL = { approve: T('Approve'), decline: T('Decline') }
+  const said = (g, a) => (g && g.kind === 'approval' && APPROVAL_LABEL[a] ? APPROVAL_LABEL[a] : a)
   const gatesOf = () => (Array.isArray(DATA.gates) ? DATA.gates : [])
   const decsOf = () => (Array.isArray(DATA.decisions) ? DATA.decisions : [])
   const canAnswer = () => LIVE && !!ANSWER_TOKEN
@@ -117,7 +117,7 @@ function controlRoom(h) {
       const what = g.status === 'expired' ? '<span class="dim">' + T('dismissed') + '</span>' : '<span class="ans">«' + esc(said(g, g.answer)) + '»</span>'
       const read = own ? ' <span class="rd ' + (g.seen ? 'yes' : 'no') + '">' + (g.seen ? T('read by the supervisor') : T('not read yet')) + '</span>' : ''
       return '<li><time dir="ltr">' + day(t) + hhmm(t) + '</time><span>' + esc(clip(g.label || g.question, 40)) + ' — ' + what + read + '</span></li>'
-    }).join('') + '</ul>' + (list.length > 15 ? '<p class="none">' + fa(list.length - 15) + T(' older ones not shown') + '</p>' : '')
+    }).join('') + '</ul>' + (list.length > 15 ? '<p class="none">' + digits(list.length - 15) + T(' older ones not shown') + '</p>' : '')
   }
 
   // inside an office the rail shows that office's questions (st.only)
@@ -126,7 +126,7 @@ function controlRoom(h) {
   function rail(S, mode) {
     const w = shown()
     const elsewhere = waiting().length - w.length
-    let html = '<h2 id="rail-h">' + T('Waiting for you') + ' <b>' + fa(w.length) + '</b><button type="button" class="x" data-railclose="1">' + T('Close ✕') + '</button></h2>'
+    let html = '<h2 id="rail-h">' + T('Waiting for you') + ' <b>' + digits(w.length) + '</b><button type="button" class="x" data-railclose="1">' + T('Close ✕') + '</button></h2>'
     html += '<p class="hint">' + (canAnswer() ? T('Answer here, or reply to the supervisor in the chat. Oldest first.')
       : LIVE ? T('Answer in the chat; this page must be open.')
         : T('Answer in the chat; this page must be open.')) + '</p>'
@@ -134,12 +134,12 @@ function controlRoom(h) {
     st.sent = st.sent.filter((x) => S.now - x.at < 20000)
     html += st.sent.map((x) => '<p class="ansmsg ok" role="status">' + (x.dismissed ? esc(clip(x.shown, 40)) + T(' dismissed.') : '«' + esc(clip(x.shown, 40)) + T('” recorded. The supervisor picks it up from answers.jsonl.')) + '</p>').join('')
     html += w.length ? w.map((g) => waitCard(S, g)).join('') : '<p class="none">' + T('Nothing is waiting for you.') + '</p>'
-    if (elsewhere > 0) html += '<p class="none">' + fa(elsewhere) + T(' more in other offices') + '</p>'
+    if (elsewhere > 0) html += '<p class="none">' + digits(elsewhere) + T(' more in other offices') + '</p>'
     // questions that sat for a day are nearly always settled in the chat already
     const stale = w.filter((g) => ageOf(g, S.now) > STALE_MS)
     if (canAnswer() && stale.length > 1) {
       const armed = st.armed === 'dis|*'
-      html += '<button type="button" class="bulk' + (armed ? ' armed' : '') + '" data-dis="*"' + (st.busy ? ' disabled' : '') + '>' + (armed ? T('Click again to dismiss ') : T('Dismiss all older than 24 h ')) + '(' + fa(stale.length) + ')</button>'
+      html += '<button type="button" class="bulk' + (armed ? ' armed' : '') + '" data-dis="*"' + (st.busy ? ' disabled' : '') + '>' + (armed ? T('Click again to dismiss ') : T('Dismiss all older than 24 h ')) + '(' + digits(stale.length) + ')</button>'
     }
     if (mode === 'use') html += '<div class="sect">' + T('Where did the tokens go? ') + '<span class="src">' + T('summary for today') + '</span></div>' + where(S)
     html += '<div class="sect">' + T('Gates per project') + '</div>' + pipes(S)
@@ -149,7 +149,7 @@ function controlRoom(h) {
 
   function mini(S) {
     const w = shown()
-    let html = '<button type="button" class="ttl" data-railopen="1" aria-label="' + T('Open the waiting-for-you rail, ') + fa(w.length) + T(' items') + '">' + T('Waiting for you') + ' ' + fa(w.length) + '</button>'
+    let html = '<button type="button" class="ttl" data-railopen="1" aria-label="' + T('Open the waiting-for-you rail, ') + digits(w.length) + T(' items') + '">' + T('Waiting for you') + ' ' + digits(w.length) + '</button>'
     html += w.slice(0, 9).map((g) => {
       const age = ageOf(g, S.now), late = age > LATE_MS
       return '<button type="button" class="mr' + (late ? ' late' : '') + '" data-railopen="' + esc(g.id) + '" aria-label="' + esc(T('Gate ') + (KIND[g.kind] || g.kind) + T(', ') + (g.project || '') + T(', ') + g.question + T(', ') + hm(age)) + '"><b>' + esc(KIND[g.kind] || g.kind) + '</b><span>' + hm(age) + '</span></button>'
@@ -168,7 +168,7 @@ function controlRoom(h) {
       const open = d.state === 'open'
       out.push({
         id: 'd:' + d.id, t, who, lane: who, open, project: d.projectKey || d.project || '',
-        name: who === 'a' ? (d.agent || (S.byId.get(d.run) || {}).agent || T('agent')) : WHO_FA[who],
+        name: who === 'a' ? (d.agent || (S.byId.get(d.run) || {}).agent || T('agent')) : WHO_LABEL[who],
         text: d.text, reason: d.reason, run: d.run,
         status: open ? '<span class="dst wt">' + T('Open') + '</span>' : '<span class="dst">' + (who === 'a' ? T('self-decided') : who === 'u' ? T('answered') : T('taken')) + '</span>',
       })
@@ -199,7 +199,7 @@ function controlRoom(h) {
     const pass = (x) => !st.dwho || (st.dwho === 'open' ? x.open : st.dwho === 'u' ? x.who === 'u' : x.who === st.dwho)
     const rows = inProj.filter(pass)
     const n = (f) => inProj.filter(f).length
-    const chip = (key, label, count, color) => '<button type="button" class="fchip" data-dwho="' + key + '" aria-pressed="' + (st.dwho === key) + '"' + (color ? ' style="color:' + color + '"' : '') + '>' + label + ' <b>' + fa(count) + '</b></button>'
+    const chip = (key, label, count, color) => '<button type="button" class="fchip" data-dwho="' + key + '" aria-pressed="' + (st.dwho === key) + '"' + (color ? ' style="color:' + color + '"' : '') + '>' + label + ' <b>' + digits(count) + '</b></button>'
     const projects = [...new Set(all.map((x) => x.project).filter(Boolean))].sort()
     let html = '<div class="fbar"><h2>' + T('Decisions today') + '</h2>' +
       chip('', T('All'), inProj.length) + chip('open', T('Open'), n((x) => x.open), 'var(--gate)') +
@@ -239,12 +239,13 @@ function controlRoom(h) {
     const mark = (lane, t, cls, label, id) => {
       const p = pos(t)
       // markers a few minutes apart sit on top of each other and the lower one
-      // cannot be clicked: nudge each one that has close neighbours up or down
+      // cannot be clicked: nudge each one that has close neighbours down (the label sits above the lane's middle line)
       const near = placed[lane].filter((q) => Math.abs(q - p) < 1.4).length
       placed[lane].push(p)
-      const nudge = near ? ';margin-top:' + (-6 + [0, -10, 10, -5, 5][near % 5]) + 'px' : ''
-      let html = '<button type="button" class="mk ' + cls + (st.dsel === id ? ' sel' : '') + '" style="right:' + p.toFixed(2) + '%' + nudge + '" data-dsel="' + esc(id) + '" aria-label="' + esc(hhmm(t) + ' ' + label) + '"></button>'
-      if (label && Math.abs(p - labelled[lane]) > 8) { labelled[lane] = p; html += '<span class="mlab" style="right:' + p.toFixed(2) + '%">' + esc(clip(label, 22)) + '</span>' }
+      const nudge = near ? ';margin-top:' + (-6 + [0, 9, 4, 12, 7][near % 5]) + 'px' : ''
+      let html = '<button type="button" class="mk ' + cls + (st.dsel === id ? ' sel' : '') + '" style="right:' + p.toFixed(2) + '%' + nudge + '" data-dsel="' + esc(id) + '" title="' + esc(hhmm(t) + ' ' + label) + '" aria-label="' + esc(hhmm(t) + ' ' + label) + '"></button>'
+      // a label is up to ~160 px wide: 14 % of the track keeps two of them apart
+      if (label && Math.abs(p - labelled[lane]) > 14) { labelled[lane] = p; html += '<span class="mlab" style="right:' + p.toFixed(2) + '%">' + esc(clip(label, 22)) + '</span>' }
       lanes[lane].push(html)
     }
     const sorted = list.slice().sort((a, b) => a.t - b.t)
@@ -266,7 +267,7 @@ function controlRoom(h) {
       const a = pos(isNaN(r.start) ? r.end : r.start), b = pos(r.live ? now : r.end)
       return '<i class="' + (r.live ? 'lv' : isHeavy(r.modelKey) ? 'op' : '') + '" style="right:' + a.toFixed(2) + '%;width:' + Math.max(0.4, b - a).toFixed(2) + '%" title="' + esc(r.agent + ' · ' + cleanTask(r.task)) + '"></i>'
     }).join('')
-    const lane = (key, top) => '<div class="lane" style="top:' + top + 'px"><div class="lh"><span class="dw ' + key + '"><i></i>' + esc(WHO_FA[key]) + '</span></div><div class="track">' +
+    const lane = (key, top) => '<div class="lane" style="top:' + top + 'px"><div class="lh"><span class="dw ' + key + '"><i></i>' + esc(WHO_LABEL[key]) + '</span></div><div class="track">' +
       (key === 'u' ? bars : '') + lanes[key].join('') + '</div></div>'
     return '<div class="swim" role="img" aria-label="' + T('Timeline of decisions today in three lanes: you, supervisor, agents') + '">' +
       lane('u', 0) + lane('s', 44) + lane('a', 88) +
@@ -294,7 +295,7 @@ function controlRoom(h) {
     const time = runs.reduce((a, r) => a + (r.durMs || (r.live ? S.now - r.start : 0) || 0), 0)
     const opTime = op.reduce((a, r) => a + (r.durMs || (r.live ? S.now - r.start : 0) || 0), 0)
     let html = ''
-    if (opT) html += '<p class="say">' + fa(op.length) + T(' heavy-model runs took ') + '<b>' + fa(Math.round(opT / tot * 100)) + T('%</b> of tokens and <b>') + fa(time ? Math.round(opTime / time * 100) : 0) + T('%</b> of the time.') + '</p>'
+    if (opT) html += '<p class="say">' + digits(op.length) + T(' heavy-model runs took ') + '<b>' + digits(Math.round(opT / tot * 100)) + T('%</b> of tokens and <b>') + digits(time ? Math.round(opTime / time * 100) : 0) + T('%</b> of the time.') + '</p>'
     const big = runs.slice().sort((a, b) => (b.tokTotal || 0) - (a.tokTotal || 0))[0]
     if (big) html += '<p class="say">' + T('Largest single run: ') + '<span dir="ltr" class="mono">' + esc(big.agent) + '</span> · ' + esc(clip(cleanTask(big.task), 50)) + ' (<b>' + k(big.tokTotal) + '</b>).</p>'
     let rr = null
@@ -303,7 +304,7 @@ function controlRoom(h) {
       if (!t) continue
       for (const f of t.files) if (f.read >= 5 && (!rr || f.read > rr.n)) rr = { r, n: f.read, f: f.path }
     }
-    if (rr) html += '<p class="say">' + '<span dir="ltr" class="mono">' + esc(rr.r.agent) + ' ' + esc(id4(rr.r.id)) + '</span> read <span dir="ltr" class="mono">' + esc(rr.f.split(/[\\/]/).pop()) + '</span> <b>' + fa(rr.n) + '</b> times — a sign of repeated reading (rule 9.2).' + '</p>'
+    if (rr) html += '<p class="say">' + '<span dir="ltr" class="mono">' + esc(rr.r.agent) + ' ' + esc(id4(rr.r.id)) + '</span> read <span dir="ltr" class="mono">' + esc(rr.f.split(/[\\/]/).pop()) + '</span> <b>' + digits(rr.n) + '</b> times — a sign of repeated reading (rule 9.2).' + '</p>'
     return html
   }
 
@@ -319,14 +320,14 @@ function controlRoom(h) {
     const cost = costKnown.reduce((a, r) => a + r.costUsd, 0)
     const pricesSet = !!(DATA.prices && DATA.prices.set)
     const costDd = !pricesSet ? '<dd class="unset" title="' + T('Enter each model price in ') + esc((DATA.prices && DATA.prices.file) || 'model-prices.json') + '">' + T('set prices') + '</dd>'
-      : '<dd>' + (costKnown.length ? usd(cost) : '—') + (costKnown.length < runs.length ? '<small>' + fa(runs.length - costKnown.length) + T(' no data') + '</small>' : '') + '</dd>'
+      : '<dd>' + (costKnown.length ? usd(cost) : '—') + (costKnown.length < runs.length ? '<small>' + digits(runs.length - costKnown.length) + T(' no data') + '</small>' : '') + '</dd>'
     let html = '<dl class="kpis">' +
       '<div class="kpi m"><dt>' + T('Tokens today') + '</dt><dd>' + k(tot) + '<small>' + T('excludes cache reads') + '</small></dd></div>' +
-      '<div class="kpi"><dt>' + T('Heavy-model share') + '</dt><dd>' + (tot ? fa(Math.round(opT / tot * 100)) + T('%') : '—') + '<small>' + fa(opRuns.length) + T(' of ') + fa(runs.length) + T(' runs') + '</small></dd></div>' +
-      '<div class="kpi m"><dt>' + T('Tool calls') + '</dt><dd>' + fa(tools) + '</dd></div>' +
+      '<div class="kpi"><dt>' + T('Heavy-model share') + '</dt><dd>' + (tot ? digits(Math.round(opT / tot * 100)) + T('%') : '—') + '<small>' + digits(opRuns.length) + T(' of ') + digits(runs.length) + T(' runs') + '</small></dd></div>' +
+      '<div class="kpi m"><dt>' + T('Tool calls') + '</dt><dd>' + digits(tools) + '</dd></div>' +
       '<div class="kpi"><dt>' + T('Agent work time') + '</dt><dd>' + hm(time) + '<small>' + T('hours') + '</small></dd></div>' +
       '<div class="kpi"><dt>' + T('Cost (USD)') + '</dt>' + costDd + '</div>' +
-      '<div class="kpi"><dt>' + T('No data') + '</dt><dd style="color:var(--ink-dim)">' + fa(nodata) + '<small>' + T('runs without a transcript') + '</small></dd></div></dl>'
+      '<div class="kpi"><dt>' + T('No data') + '</dt><dd style="color:var(--ink-dim)">' + digits(nodata) + '<small>' + T('runs without a transcript') + '</small></dd></div></dl>'
     html += '<div class="grid2">' + byAgent(runs) + matrix(runs) + '</div>'
     html += runsTable(S, runs)
     return html
@@ -347,7 +348,7 @@ function controlRoom(h) {
     const max = Math.max(1, ...list.map((a) => a.op + a.sn))
     const rows = list.map((a) => {
       const t = a.op + a.sn
-      return '<tr><th scope="row" title="' + esc(a.name) + '">' + esc(clip(a.name, 17)) + ' ×' + fa(a.n) + '</th><td><div class="hbar">' +
+      return '<tr><th scope="row" title="' + esc(a.name) + '">' + esc(clip(a.name, 17)) + ' ×' + digits(a.n) + '</th><td><div class="hbar">' +
         (a.op ? '<i class="op" style="width:' + (a.op / max * 100).toFixed(1) + '%"></i>' : '') +
         (a.sn ? '<i class="sn" style="width:' + (a.sn / max * 100).toFixed(1) + '%"></i>' : '') +
         (!t ? '<i class="nr" style="width:12%"></i>' : '') + '</div></td>' +
@@ -355,7 +356,7 @@ function controlRoom(h) {
     }).join('')
     return '<section class="box" aria-labelledby="h-tok"><h3 id="h-tok">' + T('Tokens by agent') + ' <span>' + T('from the transcript; input + cache writes + output') + '</span></h3>' +
       (rows ? '<table class="hb">' + rows + '</table>' : '<p class="empty">' + T('No runs today.') + '</p>') +
-      '<div class="lg"><span><i style="background:var(--opus)"></i>' + T('Heavy models') + '</span><span><i style="background:var(--sonnet)"></i>' + T('Other models') + '</span><span><i style="background:repeating-linear-gradient(135deg,#3A4757 0 3px,transparent 3px 6px);border:1px solid #C3CCD5"></i>' + T('not recorded') + '</span><span class="dim">' + T('… = still running') + '</span></div></section>'
+      '<div class="lg"><span><i style="background:var(--heavy)"></i>' + T('Heavy models') + '</span><span><i style="background:var(--other)"></i>' + T('Other models') + '</span><span><i style="background:repeating-linear-gradient(135deg,#3A4757 0 3px,transparent 3px 6px);border:1px solid #C3CCD5"></i>' + T('not recorded') + '</span><span class="dim">' + T('… = still running') + '</span></div></section>'
   }
 
   function matrix(runs) {
@@ -375,13 +376,13 @@ function controlRoom(h) {
       const cells = TOOLS.map((tool) => {
         const c = a.counts[tool] || 0
         const ok = al === null || al === 'all' || al.has(tool)
-        if (c) return '<td><span class="mc u' + (c >= 40 ? ' hi' : '') + (ok ? '' : ' bad') + '" title="' + esc(tool) + (ok ? '' : T(' — not allowed in the definition')) + '">' + fa(c) + '</span></td>'
+        if (c) return '<td><span class="mc u' + (c >= 40 ? ' hi' : '') + (ok ? '' : ' bad') + '" title="' + esc(tool) + (ok ? '' : T(' — not allowed in the definition')) + '">' + digits(c) + '</span></td>'
         if (!ok) return '<td><span class="mc n" title="' + esc(tool) + T(' not allowed in the definition') + '">·</span></td>'
-        return '<td><span class="mc z">' + fa(0) + '</span></td>'
+        return '<td><span class="mc z">' + digits(0) + '</span></td>'
       })
       const other = Object.entries(a.counts).filter(([n]) => !TOOLS.includes(n))
       const oc = other.reduce((s, [, c]) => s + c, 0)
-      cells.push('<td>' + (oc ? '<span class="mc u" title="' + esc(other.map(([n, c]) => n + ' ' + c).join(T(', '))) + '">' + fa(oc) + '</span>' : '<span class="mc z">' + fa(0) + '</span>') + '</td>')
+      cells.push('<td>' + (oc ? '<span class="mc u" title="' + esc(other.map(([n, c]) => n + ' ' + c).join(T(', '))) + '">' + digits(oc) + '</span>' : '<span class="mc z">' + digits(0) + '</span>') + '</td>')
       return '<tr><th scope="row" title="' + esc(a.name) + (al === null ? T(' — built-in agent, its allowed tools are not known here') : '') + '">' + esc(clip(a.name, 17)) + '</th>' + cells.join('') + '</tr>'
     }).join('')
     return '<section class="box" aria-labelledby="h-mx"><h3 id="h-mx">' + T('Tools: allowed vs used') + ' <span>' + T('number = calls today') + '</span></h3>' +
@@ -407,9 +408,9 @@ function controlRoom(h) {
         '<td class="n">' + (dur ? span(dur) : '—') + '</td>' +
         (r.tokSrc ? '<td class="n m">' + k(r.tokTotal) + (r.tokSrc === 'reported' ? '≈' : '') + '</td>' : nr) +
         (typeof r.costUsd === 'number' ? '<td class="n">' + usd(r.costUsd) + '</td>' : '<td class="n nrec">' + (t && !(DATA.prices && DATA.prices.set) ? T('no price') : '—') + '</td>') +
-        (r.toolTotal ? '<td class="n m">' + fa(r.toolTotal) + '</td>' : nr) +
-        '<td class="n">' + (changed === null ? '—' : fa(changed)) + '</td>' +
-        '<td class="n">' + fa(ds.length) + (open ? ' <span style="color:var(--gate)">+' + fa(open) + T(' open') + '</span>' : '') + '</td></tr>'
+        (r.toolTotal ? '<td class="n m">' + digits(r.toolTotal) + '</td>' : nr) +
+        '<td class="n">' + (changed === null ? '—' : digits(changed)) + '</td>' +
+        '<td class="n">' + digits(ds.length) + (open ? ' <span style="color:var(--gate)">+' + digits(open) + T(' open') + '</span>' : '') + '</td></tr>'
     }).join('')
     return '<section class="box runs-box" style="flex:1;min-height:0;padding-bottom:0" aria-labelledby="h-runs"><h3 id="h-runs">' + T('Runs today') + ' <span>' + T('newest first · files changed = Edit/Write in the transcript · ≈ = reported number, not counted') + '</span></h3>' +
       (body ? '<table class="rt"><thead><tr><th scope="col">' + T('End') + '</th><th scope="col">' + T('Agent') + '</th><th scope="col">' + T('Task') + '</th><th scope="col">' + T('Model') + '</th><th scope="col">' + T('Duration') + '</th><th scope="col">' + T('Tokens') + '</th><th scope="col">' + T('Cost') + '</th><th scope="col">' + T('Tools') + '</th><th scope="col">' + T('Files changed') + '</th><th scope="col">' + T('Decision') + '</th></tr></thead><tbody>' + body + '</tbody></table>'
@@ -421,7 +422,7 @@ function controlRoom(h) {
     const t = tr(r)
     const al = allowed(r.agent)
     let html = '<dl class="kv"><div><dt>' + T('Tokens') + (r.live ? T(' so far') : '') + '</dt><dd style="color:var(--measured)">' + (r.tokSrc ? k(r.tokTotal) + (r.tokSrc === 'reported' ? '≈' : '') : '<span class="nrec">' + T('not recorded') + '</span>') + '</dd></div>' +
-      '<div><dt>' + T('Tools') + '</dt><dd style="color:var(--measured)">' + (r.toolTotal ? fa(r.toolTotal) : '<span class="nrec">' + T('not recorded') + '</span>') + '</dd></div>' +
+      '<div><dt>' + T('Tools') + '</dt><dd style="color:var(--measured)">' + (r.toolTotal ? digits(r.toolTotal) : '<span class="nrec">' + T('not recorded') + '</span>') + '</dd></div>' +
       '<div><dt>' + T('Cost') + '</dt><dd>' + (typeof r.costUsd === 'number' ? usd(r.costUsd) : '<span class="nrec">' + (t && !(DATA.prices && DATA.prices.set) ? T('no price') : '—') + '</span>') + '</dd></div></dl>'
     if (!t) {
       const why = r.transcript && r.transcript.reason === 'missing' ? T('The transcript file is no longer there.') : r.live ? T('This run transcript has not been found yet.') : T('This run transcript was not recorded.')
@@ -429,17 +430,17 @@ function controlRoom(h) {
     }
     const used = Object.entries(t.toolCounts || {}).sort((a, b) => b[1] - a[1])
     const zero = al && al !== 'all' ? [...al].filter((n) => !t.toolCounts[n]) : []
-    html += '<div class="toolline">' + used.map(([n, c]) => '<span' + (al && al !== 'all' && !al.has(n) ? ' class="bad" title="' + T('not allowed in the definition') + '"' : '') + '>' + esc(n) + ' <b>' + fa(c) + '</b></span>').join(' · ') +
-      (zero.length ? ' · ' + zero.map((n) => '<s>' + esc(n) + ' ' + fa(0) + '</s>').join(' · ') : '') + '</div>'
+    html += '<div class="toolline">' + used.map(([n, c]) => '<span' + (al && al !== 'all' && !al.has(n) ? ' class="bad" title="' + T('not allowed in the definition') + '"' : '') + '>' + esc(n) + ' <b>' + digits(c) + '</b></span>').join(' · ') +
+      (zero.length ? ' · ' + zero.map((n) => '<s>' + esc(n) + ' ' + digits(0) + '</s>').join(' · ') : '') + '</div>'
     if (t.tokens && t.tokens.cacheRead) html += '<p class="muted" style="margin:2px 0 0">' + T('Cache reads: ') + '<span dir="ltr" class="mono">' + k(t.tokens.cacheRead) + '</span></p>'
     const changed = t.files.filter((f) => f.edit + f.write > 0)
     const read = t.files.filter((f) => !(f.edit + f.write))
-    html += '<h3 class="sect">' + T('Files') + ' <span class="dim">· ' + fa(changed.length) + T(' changed, ') + fa(read.length) + T(' read') + (t.hiddenFiles ? T(', ') + fa(t.hiddenFiles) + T(' hidden') : '') + '</span></h3>'
+    html += '<h3 class="sect">' + T('Files') + ' <span class="dim">· ' + digits(changed.length) + T(' changed, ') + digits(read.length) + T(' read') + (t.hiddenFiles ? T(', ') + digits(t.hiddenFiles) + T(' hidden') : '') + '</span></h3>'
     const name = (f) => { const p = f.path.split(/[\\/]/); return p.slice(-2).join('/') }
     if (changed.length) html += '<div class="files">' + changed.map((f) => '<span class="file w" title="' + esc(f.path + ' — ' + (f.write ? 'Write ' + f.write : '') + (f.edit ? ' Edit ' + f.edit : '')) + '">' + esc(name(f)) + '</span>').join('') + '</div>'
     else html += '<p class="muted" style="margin:2px 0">' + T('No file changed.') + '</p>'
-    if (read.length) html += '<details><summary>' + fa(read.length) + T(' files read') + '</summary><div class="files">' + read.map((f) => '<span class="file" title="' + esc(f.path + ' — Read ' + f.read) + '">' + esc(name(f)) + (f.read > 1 ? ' ×' + fa(f.read) : '') + '</span>').join('') + '</div></details>'
-    if (t.hiddenFiles) html += '<p class="muted" style="margin:4px 0 0">' + fa(t.hiddenFiles) + T(' confidential files (keys, licences, documents) were only counted, their names are not shown.') + '</p>'
+    if (read.length) html += '<details><summary>' + digits(read.length) + T(' files read') + '</summary><div class="files">' + read.map((f) => '<span class="file" title="' + esc(f.path + ' — Read ' + f.read) + '">' + esc(name(f)) + (f.read > 1 ? ' ×' + digits(f.read) : '') + '</span>').join('') + '</div></details>'
+    if (t.hiddenFiles) html += '<p class="muted" style="margin:4px 0 0">' + digits(t.hiddenFiles) + T(' confidential files (keys, licences, documents) were only counted, their names are not shown.') + '</p>'
     return html
   }
 
@@ -472,7 +473,9 @@ function controlRoom(h) {
     st.msg[id] = { ok: true, text: T('Sending…') }
     redraw()
     try {
-      const body = await post('api/answer', { gate: id, answer: value })
+      // with the hash of the question shown: one changed since is refused, not answered blind
+      const g = (DATA.gates || []).find((x) => x.id === id)
+      const body = await post('api/answer', Object.assign({ gate: id, answer: value }, g && g.qhash ? { hash: g.qhash } : {}))
       keepGate(body, id)
       delete st.msg[id]
       st.sent.push({ id, shown: said(body.gate, value), at: Date.now() })

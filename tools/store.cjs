@@ -65,10 +65,13 @@ function renameRetry(from, to) {
   }
 }
 
-function writeAtomic(file, text) {
+/** opts.mode: the mode of the new file (POSIX); the temp file is made with
+ *  it, so a secret is never readable by others even for the moment before
+ *  the rename. */
+function writeAtomic(file, text, opts) {
   const tmp = file + '.' + process.pid + '-' + crypto.randomBytes(3).toString('hex') + '.tmp'
   try {
-    const fd = fs.openSync(tmp, 'w')
+    const fd = fs.openSync(tmp, 'w', opts && opts.mode)
     try {
       fs.writeFileSync(fd, text)
       // without it a power cut soon after the rename can leave an empty file

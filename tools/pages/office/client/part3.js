@@ -8,7 +8,7 @@
         (l ? '<h3 class="sect">' + T('Last report') + '</h3><div class="slip g-' + st + '"><span class="st"><span class="g g-' + st + '">' + STATUS[st].g + '</span> ' + STATUS[st].label + '</span>' +
           '<b dir="ltr">' + esc(l.agent) + '</b> · ' + esc(l.projectKey || '—') + ' · ' + esc(new Date(l.end).toLocaleDateString(SHORT_LOCALE)) + ' <span dir="ltr">' + hhmm(l.end) + '</span>' +
           '<p>' + esc(l.summary || cleanTask(l.task)) + '</p></div>' : '') +
-        '<h3 class="sect">' + fa(DATA.agents.length) + T(' agents, 0 working') + '</h3>' +
+        '<h3 class="sect">' + digits(DATA.agents.length) + T(' agents, 0 working') + '</h3>' +
         '<p class="muted">' + T('The desks and break room are empty; no one who has not worked today has come to the office.') + '</p>'
     }
     const st = r.live ? 'running' : stOf(r.status)
@@ -20,16 +20,17 @@
     const startTxt = isNaN(r.start) ? '—' : hhmm(r.start)
     const took = isNaN(r.start) ? (r.durMs ? span(r.durMs) : '—') : span((r.live ? Date.now() : r.end) - r.start)
     let news
-    if (r.live) news = '<dd class="fa' + (r.stale ? ' warn' : '') + '">' + (r.stale ? '◷ ' : '') + '<span data-quiet="' + r.lastAt + '">' + minsFa(Date.now() - r.lastAt) + '</span>' + T(' min ago') + '</dd>'
+    if (r.live) news = '<dd' + (r.stale ? ' class="warn"' : '') + '>' + (r.stale ? '◷ ' : '') + '<span data-quiet="' + r.lastAt + '">' + quietMins(Date.now() - r.lastAt) + '</span>' + T(' min ago') + '</dd>'
     else news = '<dd dir="ltr">' + hhmm(r.end) + '</dd>'
     const who = (x) => '<button type="button" data-key="' + esc(x.key) + '"><b dir="ltr">' + esc(x.agent) + '</b></button>'
     let html = '<div class="who">' + portrait(r.agent, 5, false) +
       '<div><h2 class="ih" dir="ltr">' + esc(r.agent) + '</h2><div class="muted" style="margin:0">' + esc((def && def.title) || (def ? '' : T('agent with no definition in the agent folders'))) + '</div></div></div>' +
       '<div class="chips"><span class="chip st-' + st + '"><span class="g">' + STATUS[st].g + '</span> ' + STATUS[st].label + '</span>' +
-      '<span class="chip mdl ' + (isHeavy(r.modelKey) ? 'opus' : 'son') + '">' + esc((r.modelKey || '—') + (r.effort ? ' · ' + r.effort : '')) + '</span>' +
+      '<span class="chip mdl ' + (isHeavy(r.modelKey) ? 'heavy' : 'std') + '">' + esc((r.modelKey || '—') + (r.effort ? ' · ' + r.effort : '')) + '</span>' +
       (r.projectKey ? '<span class="chip">' + esc(r.projectKey) + '</span>' : '') +
       (r.budgetLevel === 'stop' ? '<span class="chip despite" title="' + T('The supervisor started this run although the budget check said stop') + '">' + T('started despite stop') + '</span>' : '') + '</div>' +
-      (twins.length > 1 ? '<div class="twins" role="group" aria-label="' + T('Concurrent runs of this agent') + '">' + twins.map((x, i) => '<button type="button" data-key="' + esc(x.key) + '" class="' + (x.key === r.key ? 'on' : '') + '">' + T('Run ') + fa(i + 1) + '</button>').join('') + '</div>' : '') +
+      (twins.length > 1 ? '<div class="twins" role="group" aria-label="' + T('Concurrent runs of this agent') + '">' + twins.map((x, i) => '<button type="button" data-key="' + esc(x.key) + '" class="' + (x.key === r.key ? 'on' : '') + '">' + T('Run ') + digits(i + 1) + '</button>').join('') + '</div>' : '') +
+      inspectorAct(S, r) +
       plainFirst(r, took) +
       '<dl class="kv"><div><dt>' + T('Start') + '</dt><dd dir="ltr">' + startTxt + '</dd></div>' +
       '<div><dt>' + (r.live ? T('Elapsed') : T('Duration')) + '</dt><dd dir="ltr"' + (r.live && !isNaN(r.start) ? ' data-since="' + r.start + '"' : '') + '>' + took + '</dd></div>' +
@@ -38,9 +39,9 @@
       '<h3 class="sect">' + T('Task') + '</h3><p class="task">' + esc(cleanTask(r.task)) + '</p>'
     if (parent) html += '<p class="rel">' + T('Under ') + (parent.missing ? '<span dir="ltr" class="dim">' + esc(parent.id) + '</span>' : who(parent) + ' <span dir="ltr" class="dim">…' + esc(String(parent.id || '').slice(-4)) + '</span>') + '</p>'
     if (kids.length) {
-      html += '<p class="rel">' + T('Delegated to ') + kids.map((k) => who(k) + ' <span class="dim">(' + (k.live ? STATUS.running.label + T(', ') + minsFa(Date.now() - k.start) + T(' min') : STATUS[stOf(k.status)].g + ' ' + STATUS[stOf(k.status)].label) + ')</span>').join(T(', ')) + '</p>'
+      html += '<p class="rel">' + T('Delegated to ') + kids.map((k) => who(k) + ' <span class="dim">(' + (k.live ? STATUS.running.label + T(', ') + quietMins(Date.now() - k.start) + T(' min') : STATUS[stOf(k.status)].g + ' ' + STATUS[stOf(k.status)].label) + ')</span>').join(T(', ')) + '</p>'
     }
-    html += '<h3 class="sect">' + (r.live ? T('Live log') : T('Log')) + (steps && steps.length ? ' <span class="dim">· ' + fa(steps.length) + T(' steps') + '</span>' : '') + '</h3>'
+    html += '<h3 class="sect">' + (r.live ? T('Live log') : T('Log')) + (steps && steps.length ? ' <span class="dim">· ' + digits(steps.length) + T(' steps') + '</span>' : '') + '</h3>'
     if (steps && steps.length) {
       html += '<ol class="term" id="term">' + steps.map((s, i) => '<li class="' + (r.live && i === steps.length - 1 ? 'now' : '') + '"><time dir="ltr">' + hhmm(ms(s.at)) + '</time><span>' + esc(s.text) + '</span></li>').join('') + '</ol>'
     } else if (r.live) {
@@ -71,9 +72,63 @@
     if (Array.isArray(r.whatWasDone) && r.whatWasDone.length) html += '<h3 class="sect">' + T('What was done') + '</h3><ul class="done">' + r.whatWasDone.map((x) => '<li dir="auto">' + esc(x) + '</li>').join('') + '</ul>'
     const tms = r.durMs || (r.end - r.start) || 0
     const mins = Math.round(tms / 60000), hh = Math.floor(mins / 60), mm = mins % 60
-    const plainTook = !tms ? '—' : mins < 1 ? T('under a minute') : (hh ? fa(hh) + T(' h') + ' ' : '') + (mm || !hh ? fa(mm) + T(' min') : '')
+    const plainTook = !tms ? '—' : mins < 1 ? T('under a minute') : (hh ? digits(hh) + T(' h') + ' ' : '') + (mm || !hh ? digits(mm) + T(' min') : '')
     void took
     return html + '<p class="tm">' + plainTook + ' · ' + money + '</p></div>'
+  }
+
+  // ---------- "Needs a look": the runs of this floor that are stalled or dead.
+  // Nudge asks the supervisor, through its inbox, to check a stalled run; Clean
+  // hides a dead run Arsenale closed (both api/run-action, board only on the
+  // server; its log stays in Activity). The closed dead runs come from
+  // api/run-actions. A run the monitor calls dead but has not closed yet gets no
+  // button: the monitor closes it on its next pass, within 30 s.
+  const NL = { dead: [], at: 0, busy: '', msg: null }
+  function loadClosedDead(force) {
+    if (!LIVE || (!force && Date.now() - NL.at < 15000)) return
+    NL.at = Date.now()
+    fetch('api/run-actions', { cache: 'no-store' }).then((res) => (res.ok ? res.json() : null)).then((d) => { if (d && Array.isArray(d.dead)) { NL.dead = d.dead; redrawLater() } }, () => { /* an older server: no list, no Clean */ })
+  }
+  const closedDead = (S) => {
+    const ids = new Set(NL.dead.map((d) => d.id))
+    return ((S.full || S).all || []).filter((r) => r.id && ids.has(r.id) && (!CO || r.officeId === officeId))
+  }
+  const runActBtn = (op, id) => !LIVE ? '' : '<button type="button" class="nb" data-runact="' + op + '|' + esc(id) + '"' + (NL.busy ? ' disabled' : '') + '>' + (NL.busy === op + '|' + id ? T('Sending…') : op === 'clean' ? T('Clean') : T('Nudge')) + '</button>'
+  async function runAct(op, id) {
+    if (NL.busy) return
+    NL.busy = op + '|' + id; NL.msg = null; renderAll()
+    try {
+      await CR.post('api/run-action', { op, run: id })
+      NL.msg = { ok: true, text: op === 'clean' ? T('Hidden here and on Live. The log stays in Activity.') : T('Your assistant is asked to check on this run.') }
+      if (op === 'clean') NL.dead = NL.dead.filter((d) => d.id !== id)
+    } catch (e) { NL.msg = { ok: false, text: errTxt(e.message) } }
+    NL.busy = ''
+    loadClosedDead(true)
+    renderAll()
+  }
+  function needsLook(S) {
+    loadClosedDead(false)
+    const list = S.active.filter((r) => r.health === 'stalled' || r.health === 'dead').sort((a, b) => b.quiet - a.quiet)
+    const closed = closedDead(S)
+    if (!list.length && !closed.length && !NL.msg) return ''
+    return '<div class="nh"><b>' + T('Needs a look') + '</b><span class="nn">' + digits(list.length + closed.length) + '</span></div>' +
+      (NL.msg ? '<p class="nm' + (NL.msg.ok ? '' : ' bad') + '" role="status">' + esc(NL.msg.text) + '</p>' : '') +
+      list.map((r) => {
+        const dead = r.health === 'dead'
+        return '<div class="nr"><span class="nt ' + r.health + '">' + (dead ? T('dead') : '◷ ' + quietSpan(r.quiet)) + '</span>' +
+          '<span class="nx" dir="auto"><button type="button" data-key="' + esc(r.key) + '"><b>' + esc(r.agent) + '</b></button> ' + (dead ? T('closing now') : T('has not reported')) + '</span>' +
+          (dead ? '' : runActBtn('nudge', r.id)) + '</div>'
+      }).join('') +
+      closed.map((r) => '<div class="nr"><span class="nt dead">' + T('dead') + '</span>' +
+        '<span class="nx" dir="auto"><button type="button" data-key="' + esc(r.key) + '"><b>' + esc(r.agent) + '</b></button> ' + T('closed by Arsenale') + '</span>' +
+        runActBtn('clean', r.id) + '</div>').join('')
+  }
+  /** The same two actions in the inspector, for the run it shows. */
+  function inspectorAct(S, r) {
+    if (r.live && r.health === 'stalled') return '<div class="iact"><span class="warn">' + T('Stalled: no report for ') + quietSpan(r.quiet) + '</span>' + runActBtn('nudge', r.id) + '</div>'
+    if (r.live && r.health === 'dead') return '<div class="iact"><span class="dim">' + T('The process is gone. Arsenale closes this run on its next check.') + '</span></div>'
+    if (!r.live && closedDead(S).some((x) => x.id === r.id)) return '<div class="iact"><span class="dim">' + T('Closed by Arsenale: the process had ended.') + '</span>' + runActBtn('clean', r.id) + '</div>'
+    return ''
   }
 
   // ---------- the drawer: today's slips, and when open, the shift board
@@ -82,13 +137,13 @@
     S.today.forEach((d) => { if (counts[d.status] !== undefined) counts[d.status]++ })
     const list = S.today.slice().reverse().filter((d) => !filter || d.status === filter)
     const fbtn = (key, label) => '<button type="button" class="f' + (filter === key ? ' on' : '') + '" data-filter="' + key + '" aria-pressed="' + (filter === key) + '">' + label + '</button>'
-    let html = '<div class="dr-top"><h2 id="dr-h">' + (drawerOpen ? T('Shift board') : T('Handed in today')) + ' <span class="dim">' + fa(S.today.length) + '</span></h2>'
+    let html = '<div class="dr-top"><h2 id="dr-h">' + (drawerOpen ? T('Shift board') : T('Handed in today')) + ' <span class="dim">' + digits(S.today.length) + '</span></h2>'
     if (!drawerOpen) {
       html += '<span class="filters" role="group" aria-label="' + T('Filter') + '">' + fbtn('', T('All')) +
-        fbtn('findings', '<span class="g g-findings">!</span> ' + T('Has findings ') + fa(counts.findings)) +
-        fbtn('failed', '<span class="g g-failed">✕</span> ' + T('Failed ') + fa(counts.failed)) + '</span>'
+        fbtn('findings', '<span class="g g-findings">!</span> ' + T('Has findings ') + digits(counts.findings)) +
+        fbtn('failed', '<span class="g g-failed">✕</span> ' + T('Failed ') + digits(counts.failed)) + '</span>'
     } else {
-      html += '<span class="dim" style="font-size:12px">' + T('Time flows right to left; each small line is one step, and hatching means more than ') + fa(QUIET_MIN) + T(' minutes of quiet.') + '</span>'
+      html += '<span class="dim" style="font-size:12px">' + T('Time flows right to left; each small line is one step, and hatching means more than ') + digits(QUIET_MIN) + T(' minutes of quiet.') + '</span>'
     }
     html += '<button type="button" class="more-btn" data-toggle="1" aria-expanded="' + drawerOpen + '">' + (drawerOpen ? T('Back to the office ↓') : T('Shift board ↑')) + '</button>' +
       '<a class="arch" href="' + ARCHIVE_HREF + '">' + T('Archive of every day') + '</a></div>'
@@ -201,7 +256,7 @@
       if (run) {
         const txt = run.steps.length ? run.steps[run.steps.length - 1].text : T('Waiting for the first report…')
         html.push('<button type="button" class="sb-say' + (run.stale ? ' stale' : '') + '" data-key="' + esc(run.key) + '" style="left:16px;top:' + (y + 3) + 'px;width:' + (nowX - 32) + 'px">' +
-          '<span>' + esc(txt) + '</span>' + (run.stale ? '<b>' + T('◷ quiet for ') + minsFa(S.now - run.lastAt) + T(' min') + '</b>' : '') + '</button>')
+          '<span>' + esc(txt) + '</span>' + (run.stale ? '<b>' + T('◷ quiet for ') + quietMins(S.now - run.lastAt) + T(' min') + '</b>' : '') + '</button>')
       }
     })
     // delegation: from the parent's lane down (or up) to the child's bar, at the moment it was handed over
@@ -234,9 +289,9 @@
     }).join('')
     const absent = DATA.agents.map((a) => a.name).filter((a) => !order.includes(a))
     const headList = '<ol class="sb-heads">' +
-      '<li style="top:44px" class="boss">' + portrait('supervisor', 3, false) + '<span class="sb-nm"><b>' + T('Supervisor') + '</b><span>' + T('Reports land on this line · ') + fa(S.today.length) + '</span></span></li>' +
+      '<li style="top:44px" class="boss">' + portrait('supervisor', 3, false) + '<span class="sb-nm"><b>' + T('Supervisor') + '</b><span>' + T('Reports land on this line · ') + digits(S.today.length) + '</span></span></li>' +
       heads +
-      '<li style="top:' + (TOP + order.length * ROW + 4) + 'px" class="absent" title="' + esc(absent.join(' · ')) + '"><span>' + fa(absent.length) + T(' agents had no work today:') + '</span> <span dir="ltr" class="sb-al">' + esc(absent.slice(0, 4).join(' · ')) + (absent.length > 4 ? ' …' : '') + '</span></li></ol>'
+      '<li style="top:' + (TOP + order.length * ROW + 4) + 'px" class="absent" title="' + esc(absent.join(' · ')) + '"><span>' + digits(absent.length) + T(' agents had no work today:') + '</span> <span dir="ltr" class="sb-al">' + esc(absent.slice(0, 4).join(' · ')) + (absent.length > 4 ? ' …' : '') + '</span></li></ol>'
     return '<div class="sb-in" style="height:' + Hgt + 'px">' + headList +
       '<div class="sb-tl" style="width:' + TW + 'px;height:' + Hgt + 'px"><svg width="' + TW + '" height="' + Hgt + '" aria-hidden="true"><defs>' +
       '<pattern id="sbfuture" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#0B1117"/><line x1="0" y1="0" x2="0" y2="8" stroke="#0E151C" stroke-width="3"/></pattern></defs>' +
@@ -256,10 +311,10 @@
     // failures stay one click away in the drawer's filters
     void findings; void failed; void ready
     $('counts').innerHTML =
-      '<li><b class="acc">' + fa(S.active.length) + '</b> <span class="g g-running">▶</span> ' + T('Working') + '</li>' +
-      (quiet ? '<li><b class="warn">' + fa(quiet) + '</b> <span class="g warn">◷</span> ' + T('Quiet') + '</li>' : '') +
-      '<li><b>' + fa(S.today.length) + '</b> ' + T('handed in') + '</li>' +
-      '<li><b class="gate-c">' + fa(CR.shown().length) + '</b> ' + T('waiting for you') + '</li>'
+      '<li><b class="acc">' + digits(S.active.length) + '</b> <span class="g g-running">▶</span> ' + T('Working') + '</li>' +
+      (quiet ? '<li><b class="warn">' + digits(quiet) + '</b> <span class="g warn">◷</span> ' + T('Quiet') + '</li>' : '') +
+      '<li><b>' + digits(S.today.length) + '</b> ' + T('handed in') + '</li>' +
+      '<li><b class="gate-c">' + digits(CR.shown().length) + '</b> ' + T('waiting for you') + '</li>'
     document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === mode)))
     if (CO) {
       const o = CO.officeById(officeId)
@@ -267,7 +322,7 @@
       if (tab) tab.textContent = T('Office') + (o && mode === 'office' ? ' · ' + CO.oname(o) : '')
       const legacy = $('omenu-legacy')
       if (legacy) {
-        legacy.textContent = (mode === 'dec' ? T('Decisions & gates') : mode === 'use' ? T('Tools & usage') : mode === 'org' ? T('Org chart') : mode === 'set' ? T('Settings') : T('More')) + ' ▾'
+        legacy.textContent = (mode === 'dec' ? T('Gate history') : mode === 'use' ? T('Tools & usage') : mode === 'org' ? T('Org chart') : mode === 'set' ? T('Settings') : T('More')) + ' ▾'
         legacy.setAttribute('aria-pressed', String(mode === 'dec' || mode === 'use' || mode === 'org' || mode === 'set'))
       }
       const menu = $('omenu')
@@ -278,7 +333,7 @@
           menu.style.top = (r.bottom + 4) + 'px'
           menu.style.left = Math.max(8, (r.right - 220)) + 'px'
           menu.innerHTML = omenuOpen === 'legacy'
-            ? '<button type="button" data-view="org" aria-current="' + (mode === 'org') + '">' + T('Org chart') + '</button><button type="button" data-view="dec" aria-current="' + (mode === 'dec') + '">' + T('Decisions & gates') + '</button><button type="button" data-view="use" aria-current="' + (mode === 'use') + '">' + T('Details: tools & usage') + '</button><button type="button" data-view="set" aria-current="' + (mode === 'set') + '">' + T('Settings') + '</button>'
+            ? '<button type="button" data-view="org" aria-current="' + (mode === 'org') + '">' + T('Org chart') + '</button><button type="button" data-view="dec" aria-current="' + (mode === 'dec') + '">' + T('Gate history') + '</button><button type="button" data-view="use" aria-current="' + (mode === 'use') + '">' + T('Details: tools & usage') + '</button><button type="button" data-view="set" aria-current="' + (mode === 'set') + '">' + T('Settings') + '</button>'
             : CO.officeList().filter((x) => !x.builtIn || CO.counts(S_FULL, x.id).today || CO.counts(S_FULL, x.id).working).map((x) => '<button type="button" data-goto="office:' + esc(x.id) + '" aria-current="' + (x.id === officeId) + '"><span class="sq" style="background:' + esc(x.color) + '"></span>' + esc(CO.oname(x)) + '</button>').join('')
         }
       }
@@ -297,7 +352,7 @@
   }
   function aria(el, v, [lo, hi]) {
     el.setAttribute('aria-valuenow', Math.round(v)); el.setAttribute('aria-valuemin', Math.round(lo)); el.setAttribute('aria-valuemax', Math.round(hi))
-    el.setAttribute('aria-valuetext', fa(Math.round(v)) + T(' pixels'))
+    el.setAttribute('aria-valuetext', digits(Math.round(v)) + T(' pixels'))
   }
   function applyLayout() {
     const z = sizes()
@@ -367,11 +422,11 @@
   let W3 = null
   try {
     W3 = typeof office3d === 'function' && typeof OFFICE_CHARACTERS === 'object' ? office3d({
-      esc, fa, calm, characters: OFFICE_CHARACTERS,
+      esc, digits, calm, characters: OFFICE_CHARACTERS,
       // the office strip (company) over the top of the floor, the legend along its foot
       pad: { top: CO ? 104 : 8, bottom: 36 },
       onPick: (id, p) => { if (p && p.selKey) { sel = { key: p.selKey }; remember(); renderAll() } },
-      onView: (v) => { view3[(CO ? officeId : '') || 'office'] = v; if (hashIsCurrent()) remember(); /* a late camera report must not pull the address back after the person left */ const z = $('zoomv'); if (z && W3) z.textContent = fa(W3.zoomPct()) + T('%') },
+      onView: (v) => { view3[(CO ? officeId : '') || 'office'] = v; if (hashIsCurrent()) remember(); /* a late camera report must not pull the address back after the person left */ const z = $('zoomv'); if (z && W3) z.textContent = digits(W3.zoomPct()) + T('%') },
       onLost: () => { W3 = null; stage.classList.remove('w3on'); renderAll() },
     }) : null
   } catch (e) { W3 = null }
@@ -396,7 +451,7 @@
   }
   let viewQueued = false, relayoutT = 0, easeT = 0, rememberT = 0
   function applyView(ease) {
-    if (w3on()) { $('zoomv').textContent = fa(W3.zoomPct()) + T('%'); return }
+    if (w3on()) { $('zoomv').textContent = digits(W3.zoomPct()) + T('%'); return }
     clampView()
     if (ease && !calm()) { inner.classList.add('ease'); clearTimeout(easeT); easeT = setTimeout(() => inner.classList.remove('ease'), 240) }
     clearTimeout(rememberT); rememberT = setTimeout(() => { if (hashIsCurrent()) remember() }, 400)
@@ -407,7 +462,7 @@
       const s = fitK * view.z
       inner.style.transform = 'translate(' + ((SW - 1060 * s) / 2 + view.x).toFixed(1) + 'px,' + ((SH - 716 * s) / 2 + view.y).toFixed(1) + 'px) scale(' + s.toFixed(4) + ')'
       inner.style.setProperty('--bs', labelScale().toFixed(3))
-      $('zoomv').textContent = fa(Math.round(view.z * 100)) + T('%')
+      $('zoomv').textContent = digits(Math.round(view.z * 100)) + T('%')
       // how crowded the labels are depends on their size: lay them out again once the zoom settles
       if (Math.abs(labelScale() - bubK) / bubK > 0.04) { clearTimeout(relayoutT); relayoutT = setTimeout(renderAll, 220) }
     })

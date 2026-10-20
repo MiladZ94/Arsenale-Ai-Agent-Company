@@ -26,8 +26,8 @@
   cvs.setAttribute('aria-hidden', 'true')
   const host = document.createElement('div'); host.className = 'w3host'
   const ov = document.createElement('div'); ov.className = 'w3ov'
-  const cardsEl = document.createElement('div'), pageEl = document.createElement('div'), whoEl = document.createElement('div')
-  ov.append(whoEl, cardsEl, pageEl)
+  const cardsEl = document.createElement('div'), pageEl = document.createElement('div')
+  ov.append(cardsEl, pageEl)
   const projEl = document.createElement('div'); projEl.className = 'w3proj'
   const dropEl = document.createElement('div'); dropEl.className = 'w3drop'; dropEl.innerHTML = '<span>' + T('Drop the .glb on a desk') + '</span>'
   const toastEl = document.createElement('div'); toastEl.className = 'w3toast'; toastEl.setAttribute('role', 'status')

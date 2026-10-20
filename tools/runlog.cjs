@@ -100,6 +100,54 @@ const pidFields = (input) => {
   const n = Number(input.pid)
   return Number.isSafeInteger(n) && n > 0 ? { pid: n } : {}
 }
+// When the agent's process started, so a pid reused by another program is not
+// taken for the agent (spec 1.1, rule 17). Only Linux tells this without
+// starting a process (/proc); elsewhere NaN, "cannot tell". A recorded
+// pidStartedAt is therefore always one the system gave: watch.cjs trusts it
+// to close a run whose pid is gone without waiting for the stall limit.
+function pidStartMs(pid) {
+  if (process.platform !== 'linux') return NaN
+  try {
+    const stat = fs.readFileSync('/proc/' + Number(pid) + '/stat', 'utf8')
+    const ticks = Number(stat.slice(stat.lastIndexOf(')') + 2).split(' ')[19])
+    const boot = Number((/^btime (\d+)$/m.exec(fs.readFileSync('/proc/stat', 'utf8')) || [])[1])
+    // USER_HZ is 100 on every Linux build Node supports
+    return Number.isFinite(ticks) && boot ? boot * 1000 + ticks * 10 : NaN
+  } catch { return NaN }
+}
+// a pidStartedAt in the input is never read: a made-up one would make a live
+// pid look reused, and its run closed (security review of P2, finding 4)
+const pidStartFields = (pid) => {
+  const real = pid ? pidStartMs(pid) : NaN
+  return Number.isFinite(real) ? { pidStartedAt: new Date(real).toISOString() } : {}
+}
+
+// Fields of spec 1.1 (all optional, an older reader ignores them): where the
+// work happens, the brief it was given (for a resume), and the planned
+// counts the estimate is measured against.
+const BRIEF_MAX = 8000
+const wholeOf = (v, name) => {
+  if (v === undefined || v === null || v === '') return undefined
+  const n = typeof v === 'number' ? v : /^\d+$/.test(String(v)) ? Number(v) : NaN
+  if (!Number.isSafeInteger(n) || n < 0) throw fail(400, '"' + name + '" must be a whole number, 0 or more')
+  return n
+}
+function workFields(input, warnings) {
+  const out = {}
+  if (input.worktree) out.worktree = clipCp(String(input.worktree).replace(/[\u0000-\u001f]/g, ''), 500)
+  if (input.branch) { const b = String(input.branch).replace(/[^\w./-]/g, '').slice(0, 200); if (b) out.branch = b }
+  if (input.brief !== undefined && input.brief !== null && input.brief !== '') {
+    const all = Array.from(String(input.brief))
+    if (all.length > BRIEF_MAX && warnings) warnings.push('note: the brief is longer than ' + BRIEF_MAX + ' characters; only the first ' + BRIEF_MAX + ' are stored')
+    out.brief = all.slice(0, BRIEF_MAX).join('')
+  }
+  // a bad planned count is dropped with a note, not refused: a refused start
+  // would hide work that happens anyway
+  for (const k of ['plannedFiles', 'plannedTests']) {
+    try { const n = wholeOf(input[k], k); if (n !== undefined) out[k] = n } catch (e) { if (warnings) warnings.push('note: ' + e.message + '; not stored') }
+  }
+  return out
+}
 const TASK_TIERS = ['light', 'standard', 'heavy']
 const MAX_HEAVY = 3 // AGENT-RULES section 9 rule 7, spec rule 62: across every version run
 const pidAlive = (pid) => { try { process.kill(pid, 0); return true } catch (e) { return e.code === 'EPERM' } }
@@ -155,6 +203,7 @@ function startRunLocked(input, actor) {
   const now = new Date()
   const id = now.toISOString().replace(/[:.]/g, '-') + '-' + Math.random().toString(36).slice(2, 6)
   const warnings = []
+  const work = workFields(input, warnings)
   let budget = null
   try {
     const C = company()
@@ -176,7 +225,7 @@ function startRunLocked(input, actor) {
     doing: input.doing || '',            // the latest line
     steps: input.doing ? [{ at: input.startedAt || now.toISOString(), text: String(input.doing) }] : [],
     startedAt: input.startedAt || now.toISOString(),
-  }, pidFields(input), TASK_TIERS.includes(input.tier) ? { tier: input.tier } : {}, companyFields(input), versionFields(input), sourceFields(actor), budget && budget.level !== 'ok' ? { budgetWarned: true, budgetLevel: budget.level } : {})
+  }, pidFields(input), pidFields(input).pid ? pidStartFields(pidFields(input).pid) : {}, work, TASK_TIERS.includes(input.tier) ? { tier: input.tier } : {}, companyFields(input), versionFields(input), sourceFields(actor), budget && budget.level !== 'ok' ? { budgetWarned: true, budgetLevel: budget.level } : {})
   writeAtomic(path.join(ACTIVE, id + '.json'), JSON.stringify(record, null, 2))
   // a job started for a task links to it and moves it from "to do" to "in
   // progress" (never backwards); a missing or unreadable task never stops the log
@@ -185,10 +234,15 @@ function startRunLocked(input, actor) {
 }
 
 /** One line of what the agent is doing now, kept as a log (at most 200),
- *  and an optional percentage done ("pct"). */
+ *  and an optional percentage done ("pct"). Spec 1.1 adds, all optional: a
+ *  "plan" of weighted steps (taken from the first call that has one) and the
+ *  "step" being done, after which "pct" is that step's own progress; and the
+ *  counts "files", "plannedFiles", "tests" {run, of}, "testsRun", "plannedTests". */
 function progress(input, actor) {
   const file = activeFileFor(input && input.id)
   if (!input || !input.id || !fs.existsSync(file)) throw fail(404, 'no run is active with that id')
+  // refused before anything is written
+  progressCounts(input)
   // under the lock finishRun takes too: a step written after the finish would
   // bring the run back as active
   return withLock(file, () => progressLocked(file, input, actor))
@@ -202,8 +256,24 @@ function progressLocked(file, input, actor) {
   run.doing = text
   // Optional rough progress, 0-100, sent only at a few fixed milestones; a
   // missing or non-numeric value leaves the last one as it was.
-  const pct = Number(input.pct)
-  if (Number.isFinite(pct)) run.pct = Math.max(0, Math.min(100, Math.round(pct)))
+  const Pg = require('./progress.cjs')
+  if (!Pg.cleanPlan(run.plan)) { const plan = Pg.cleanPlan(input.plan); if (plan) run.plan = plan }
+  const plan = Pg.cleanPlan(run.plan)
+  if (plan && input.step !== undefined) {
+    const i = Pg.stepIndexOf(plan, input.step)
+    // a new step starts at 0 % of itself
+    if (i && i !== run.stepIndex) { run.stepIndex = i; delete run.stepPct }
+  }
+  const raw = input.pct === null || input.pct === '' ? NaN : Number(input.pct)
+  const pct = Number.isFinite(raw) ? Math.max(0, Math.min(100, Math.round(raw))) : NaN
+  if (plan && run.stepIndex) {
+    if (Number.isFinite(pct)) run.stepPct = pct
+    // "pct" stays the whole run's percent: the number an older page shows
+    const rep = Pg.reportedPercent(run)
+    if (rep !== null) run.pct = rep
+  } else if (Number.isFinite(pct)) run.pct = pct
+  Object.assign(run, progressCounts(input))
+  run.lastActivityAt = new Date().toISOString()
   // Kept as a log, not a single line: the dashboard shows it like a terminal,
   // so the reader can see the whole path the agent took, not only where it is.
   run.steps = Array.isArray(run.steps) ? run.steps : []
@@ -211,6 +281,53 @@ function progressLocked(file, input, actor) {
   if (run.steps.length > 200) run.steps = run.steps.slice(-200)
   writeAtomic(file, JSON.stringify(run, null, 2))
   return { ok: true, run }
+}
+
+/** The counts a progress line may carry, checked: a negative or fractional
+ *  count is refused (400). "plannedFiles": 0 means not known. */
+function progressCounts(input) {
+  const out = {}
+  const files = wholeOf(input.files, 'files')
+  if (files !== undefined) out.files = files
+  const t = input.tests && typeof input.tests === 'object' ? input.tests : {}
+  const ran = input.testsRun !== undefined ? wholeOf(input.testsRun, 'testsRun') : wholeOf(t.run, 'tests.run')
+  if (ran !== undefined) out.testsRun = ran
+  const of = input.plannedTests !== undefined ? wholeOf(input.plannedTests, 'plannedTests') : wholeOf(t.of, 'tests.of')
+  if (of !== undefined) out.plannedTests = of
+  const pf = wholeOf(input.plannedFiles, 'plannedFiles')
+  if (pf !== undefined) out.plannedFiles = pf
+  return out
+}
+
+/** Marks a run as active now, without a step (the test queue does, while the
+ *  run waits for the suite or holds it). A run that is not active is left alone. */
+function touch(id) {
+  const file = activeFileFor(id)
+  if (!id || !fs.existsSync(file)) return false
+  return withLock(file, () => {
+    let run
+    try { run = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { return false }
+    run.lastActivityAt = new Date().toISOString()
+    writeAtomic(file, JSON.stringify(run, null, 2))
+    return true
+  })
+}
+
+/** Closes a run whose process is gone (spec 1.1, rule 16): a finished record
+ *  "stopped", its steps kept, through finishRun's own locked path.
+ *  `stillDead(run)` is asked again under the lock, so a step that arrived in
+ *  the meantime keeps the run alive. Kills nothing. The record, or null. */
+function closeDead(id, stillDead) {
+  const file = activeFileFor(id)
+  if (!id || !fs.existsSync(file)) return null
+  const out = withLock(file, () => {
+    let run
+    try { run = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { return null }
+    if (!run || (stillDead && !stillDead(run))) return null
+    return finishLocked({ id: run.id, agent: run.agent, task: run.task, model: run.model, effort: run.effort, project: run.project, status: 'stopped', summary: 'The process ended; closed by Arsenale' }, null, file, { closedBy: 'arsenale' })
+  })
+  if (out && out.record.issue) { try { require('./tasks.cjs').linkRun(out.record.issue, out.record.id, actorFor('cli', 'supervisor'), { finish: true }) } catch { /* not a task here */ } }
+  return out
 }
 
 /** Finishes a job: one record file per finished run, never rewritten. */
@@ -225,7 +342,7 @@ function finishRun(input, actor) {
   if (out.record.issue) { try { require('./tasks.cjs').linkRun(out.record.issue, out.record.id, actor || cliActor({}), { finish: true }) } catch { /* not a task here */ } }
   return out
 }
-function finishLocked(input, actor, activeFile) {
+function finishLocked(input, actor, activeFile, opts) {
   const now = new Date()
   let startedAt = input.startedAt || ''
   let parent = parentOf(input)
@@ -280,6 +397,17 @@ function finishLocked(input, actor, activeFile) {
   if (transcript) record.transcript = transcript
   Object.assign(record, companyFields(input, fromActive), versionFields(input, fromActive))
   if (fromActive && fromActive.budgetWarned) { record.budgetWarned = true; record.budgetLevel = fromActive.budgetLevel || 'warn' }
+  // where the work happened: a later run in the same worktree settles a resume
+  if (fromActive) for (const k of ['worktree', 'branch']) if (fromActive[k]) record[k] = fromActive[k]
+  // only Arsenale's own close says so, never a field of the input; the brief
+  // is kept for the resume of that run, which needs its worktree
+  if (opts && opts.closedBy === 'arsenale') {
+    record.closedBy = 'arsenale'
+    if (fromActive && fromActive.brief && fromActive.worktree) record.brief = fromActive.brief
+    if (fromActive && fromActive.pid) record.pid = fromActive.pid
+    const last = require('./progress.cjs').lastActivity(fromActive || {})
+    if (Number.isFinite(last)) record.lastActivityAt = new Date(last).toISOString()
+  }
   // the plain-language fields a door other than the CLI may add (spec 5.7)
   if (actor && actor.door !== 'cli') {
     Object.assign(record, sourceFields(actor))
@@ -340,7 +468,7 @@ function versionRunLocked(id, input) {
     if (!Array.isArray(input.phases)) throw fail(400, '"phases" must be a list')
     rec.phases = input.phases.slice(0, 50).filter((p) => String((p && p.id) || '').replace(/[^\w.-]/g, '')).map((p) => {
       const pct = Number(p && p.percent)
-      return {
+      return Object.assign({
         id: clipCp(String((p && p.id) || '').replace(/[^\w.-]/g, ''), 20),
         name: clipCp(p && p.name, 120),
         tier: TIERS.includes(p && p.tier) ? p.tier : 'medium',
@@ -348,7 +476,11 @@ function versionRunLocked(id, input) {
         dependsOn: Array.isArray(p && p.dependsOn) ? p.dependsOn.slice(0, 20).map((r) => clipCp(r, 20)) : [],
         status: clipCp((p && p.status) || 'planned', 40),
         percent: Number.isFinite(pct) ? Math.max(0, Math.min(100, Math.round(pct))) : 0,
-      }
+      },
+      // a percent the supervisor gave wins over the live one (progress.overallPercent)
+      p && p.percent !== undefined && p.percent !== null && p.percent !== '' && Number.isFinite(pct) ? { percentSet: true } : {},
+      // the requests already merged, for the live overall percent
+      Array.isArray(p && p.merged) ? { merged: p.merged.slice(0, 50).map((r) => clipCp(r, 20)) } : {})
     })
   }
   if (input.reviews !== undefined) {
@@ -408,6 +540,13 @@ function budgetCheck(input) {
  *  only through the owner's answer). */
 function gate(input, actor, via) {
   actor = actor || cliActor(input)
+  // What an approval lets run (merge, next phase, build, publish) and whether
+  // its gates passed are the supervisor's word: the version-run mirror does
+  // not record that a phase passed its gates, so an agent saying so for its
+  // own merge is refused here, where
+  // the gate is written (security review of spec 1.1 P2, finding 2).
+  const a = input && input.action && typeof input.action === 'object' ? input.action : null
+  if (a && (a.type !== undefined || a.gatesPassed !== undefined) && actor.role === 'agent') throw fail(403, 'only the supervisor asks for a merge, next-phase, build or publish approval')
   if (actor.door !== 'cli') {
     if (input.id || input.status) throw fail(403, OWNER_ONLY)
     const extra = { askedBy: actor.role === 'agent' ? 'agent' : 'supervisor', askedVia: actor.door }
@@ -449,6 +588,6 @@ function campus(input, actor) { return require('./campus.cjs').apply(input, acto
 
 module.exports = {
   campus, OWNER_ONLY, fail, actorFor, cliActor, boardProven, actorLabel, requireBoard, clipCp,
-  startRun, heavyActive, pidAlive, progress, finishRun, activeFileFor, versionRun, versionLedger, noteIncidents, budgetCheck, readActive,
+  startRun, heavyActive, pidAlive, pidStartMs, progress, touch, closeDead, finishRun, activeFileFor, versionRun, versionLedger, noteIncidents, budgetCheck, readActive,
   gate, decision, answer, dismiss, setBudget, setBudgetsEnabled, updateEmployee,
 }

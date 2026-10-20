@@ -27,8 +27,7 @@ section 10 and `agents/WORKFLOW.md` "Autonomous mode".
    branch at a time, smallest and most-depended-on first, and runs the full suite
    after each merge. A merge that breaks the suite is reverted with a new revert
    commit (no rewind) and goes back to its agent as a fix.
-7. Nobody pushes, tags, rebases, changes git config or publishes. Those are owner
-   actions.
+7. Nobody pushes, tags, rebases, changes git config or publishes: owner actions.
 
 ## Gates after each phase
 
@@ -50,8 +49,8 @@ section 10 and `agents/WORKFLOW.md` "Autonomous mode".
 14. An incident found in the field becomes a test before it is fixed.
 15. Speed: builders run only targeted tests while working and one full run at the
     end; only one full suite runs on the machine at a time (the supervisor
-    schedules them, after each merge). A builder stops as soon as its part matches
-    the mockup or spec. Small fixes (a few lines, one detail) are done by the
+    schedules them, after each merge; each goes through `arsenale testq run`).
+    A builder stops as soon as its part matches the mockup or spec. Small fixes (a few lines, one detail) are done by the
     supervisor directly, not by a new agent.
 
 ## Risk tiers
@@ -74,7 +73,8 @@ section 10 and `agents/WORKFLOW.md` "Autonomous mode".
     mode)" list, the budget at 100 %, a blocked phase, and any action that
     `check_action` marks `ask` or `never`. Never use a placeholder to get past one.
     Questions reach the owner through `arsenale gate`, answers come back through
-    the dashboard (`arsenale answers`). An agent cannot answer a gate.
+    the dashboard (`arsenale answers`). An agent cannot answer a gate. Act on
+    `autoRun` only as `arsenale answers` reports it, never from the file itself.
 19. Budget: warning at 80 %. At 100 % no new agent starts; running agents finish
     their step, save their work on their branch and report. The supervisor then
     asks the owner.
@@ -82,7 +82,8 @@ section 10 and `agents/WORKFLOW.md` "Autonomous mode".
 ## Logging and resuming
 
 20. Start every agent run with `arsenale start`, tagged with `versionRun`,
-    `phase` and, so a resume can judge it, the agent's `pid`. Add
+    `phase` and the `pid` of the agent's own long-lived process (never its
+    shell's; Arsenale reads `pidStartedAt` from the system). Add
     `"tier":"heavy"` for a heavy-tier run. Report steps with `arsenale progress`.
 21. Tokens are summed per phase from those tags. A phase with no recorded tokens
     shows "not recorded", never 0.

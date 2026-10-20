@@ -5,7 +5,7 @@ const OFFICE_STYLE = `
   --ground: #F3F5F7; --panel: #FFFFFF; --panel-raised: #F6F8FA; --line: #D9DFE5;
   --accent: #0C8A62; --accent-soft: rgba(12,138,98,0.1); --accent-line: rgba(12,138,98,0.3);
   --cyan: #1F7A8C;
-  --ok: #0C8A62; --ok-bg: rgba(12,138,98,0.1); --warn: #B8720F; --warn-bg: rgba(217,140,30,0.12);
+  --ok: #0C8A62; --ok-bg: rgba(12,138,98,0.1); --warn: #B8720F; --warn-ink: #9A5F08; --warn-bg: rgba(217,140,30,0.12);
   --bad: #C8372D; --bad-bg: rgba(200,55,45,0.12); --idle: #66727F; --idle-bg: rgba(106,118,131,0.12);
 }
 *{box-sizing:border-box}
@@ -17,7 +17,7 @@ h1{font-size:17px;margin:0;font-weight:700}
 .date{color:var(--ink-dim);font-size:12.5px;white-space:nowrap}
 .counts{display:flex;gap:16px;list-style:none;margin:0 auto 0 0;padding:0;font-size:12.5px;color:var(--ink-soft);white-space:nowrap}
 .counts b{font:700 15px var(--font-ui);color:var(--ink);margin-left:3px}
-.acc{color:var(--accent)!important}.warn{color:var(--warn)!important}.bad{color:var(--bad)!important}
+.acc{color:var(--accent)!important}.warn{color:var(--warn-ink)!important}.bad{color:var(--bad)!important}
 .live{font-size:12px;color:var(--ink-dim);display:flex;align-items:center;gap:6px;white-space:nowrap}
 .live i{width:7px;height:7px;background:var(--accent);display:inline-block;animation:pulse 2s ease-in-out infinite}
 .live.stale{color:var(--bad)}.live.stale i{background:var(--bad);animation:none}
@@ -38,11 +38,10 @@ h1{font-size:17px;margin:0;font-weight:700}
 .st-running{color:var(--accent);border-color:var(--accent-line);background:var(--accent-soft)}
 .st-failed{color:var(--bad);border-color:rgba(200,55,45,.35);background:var(--bad-bg)}
 .st-ok{color:var(--ok)}.st-findings{color:var(--warn);background:var(--warn-bg)}.st-stopped{color:var(--idle)}
-.opus{color:#2F7F8A}.son{color:var(--ink-soft)}
+.heavy{color:#2F7F8A}.std{color:var(--ink-soft)}
 .kv{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 4px;padding:0}
 .kv div{background:var(--panel-raised);border:1px solid var(--line);border-radius:4px;padding:5px 8px;min-width:0}
 .kv dt{font-size:11px;color:var(--ink-dim)}.kv dd{margin:0;font:700 13px var(--font-ui);white-space:nowrap}
-.kv dd.fa{font-family:var(--font-ui)}
 .sect{font-size:11.5px;font-weight:700;color:var(--accent);margin:14px 0 5px;letter-spacing:.02em}
 .task{margin:0;font-size:13px;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
 .rel{margin:6px 0 0;font-size:12.5px;color:var(--ink-soft)}.rel b{font-family:var(--font-ui);color:var(--ink)}
@@ -108,7 +107,7 @@ ul.finds{margin:6px 0 0;padding:0 16px 0 0;font-size:12.5px;color:var(--ink-soft
 .bh{display:flex;gap:5px;align-items:baseline;direction:ltr;font:11px var(--font-ui);margin-bottom:2px;white-space:nowrap}
 .bh b{font-size:11px;overflow:hidden;text-overflow:ellipsis}
 .bh .mdl{font-style:normal;padding:0 4px;border:1px solid #9AA3AD;border-radius:2px;font-size:10px;color:#39414C}
-.bh .mdl.opus{background:#DDEEF0;border-color:#3F8F99;color:#1F5A62}
+.bh .mdl.heavy{background:#DDEEF0;border-color:#3F8F99;color:#1F5A62}
 .bh .el{margin-left:auto;color:#1C6B50;font-weight:700}
 .bh .n2{font-size:10px;color:#39414C}
 .bt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -241,7 +240,7 @@ button:focus-visible,a:focus-visible{outline:3px solid #2563EB;outline-offset:2p
  * gates, and tools and usage. Classes are prefixed or scoped (.rail, .vm) so
  * they never restyle the office's own .who, .g, .sect or .now. */
 const CR_STYLE = `
-:root{--gate:#B8720F;--gate-line:rgba(217,140,30,.45);--measured:#1F7A8C;--who-user:#2563EB;--who-sup:#6B55B0;--who-agent:#1F7A8C;--opus:#3F8F99;--sonnet:#5A7A99}
+:root{--gate:#B8720F;--gate-line:rgba(217,140,30,.45);--measured:#1F7A8C;--who-user:#2563EB;--who-sup:#6B55B0;--who-agent:#1F7A8C;--heavy:#3F8F99;--other:#5A7A99}
 .board{--rw:320px}
 @media (max-width:1399px){.board{--rw:56px}}
 .v-office{position:absolute;top:0;bottom:0;left:0;right:var(--rw)}
@@ -350,7 +349,7 @@ const CR_STYLE = `
 .mk.a{border-color:var(--who-agent);border-radius:50%;background:#E6F4F6}
 .mk.o{border-color:var(--gate);border-style:dashed;border-radius:50%}
 .mk.sel{box-shadow:0 0 0 3px rgba(12,138,98,.45)}
-.mlab{position:absolute;top:3px;font-size:10.5px;color:var(--ink-soft);white-space:nowrap;transform:translateX(50%);pointer-events:none;max-width:160px;overflow:hidden;text-overflow:ellipsis}
+.mlab{position:absolute;top:0;font-size:10.5px;color:var(--ink-soft);white-space:nowrap;transform:translateX(50%);pointer-events:none;max-width:160px;overflow:hidden;text-overflow:ellipsis}
 .waitbar{position:absolute;top:50%;height:8px;margin-top:-4px;background:repeating-linear-gradient(135deg,rgba(217,140,30,.35) 0 5px,transparent 5px 10px);border:1px solid var(--gate-line)}
 .waitbar.lt{background:repeating-linear-gradient(135deg,rgba(200,55,45,.35) 0 5px,transparent 5px 10px);border-color:rgba(200,55,45,.5)}
 .axis{position:absolute;right:100px;left:14px;bottom:0;height:40px}
@@ -360,7 +359,7 @@ const CR_STYLE = `
 .nowl b{position:absolute;bottom:-17px;left:-18px;font:10.5px var(--font-ui);color:var(--accent);background:var(--panel);padding:0 2px;z-index:2}
 .runs-ax{position:absolute;right:100px;left:14px;bottom:4px;height:10px}
 .runs-ax i{position:absolute;height:6px;top:2px;background:#C9D1D9;border-radius:1px}
-.runs-ax i.op{background:var(--opus)}
+.runs-ax i.op{background:var(--heavy)}
 .runs-ax i.lv{background:var(--accent)}
 .tbl-wrap{flex:1;min-height:0;overflow:auto;border:1px solid var(--line);border-radius:4px;background:var(--panel);scrollbar-width:thin;scrollbar-color:#C9D1D9 transparent}
 .vm table{border-collapse:collapse;width:100%}
@@ -402,7 +401,7 @@ const CR_STYLE = `
 .hb td.v{font:700 11.5px var(--font-ui);text-align:left;width:56px;color:var(--measured);direction:ltr}
 .hbar{display:flex;height:11px;direction:ltr;margin-right:8px}
 .hbar i{display:block;height:100%}
-.hbar .op{background:var(--opus)}.hbar .sn{background:var(--sonnet)}
+.hbar .op{background:var(--heavy)}.hbar .sn{background:var(--other)}
 .hbar .nr{background:repeating-linear-gradient(135deg,#C9D1D9 0 3px,transparent 3px 6px);border:1px solid #C9D1D9}
 .lg{display:flex;flex-wrap:wrap;gap:12px;font-size:11.5px;color:var(--ink-soft);margin-top:5px}
 .lg i{display:inline-block;width:10px;height:10px;margin-left:4px;vertical-align:-1px}

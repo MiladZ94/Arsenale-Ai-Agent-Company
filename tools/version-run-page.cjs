@@ -42,6 +42,20 @@ function load() {
   return { runs: runs.sort((a, b) => String(a.startedAt).localeCompare(String(b.startedAt))) }
 }
 
+/** Lays the Live page's percent (overall and per phase) over the records, so
+ *  both pages show the same numbers. The mirror file never stores them. */
+function withLive(data, liveRuns) {
+  const by = new Map((liveRuns || []).map((v) => [v.id, v]))
+  for (const r of data.runs) {
+    const v = by.get(r.id)
+    if (!v) continue
+    r.percent = v.percent
+    const ph = new Map((v.phases || []).map((p) => [p.id, p]))
+    r.phases = (r.phases || []).map((p) => (ph.has(p.id) ? Object.assign({}, p, { percent: ph.get(p.id).percent }) : p))
+  }
+  return data
+}
+
 const VR_STYLE = `
 .vr{overflow:auto;scrollbar-width:thin;scrollbar-color:#C9D1D9 transparent;flex:1;min-height:0;display:grid;gap:14px;align-content:start;padding-bottom:20px}
 .vr .v-card{background:var(--panel);border:1px solid var(--line);border-radius:3px;min-width:0}
@@ -144,6 +158,7 @@ function versionRunView(h) {
     return '<div class="v-card"><div class="v-hd"><h1 class="tx" dir="auto">' + esc(label(r)) + '</h1><span class="vchip ' + statusClass(r.status) + '">' + esc(r.status) + '</span>' +
       '<div class="v-kv"><span>' + T('Elapsed') + '</span><span>' + (isNaN(t) ? '—' : ago(t)) + '</span></div>' +
       '<div class="v-kv"><span>' + T('Updated') + '</span><span>' + (isNaN(u) ? '—' : ago(u) + ' ' + T('ago')) + '</span></div>' +
+      (r.percent === null || r.percent === undefined ? '' : '<div class="v-kv"><span>' + T('Overall') + '</span><span><b>' + Math.round(r.percent) + ' %</b></span></div>') +
       '<div class="v-kv"><span>' + T('Branch') + '</span><span class="v-mono tx" dir="auto">' + esc(r.integrationBranch || '—') + '</span></div></div>' +
       '<div class="v-pad">' + gauge(r) + '</div></div>'
   }
@@ -152,7 +167,7 @@ function versionRunView(h) {
     const bl = sep ? ' bl' : ''
     if (!p) return '<td class="dim' + bl + '" colspan="4">—</td>'
     const tok = ((r.ledger && r.ledger.phases) || []).find((x) => x.phase === p.id)
-    const pct = Number(p.percent) || 0
+    const pct = Math.round(Number(p.percent) || 0)
     return '<td class="' + bl.trim() + '"><b class="tx" dir="auto">' + esc(p.name || p.id) + '</b> <span class="dim">' + esc(p.tier || '') + '</span></td>' +
       '<td><div class="v-row" style="justify-content:flex-start"><div class="v-bar"><i class="' + (/block/.test(p.status) || !pct ? 'g' : '') + '" style="width:' + pct + '%"></i></div><b class="n" style="width:36px">' + pct + '%</b></div></td>' +
       '<td><span class="vchip ' + phaseClass(p.status) + '">' + esc(p.status) + '</span></td>' +
@@ -278,4 +293,4 @@ function versionRunView(h) {
   return { render, st, fetchRuns }
 }
 
-module.exports = { VR_STYLE, versionRunView, load }
+module.exports = { VR_STYLE, versionRunView, load, withLive }

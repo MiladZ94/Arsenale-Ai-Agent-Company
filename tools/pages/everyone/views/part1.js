@@ -1,13 +1,13 @@
-  const { esc, fa, T, errTxt } = h
+  const { esc, digits, T, errTxt } = h
   const A = everyoneArt()
   const ic = A.ic
-  const MODES = ['tasks', 'appr', 'team', 'dlv', 'set']
+  const MODES = ['live', 'tasks', 'appr', 'team', 'dlv', 'set']
   const st = {
     data: {}, at: {}, busy: {}, err: {},
     drawer: null, dv: 0, dmsg: null,
     taskView: 'board', taskFilter: '', taskOffice: '', page: null, editTask: false,
-    apprSel: '', note: '', dlvKind: '', dlvQ: '', setTab: 'assistants', openCard: '', openPack: '', channel: 'ntfy',
-    teamOffice: '', armed: '', armT: 0, hire: null, wiz: null, wv: 0,
+    apprSel: '', note: '', dlvKind: '', dlvQ: '', setTab: 'assistants', openCard: '', openPack: '', channel: 'desktop',
+    teamOffice: '', teamQ: '', teamStatus: '', teamModel: '', armed: '', armT: 0, hire: null, wiz: null, wv: 0,
     test: null, notifSeen: null, lastMode: '',
   }
   try { const v = localStorage.getItem('arsenale-task-view'); if (v === 'list' || v === 'board') st.taskView = v } catch { /* a private window */ }
@@ -59,7 +59,7 @@
 
   // ---------- time
   const when = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) }
-  const hm = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : fa(String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')) }
+  const hm = (iso) => { const d = new Date(iso); return isNaN(d) ? '' : digits(String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')) }
   const dayOf = (ymd) => { const d = new Date(ymd + 'T12:00:00'); return isNaN(d) ? ymd : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) }
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') }
   const isToday = (iso) => { const d = new Date(iso); return !isNaN(d) && d.toDateString() === new Date().toDateString() }
@@ -77,7 +77,7 @@
     const m = Math.round((ms || 0) / 60000)
     if (m < 1) return T('under a minute')
     const hh = Math.floor(m / 60), mm = m % 60
-    return (hh ? fa(hh) + T(' h') + (mm ? ' ' : '') : '') + (mm || !hh ? fa(mm) + T(' min') : '')
+    return (hh ? digits(hh) + T(' h') + (mm ? ' ' : '') : '') + (mm || !hh ? digits(mm) + T(' min') : '')
   }
   /** "just now", "26 minutes ago", "yesterday". */
   function ago(iso) {
@@ -85,13 +85,13 @@
     if (isNaN(t)) return ''
     const m = Math.round((Date.now() - t) / 60000)
     if (m < 2) return T('just now')
-    if (m < 60) return fa(m) + T(' minutes ago')
+    if (m < 60) return digits(m) + T(' minutes ago')
     if (m < 120) return T('an hour ago')
-    if (isToday(iso)) return fa(Math.floor(m / 60)) + T(' hours ago')
+    if (isToday(iso)) return digits(Math.floor(m / 60)) + T(' hours ago')
     return day(iso)
   }
   const ltr = (s) => '<bdi dir="ltr">' + esc(s) + '</bdi>'
-  const tokens = (n) => (h.k ? h.k(n || 0) : fa(n || 0))
+  const tokens = (n) => (h.k ? h.k(n || 0) : digits(n || 0))
 
   // ---------- data
   async function getJson(url) {
@@ -140,6 +140,9 @@
   const head = (title, sub, act, crumb) => (crumb ? '<div class="crumb">' + crumb + '</div>' : '') + '<div class="eh"><div><h1>' + title + '</h1>' + (sub ? '<p class="sub">' + sub + '</p>' : '') + '</div><div class="ea">' + (act || '') + '</div></div>'
   const gates = () => (Array.isArray(DATA.gates) ? DATA.gates : [])
   const waiting = () => gates().filter((g) => g.status === 'waiting').sort((a, b) => String(b.askedAt).localeCompare(String(a.askedAt)))
+  /** An answer, with the hash of the question this page showed: the server
+   *  refuses it when the question changed since (answerGate). */
+  const answerBody = (id, answer) => { const g = gates().find((x) => x.id === id); return Object.assign({ gate: id, answer }, g && g.qhash ? { hash: g.qhash } : {}) }
   const runsOf = (pred) => (DATA.runs || []).filter(pred)
   const taskList = () => (st.data.tasks && st.data.tasks.tasks) || []
   const taskById = (id) => taskList().find((t) => t.id === id) || (st.data.task && st.data.task.id === id ? st.data.task : null)
@@ -208,7 +211,7 @@
     const need = list.filter((t) => column(t) === 'wait')
     if (need.length) {
       const names = [...new Set(need.map((t) => { const g = taskGate(t); return nameOf(g ? askerOf(g) : whoId(t)) }))]
-      html += '<div class="banner" role="status"><span style="color:var(--warn)">' + ic('bell', 22) + '</span><div><b class="hi">' + fa(need.length) + ' ' + T(need.length === 1 ? 'task needs you' : 'tasks need you') + '</b> <span class="soft">' + esc(names.length > 1 ? names.slice(0, -1).join(T(', ')) + T(' and ') + names[names.length - 1] : names[0]) + ' ' + T(names.length === 1 ? 'is waiting for a yes or no.' : 'are waiting for a yes or no.') + '</span></div><button type="button" class="b sm" data-ev="goto" data-arg="appr" style="margin-inline-start:auto">' + T('Go to Approvals') + '</button></div>'
+      html += '<div class="banner" role="status"><span style="color:var(--warn)">' + ic('bell', 22) + '</span><div><b class="hi">' + digits(need.length) + ' ' + T(need.length === 1 ? 'task needs you' : 'tasks need you') + '</b> <span class="soft">' + esc(names.length > 1 ? names.slice(0, -1).join(T(', ')) + T(' and ') + names[names.length - 1] : names[0]) + ' ' + T(names.length === 1 ? 'is waiting for a yes or no.' : 'are waiting for a yes or no.') + '</span></div><button type="button" class="b sm" data-ev="goto" data-arg="appr" style="margin-inline-start:auto">' + T('Go to Approvals') + '</button></div>'
     }
     // before the first answer an empty list means "not loaded", not "no tasks"
     if (!list.length && !st.data.tasks && !st.err.tasks) return html + '<p class="empty" role="status">' + T('Loading…') + '</p>'
@@ -242,11 +245,11 @@
     return html + '</button>'
   }
   function taskBoard(list) {
-    const col = (k, title, cls) => { const g = list.filter((t) => column(t) === k); return '<div class="col' + (cls || '') + '"><div class="colh">' + title + ' <span class="n">' + fa(g.length) + '</span></div>' + (g.length ? g.map(taskCard).join('') : '<p class="mut" style="font-size:13px;padding:6px 2px">' + T('Nothing here.') + '</p>') + '</div>' }
+    const col = (k, title, cls) => { const g = list.filter((t) => column(t) === k); return '<div class="col' + (cls || '') + '"><div class="colh">' + title + ' <span class="n">' + digits(g.length) + '</span></div>' + (g.length ? g.map(taskCard).join('') : '<p class="mut" style="font-size:13px;padding:6px 2px">' + T('Nothing here.') + '</p>') + '</div>' }
     return '<div class="board4">' + col('todo', T('To do')) + col('work', T('Working on it')) + '<div class="colw">' + col('wait', T('Waiting for you')) + '</div>' + col('done', T('Done this week')) + '</div>'
   }
   function taskListHtml(list) {
-    const chip = (v, label) => '<button type="button" class="chip" data-ev="tfilter" data-arg="' + v + '" aria-pressed="' + (st.taskFilter === v) + '">' + label + (v ? ' ' + fa(list.filter((t) => t.status === v).length) : '') + '</button>'
+    const chip = (v, label) => '<button type="button" class="chip" data-ev="tfilter" data-arg="' + v + '" aria-pressed="' + (st.taskFilter === v) + '">' + label + (v ? ' ' + digits(list.filter((t) => t.status === v).length) : '') + '</button>'
     let html = '<div class="rw" style="gap:8px;flex-wrap:wrap;margin:-6px 0 6px">' + chip('', T('All')) + ORDER.slice(0, 4).map((s) => chip(s, T(STATE[s]))).join('') + chip('done', T('Done')) +
       '<select data-ev-change="toffice" aria-label="' + T('Office') + '" style="width:auto;display:inline-block;padding:4px 10px"><option value="">' + T('Every office') + '</option>' + offices().map((o) => '<option value="' + esc(o.id) + '"' + (st.taskOffice === o.id ? ' selected' : '') + '>' + esc(officeName(o.id)) + '</option>').join('') + '</select></div>'
     const memberOffice = (id) => { const e = emp(id); return e ? e.homeOfficeId : '' }
@@ -255,10 +258,10 @@
     for (const s of ORDER) {
       const g = shown.filter((t) => t.status === s)
       if (!g.length) continue
-      html += '<h4>' + T(STATE[s]) + ' · ' + fa(g.length) + '</h4>' + g.map((t) => {
+      html += '<h4>' + T(STATE[s]) + ' · ' + digits(g.length) + '</h4>' + g.map((t) => {
         const late = t.dueDate && t.dueDate < today() && !['done', 'cancelled'].includes(t.status)
         return '<button type="button" class="lr" data-ev="task-open" data-arg="' + esc(t.id) + '"><span class="rw" style="gap:10px;min-width:0">' + face(whoId(t), 22, true) + '<span class="hi ell" dir="auto">' + esc(t.title) + '</span></span><span class="chip">' + esc(forWhom(t)) + '</span>' + (t.dueDate ? '<span class="chip' + (late ? ' bad' : '') + '">' + esc(dueLabel(t.dueDate)) + '</span>' : '<span></span>') +
-          '<span class="mut" style="font-size:12.5px">' + (t.seenAt ? T('seen by your assistant ') + hm(t.seenAt) : T('not seen yet')) + (t.comments ? ' · ' + fa(t.comments) + ' ' + T('comments') : '') + '</span></button>'
+          '<span class="mut" style="font-size:12.5px">' + (t.seenAt ? T('seen by your assistant ') + hm(t.seenAt) : T('not seen yet')) + (t.comments ? ' · ' + digits(t.comments) + ' ' + T('comments') : '') + '</span></button>'
       }).join('')
     }
     return html + '</div>'
@@ -350,7 +353,7 @@
     ev.push({ at: t.createdAt, k: 'ok', text: t.createdBy === 'board' ? T('You wrote this task') : T('Your assistant wrote this task') })
     ev.sort((a, b) => String(b.at).localeCompare(String(a.at)))
     html += '<div class="card pad"><div class="sec">' + T('What happened') + ' <small>' + T('newest first') + '</small></div>' + ev.slice(0, 14).map((x) => '<div class="tl"><time>' + esc(isToday(x.at) ? hm(x.at) : day(x.at)) + '</time><span style="color:' + (x.k === 'q' ? 'var(--warn)' : 'var(--accent)') + '">' + ic(x.k === 'q' ? 'bell' : 'check', 16, 2.2) + '</span><span class="' + (x.k === 'q' ? 'hi' : 'soft') + '" dir="auto">' + esc(x.text) + '</span></div>').join('') + '</div>'
-    html += '<div class="card pad"><div class="sec">' + T('Comments') + ' <small>' + fa(t.comments.length) + '</small></div>'
+    html += '<div class="card pad"><div class="sec">' + T('Comments') + ' <small>' + digits(t.comments.length) + '</small></div>'
     if (!t.comments.length) html += '<p class="mut" style="font-size:13px;margin-bottom:12px">' + T('No comments yet.') + '</p>'
     for (const c of t.comments) {
       const by = c.by === 'board' ? 'board' : c.by === 'supervisor' ? 'supervisor' : String(c.by).replace(/^agent:/, '')
@@ -366,14 +369,14 @@
       '<div><span class="mut">' + T('Created') + '</span><span class="hi">' + (t.createdBy === 'board' ? T('by you, ') : T('by your assistant, ')) + esc(day(t.createdAt)) + '</span></div></div>'
     if (canWrite()) html += '<button type="button" class="b" data-ev="task-copy" data-arg="' + esc(t.id) + '">' + ic('copy', 15) + T('Copy a message for your assistant') + '</button>'
     const dls = ((st.data.dlv && st.data.dlv.deliverables) || []).filter((d) => d.taskId === t.id)
-    html += '<div class="card pad"><div class="sec">' + T('Finished work') + ' <small>' + fa(dls.length) + '</small></div>' + (dls.length ? dls.map((d) => '<button type="button" class="rw" data-ev="dlv-open" data-arg="' + esc(d.id) + '" style="padding:8px 0;gap:12px;background:none;border:0;width:100%;cursor:pointer;text-align:start;font:inherit"><span style="width:56px;height:36px;border-radius:5px;overflow:hidden;border:1px solid var(--line);flex:none">' + A.thumb(kindArt(d), colorOfMember(d.agent)) + '</span><span style="flex:1;min-width:0"><span class="hi ell" dir="auto" style="font-size:13.5px;font-weight:700;display:block">' + esc(d.title) + '</span><span class="mut" style="font-size:12px">' + esc(extOf(d)) + (d.bytes ? ', ' + sizeOf(d.bytes) : '') + '</span></span></button>').join('') : '<p class="mut" style="font-size:13px">' + T('Nothing handed in yet.') + '</p>') + '</div>'
+    html += '<div class="card pad"><div class="sec">' + T('Finished work') + ' <small>' + digits(dls.length) + '</small></div>' + (dls.length ? dls.map((d) => '<button type="button" class="rw" data-ev="dlv-open" data-arg="' + esc(d.id) + '" style="padding:8px 0;gap:12px;background:none;border:0;width:100%;cursor:pointer;text-align:start;font:inherit"><span style="width:56px;height:36px;border-radius:5px;overflow:hidden;border:1px solid var(--line);flex:none">' + A.thumb(kindArt(d), colorOfMember(d.agent)) + '</span><span style="flex:1;min-width:0"><span class="hi ell" dir="auto" style="font-size:13.5px;font-weight:700;display:block">' + esc(d.title) + '</span><span class="mut" style="font-size:12px">' + esc(extOf(d)) + (d.bytes ? ', ' + sizeOf(d.bytes) : '') + '</span></span></button>').join('') : '<p class="mut" style="font-size:13px">' + T('Nothing handed in yet.') + '</p>') + '</div>'
     if ((t.links || []).length) {
       html += '<div class="card pad"><div class="sec">' + T('Links') + '</div>'
       for (const l of t.links) html += l.url ? '<p style="margin:4px 0"><a href="' + esc(l.url) + '" target="_blank" rel="noopener noreferrer" dir="ltr" style="color:var(--cyan)">' + esc(l.title || l.url) + '</a></p>' : '<p class="rw" style="gap:8px;margin:4px 0">' + ltr(l.path) + '<button type="button" class="b sm" data-ev="copy" data-arg="' + esc(l.path) + '">' + T('Copy path') + '</button></p>'
       html += '</div>'
     }
     const tok = jobs.reduce((n, r) => n + (r.tokTotal || 0), 0)
-    html += '<div class="card pad"><div class="sec" style="margin-bottom:6px">' + T('Details') + ' <small>' + T('for the curious') + '</small></div><p class="mut" style="font-size:12.5px;line-height:1.7">' + T('Task number: ') + ltr(t.id) + '<br>' + T('Jobs: ') + fa(jobs.length) + (tok ? ' · ' + T('Usage: ') + tokens(tok) + ' ' + T('tokens') : '') + (t.seenAt ? '<br>' + T('Seen by your assistant ') + esc(day(t.seenAt)) : '') + '</p></div>'
+    html += '<div class="card pad"><div class="sec" style="margin-bottom:6px">' + T('Details') + ' <small>' + T('for the curious') + '</small></div><p class="mut" style="font-size:12.5px;line-height:1.7">' + T('Task number: ') + ltr(t.id) + '<br>' + T('Jobs: ') + digits(jobs.length) + (tok ? ' · ' + T('Usage: ') + tokens(tok) + ' ' + T('tokens') : '') + (t.seenAt ? '<br>' + T('Seen by your assistant ') + esc(day(t.seenAt)) : '') + '</p></div>'
     return html + '</div></div>'
   }
   function taskEditForm(t) {
@@ -385,23 +388,7 @@
       '<div class="rw" style="gap:10px;margin-top:14px"><button type="submit" class="b pri">' + T('Save') + '</button><button type="button" class="b ghost" data-ev="task-edit">' + T('Cancel') + '</button></div></form>'
   }
 
-  // ========== approvals
-  function apprMain() {
-    const wait = waiting()
-    if (!wait.find((g) => g.id === st.apprSel)) st.apprSel = wait.length ? wait[0].id : ''
-    const sub = wait.length ? fa(wait.length) + ' ' + T(wait.length === 1 ? 'thing your team would like your OK on.' : 'things your team would like your OK on.') + ' ' + T('Nothing happens until you answer.') : T('Nothing is waiting for you.')
-    let html = head(T('Approvals'), sub)
-    if (wait.length) {
-      html += '<div class="appr"><div class="card" style="overflow:hidden">' + wait.map((g) => {
-        const who = askerOf(g)
-        const e = emp(who)
-        return '<button type="button" class="ai" data-ev="appr-sel" data-arg="' + esc(g.id) + '" aria-current="' + (g.id === st.apprSel) + '">' + face(who, 34) + '<span style="min-width:0;flex:1"><span class="rw" style="justify-content:space-between;gap:8px"><b class="hi ell" style="font-size:13.5px">' + esc(nameOf(who)) + (e && e.name && titleOf(e) ? ' <span class="mut" style="font-weight:400">' + esc(titleOf(e)) + '</span>' : '') + '</b><span class="mut" style="font:12px var(--font-ui);flex:none">' + esc(isToday(g.askedAt) ? hm(g.askedAt) : day(g.askedAt)) + '</span></span><span class="soft" dir="auto" style="display:block;font-size:13.5px;line-height:1.35;margin-top:2px">' + esc(plainQ(g)) + '</span><span style="display:block;margin-top:6px">' + riskHtml(g) + '</span></span></button>'
-      }).join('') + '</div>' + letter(wait.find((g) => g.id === st.apprSel)) + '</div>'
-    }
-    const done = gates().filter((g) => g.status !== 'waiting').sort((a, b) => String(b.answeredAt || b.expiredAt || '').localeCompare(String(a.answeredAt || a.expiredAt || ''))).slice(0, 10)
-    if (done.length) html += '<div class="sec" style="margin-top:28px">' + T('Answered lately') + '</div><div class="card" style="overflow:hidden">' + done.map((g) => '<div class="rw" style="padding:12px 16px;border-top:1px solid var(--line);align-items:flex-start">' + face(askerOf(g), 26) + '<div style="flex:1;min-width:0"><div class="soft" dir="auto" style="font-size:13.5px">' + esc(plainQ(g)) + '</div><div class="mut" style="font-size:12.5px;margin-top:2px">' + (g.status === 'answered' ? T('Answer: ') + '<span dir="auto">' + esc(g.answer) + '</span>' : T('Closed without an answer')) + ' · ' + esc(day(g.answeredAt || g.expiredAt)) + (g.history && g.history.some((x) => /^phone:/.test(x.via || '')) ? ' · ' + T('from your phone') : '') + '</div></div></div>').join('') + '</div>'
-    return html
-  }
+  // ========== approvals: the page is decisions.js; the letter below is read in the side panel
   function letter(g) {
     if (!g) return ''
     const p = g.payload || {}

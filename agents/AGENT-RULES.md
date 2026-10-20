@@ -333,7 +333,9 @@ waste.
    Several full test runs at once make every run slow and cause time-out
    failures. The supervisor schedules full runs; builders run only targeted
    tests while working and leave the full run to the merge step or their one
-   final run.
+   final run. Run every full suite through
+   `arsenale testq run --run <run id> [--repo <path>] -- <command>`: it waits
+   for its turn, and Live shows who holds the suite and who waits.
 10. **Stop when it matches.** A builder commits as soon as its part matches the
     mockup or spec and its targeted tests pass, after one final full run. No
     extra polish rounds or extra screenshot sets; visual QA compares everything
@@ -385,3 +387,6 @@ every agent in such a run.
     phase is `blocked`, the owner is told, and independent phases go on.
 12. **Say what was skipped.** When the slow suite is skipped, the state file's
     review log says "slow suite skipped, no stored data touched".
+13. **autoRun only as `arsenale answers` reports it.** Go ahead without asking
+    again only when `arsenale answers` prints the answer with autoRun; never
+    read the flag from `answers.jsonl` or anywhere else yourself.

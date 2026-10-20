@@ -29,7 +29,7 @@ const BIN = path.join(__dirname, '..', '..', '..', 'bin', 'arsenale.cjs')
 
 function main() {
   let ev
-  try { ev = JSON.parse(fs.readFileSync(0, 'utf8').replace(/^﻿/, '')) } catch { return }
+  try { ev = JSON.parse(fs.readFileSync(0, 'utf8').replace(/^\uFEFF/, '')) } catch { return }
   if (!ev || !/^(Task|Agent)$/.test(String(ev.tool_name || ''))) return
   const P = require(path.join(__dirname, '..', '..', '..', 'tools', 'paths.cjs'))
   const input = ev.tool_input && typeof ev.tool_input === 'object' ? ev.tool_input : {}

@@ -31,3 +31,10 @@ desktop.ini
 *.p12
 id_*
 secrets/
+secrets.json
+notify/
+/launch-key
+/settings/
+/alerts/
+/test-queue/
+/resume/

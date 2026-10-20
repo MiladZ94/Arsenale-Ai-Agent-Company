@@ -984,7 +984,7 @@ step, and review as in the normal cycle.
 All seven recommendations accepted: Q1 A (mirrored JSON in the data folder, the md stays the source), Q2 A (`arsenale awake start|stop`, held only while its PID lives), Q3 A (run authorisation = commits on agent branches + merges into `auto/<version>/integration`; push, tag, build, publish stay owner gates), Q4 A (at 100 %: no new agents, running ones finish their step, then ask), Q5 A (data/security findings always re-checked at the heavy tier), Q6 A (shipped budget defaults, re-estimated after phase 1 and shown as a decision), Q7 A (pilot 1 keeps the installed agents until pilot 2's integration branch is merged and the installer re-run).
 
 ### Owner rule (2026-10-16): English only, minimal text
-Arsenale must contain NO Persian text (remove `agents/labels.fa.json`, any Persian strings in tools, pages, docs and agent files, and any setting that switches the UI to Persian) and its UI and docs must be minimal: short labels, no explanatory paragraphs on screens, docs trimmed to what a new user needs. Planned as a cleanup phase of pilot 2 (after phase 1), with visual-qa on every page.
+Arsenale must contain NO right-to-left-language text (remove `agents/labels.fa.json`, any such strings in tools, pages, docs and agent files, and any setting that switches the UI to right-to-left-language) and its UI and docs must be minimal: short labels, no explanatory paragraphs on screens, docs trimmed to what a new user needs. Planned as a cleanup phase of pilot 2 (after phase 1), with visual-qa on every page.
 
 ### Owner direction (2026-10-16 night): full Arsenale review and redesign scope
 - Full review of Arsenale (look, structure, data), the supervisor reviews its own work too.
@@ -992,7 +992,7 @@ Arsenale must contain NO Persian text (remove `agents/labels.fa.json`, any Persi
 - City-builder style campus: the user (and the supervisor) can ADD buildings/offices like in a building game; more office types than the current four.
 - An agent type with N parallel tasks = N separate figures (distinct schematic per run), never one figure; avatars far less busy (simple, readable at a glance).
 - Agent packs per task type (new packs for different kinds of work), all usable in autonomous runs.
-- Archive / database: correct structure, NO Persian in stored data; LTR/RTL alignment correct and consistent with the design.
+- Archive / database: correct structure, NO right-to-left-language text in stored data; LTR/RTL alignment correct and consistent with the design.
 - Add anything else that helps reach reliable autonomous development and avoids future problems.
 Plan: review pass → spec addendum + one batch of owner questions → autonomous phases (after the current phase 2a/2b).
 
@@ -1002,7 +1002,7 @@ Source: the full review of 2026-10-16 (not stored in the repo). Phases 2a (clean
 
 ### 16.1 Decisions (final, no open questions)
 
-- **A1** Nothing Arsenale ships or writes contains Persian text: no `*Fa` fields written, no Persian labels, files or screenshots. Text typed by the user is stored as typed and shown with `dir="auto"`. Old `*Fa` fields are ignored on load (not migrated, not deleted).
+- **A1** Nothing Arsenale ships or writes contains right-to-left-language text: no `*Fa` fields written, no such labels, files or screenshots. Text typed by the user is stored as typed and shown with `dir="auto"`. Old `*Fa` fields are ignored on load (not migrated, not deleted).
 - **A2** Assets are CC0 only. Candidates: Kenney, KayKit, Quaternius free packs. Names and licences must be re-verified on the source page before any asset file is committed.
 - **A3** The campus is drawn with three.js (orthographic, isometric) with a static image fallback when WebGL is unavailable.
 - **A4** In autonomous runs the supervisor may place buildings and offices and logs each one as a decision. The user can move or remove any of them.
@@ -1018,7 +1018,7 @@ Source: the full review of 2026-10-16 (not stored in the repo). Phases 2a (clean
 3. Tests have two tiers: `fast` (default `npm test`, no browser, under 3 minutes) and `ui` (Chrome tests, concurrency at most 2, one retry on "no DevTools port", separate command). The phase gate runs `fast` per merge and both tiers before the phase is accepted.
 4. Page builders over 800 lines are split into modules per screen or concern. The split changes no behaviour: generated HTML/JS is identical before and after (byte comparison in a test) and visual-qa screenshots match.
 5. Bug fixes, each with a regression test: (a) Team page lists an existing office as "not set up"; (b) Archive shows 0 tokens while the board shows the real total; (c) "Unassigned work" shows "$0", must show "n/a" like other unpriced items; (d) org chart names and headers are cut to a letter at 1366 px, they must show an ellipsis at a fixed width; (e) Tasks page shows "No tasks yet" before data arrives, it must show a loading state; (f) `demo` prints its address and key URL to a redirected stdout and has a `--no-open` mode that does not block.
-6. User-entered text elements carry one shared class (`unicode-bidi: plaintext; text-align: start`) on every page, so Persian and English both start at the left edge.
+6. User-entered text elements carry one shared class (`unicode-bidi: plaintext; text-align: start`) on every page, so right-to-left and English text both start at the left edge.
 
 **Phase 4, Campus and offices**
 
@@ -1045,7 +1045,7 @@ Source: the full review of 2026-10-16 (not stored in the repo). Phases 2a (clean
 - Crash between temp write and rename leaves the old file intact and a stray temp file that is cleaned at next start.
 - Two lots requested at the same cell: the second placement is refused with the reason.
 - Very many buildings (200) and runs (50 of one type): the page stays usable; extra figures collapse to a count.
-- Long names and Persian names are cut at a fixed width with an ellipsis.
+- Long names and right-to-left names are cut at a fixed width with an ellipsis.
 - No WebGL: static fallback, no error.
 - A shipped asset removed from disk: the building shows a plain placeholder, the test fails.
 
@@ -1071,7 +1071,7 @@ H3. Given `npm test`, then no browser starts and it ends in under 3 minutes; giv
 H4. Given the split page builders, then output HTML equals the stored pre-split output, and no builder file exceeds 800 lines.
 H5. Given the demo data, then the Team page shows no existing office as "not set up"; Archive tokens equal the board total; "Unassigned work" shows "n/a"; org chart names show an ellipsis; Tasks shows a loading state first (visual-qa at 1366 and 1920).
 H6. Given `arsenale demo --no-open > out.txt`, then `out.txt` contains the key URL within 5 seconds and the command can be stopped by its PID.
-H7. Given a task, a question and a run typed in Persian (fixture built from escapes), then they are stored as typed, shown with `dir="auto"`, start at the same edge as English in tasks, approvals, activity, decisions (visual-qa); and a repo search finds no Persian text in shipped files except the two name-normalisation helpers, written as escapes.
+H7. Given a task, a question and a run typed in a right-to-left language (fixture built from escapes), then they are stored as typed, shown with `dir="auto"`, start at the same edge as English in tasks, approvals, activity, decisions (visual-qa); and a repo search finds no right-to-left-language text in shipped files except the two name-normalisation helpers, written as escapes.
 C1. Given a company file with `nameFa` keys, then it loads and the next save contains none of them.
 C2. Given `campus.place` onto an occupied cell, an out-of-grid cell, or by an agent through MCP for `remove`, then it is refused and nothing changes.
 C3. Given the supervisor places an office in an autonomous run, then a decision with the reason is on the timeline and the user can move or remove the building.

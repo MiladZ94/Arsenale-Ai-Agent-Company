@@ -42,7 +42,7 @@ const { langFromRequest } = require('./dashboard-strings.cjs')
 
 // Other agents log while the server reads, so a file is never seen half
 // written: a temp file next to it, then a rename (store.cjs).
-const { writeAtomic } = require('./store.cjs')
+const { writeAtomic, withLock } = require('./store.cjs')
 
 function readJsonDir(dir) {
   if (!fs.existsSync(dir)) return []
@@ -345,12 +345,16 @@ function costOf(t, prices) {
   return { usd, why: '' }
 }
 
-/** The derived fields the pages use; the record on disk stays as it is. */
+/** The derived fields the pages use, less the brief; the record on disk
+ *  stays as it is. */
 function describe(r, prices) {
   const took = Date.parse(r.finishedAt) - Date.parse(r.startedAt)
   const u = r.usage && typeof r.usage === 'object' ? r.usage : {}
   const t = r.transcript && typeof r.transcript === 'object' ? r.transcript : null
   const cost = costOf(t, prices || {})
+  // the brief stays on the server, where a resume reads it from the run file
+  // (resume.cjs): never in /api/state, the page's JSON or the saved pages
+  delete r.brief
   return Object.assign(r, {
     projectKey: projectKey(r.project),
     modelKey: modelKey(r.model || u.model),
@@ -373,27 +377,35 @@ const clip = (s, n) => String(s == null ? '' : s).slice(0, n)
 const GATE_KINDS = ['A', 'B', 'C', 'approval']
 const GATE_STATUS = ['waiting', 'answered', 'expired']
 const APPROVAL_TYPES = ['gate', 'hire', 'action', 'budget_override', 'generic']
+const ACTION_TYPES = ['merge', 'next-phase', 'build', 'publish', 'other']
 
 /** Creates a gate, or updates the one with this id. Each change is kept in
  *  history, so a gate shows who asked, who answered and when. */
 function saveGate(input, via) {
-  const now = new Date().toISOString()
   fs.mkdirSync(GATES, { recursive: true })
-  let id = input.id ? String(input.id).replace(/[^\w.-]/g, '') : idFor('g')
+  const id = input.id ? String(input.id).replace(/[^\w.-]/g, '') : idFor('g')
   if (!id) throw new Error('bad gate id')
-  let file = fileFor(GATES, id)
-  let g = null
-  let reused = false
-  try { g = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { /* new gate */ }
   // The supervisor often records "the user answered in chat" as a NEW gate
   // with status answered and no id, which left the original question waiting
   // for ever (nine stale items piled up that way). With no id, an answered or
   // expired gate closes the waiting gate it belongs to instead.
   const closing = input.status === 'answered' || input.status === 'expired'
-  if (!g && !input.id && closing) {
-    const open = waitingMatch(input)
-    if (open) { g = open; id = open.id; file = fileFor(GATES, id); reused = true }
-  }
+  const open = !input.id && closing ? waitingMatch(input) : null
+  // under the gate's own lock: the owner's answer (answerGate) and a
+  // supervisor's edit of the same gate never interleave
+  if (open) return withLock(fileFor(GATES, open.id), () => saveGateLocked(input, via, open.id, true))
+  return withLock(fileFor(GATES, id), () => saveGateLocked(input, via, id, false))
+}
+function saveGateLocked(input, via, gateId, reusing) {
+  const now = new Date().toISOString()
+  let id = gateId
+  let file = fileFor(GATES, id)
+  let g = null
+  let reused = reusing
+  try { g = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { /* new gate */ }
+  // answered in the meantime: the owner's answer stays, this becomes a gate of its own
+  if (reused && (!g || g.status !== 'waiting')) { g = null; reused = false; id = idFor('g'); file = fileFor(GATES, id) }
+  const wasWaiting = !!g && g.status === 'waiting'
   if (!g) {
     if (!input.question) throw new Error('a new gate needs "question"')
     g = { id, project: '', kind: 'C', question: '', label: '', choices: [], round: '', status: 'waiting', answer: '', by: '', run: '', askedBy: 'supervisor', askedAt: now, answeredAt: '', history: [] }
@@ -413,7 +425,21 @@ function saveGate(input, via) {
     if (input.approvalType !== undefined) g.approvalType = APPROVAL_TYPES.includes(String(input.approvalType)) ? String(input.approvalType) : 'generic'
     for (const k of ['officeId', 'taskId', 'askedVia', 'clientId', 'versionRun']) if (input[k] !== undefined && input[k] !== '') g[k] = clip(String(input[k]).replace(/[^\w.:-]/g, ''), 80)
     if (input.subject && typeof input.subject === 'object') g.subject = { type: clip(input.subject.type, 20), id: clip(input.subject.id, 80) }
-    if (input.action && typeof input.action === 'object') g.action = { category: clip(input.action.category, 40), target: clip(input.action.target, 200), summary: clip(input.action.summary, 300), member: clip(String(input.action.member || '').replace(/[^\w.-]/g, ''), 60) }
+    if (input.action && typeof input.action === 'object') {
+      const a = input.action
+      const before = JSON.stringify(g.action === undefined ? null : g.action)
+      g.action = { category: clip(a.category, 40), target: clip(a.target, 200), summary: clip(a.summary, 300), member: clip(String(a.member || '').replace(/[^\w.-]/g, ''), 60) }
+      // spec 1.1, rule 30: what an approval lets happen. Only set when given,
+      // so an older gate keeps its shape; an unknown type reads as "other",
+      // which never runs by itself (automation.cjs)
+      if (a.type !== undefined) g.action.type = ACTION_TYPES.includes(String(a.type)) ? String(a.type) : 'other'
+      if (a.ref !== undefined) g.action.ref = clip(a.ref, 200)
+      if (a.versionRun !== undefined && a.versionRun !== '') g.action.versionRun = clip(String(a.versionRun).replace(/[^\w.-]/g, ''), 60)
+      if (a.gatesPassed !== undefined) g.action.gatesPassed = a.gatesPassed === true
+      // what a waiting approval lets happen is fixed once asked: pointing it
+      // at another merge or phase would reuse an Approve given for the first
+      if (wasWaiting && JSON.stringify(g.action) !== before) { const e = new Error('the action of a waiting gate cannot be changed; ask a new question'); e.code = 409; throw e }
+    }
     if (input.payload !== undefined) {
       const s = JSON.stringify(input.payload === null ? null : input.payload)
       if (s && s.length > 8192) throw new Error('payload is larger than 8 KB')
@@ -461,14 +487,33 @@ function waitingMatch(input) {
  *  so a double click or a stale page cannot overwrite a given answer. */
 function answerGate(id, answer, opts) {
   const file = fileFor(GATES, id)
+  // read, check and write under the gate's lock: an edit that lands between
+  // the hash check and the answer would be approved blind
+  if (!fs.existsSync(file)) { const e = new Error('no such gate'); e.code = 404; throw e }
+  return withLock(file, () => answerGateLocked(file, answer, opts))
+}
+function answerGateLocked(file, answer, opts) {
   let g
   try { g = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { const e = new Error('no such gate'); e.code = 404; throw e }
   if (g.status !== 'waiting') { const e = new Error('gate is ' + g.status); e.code = 409; throw e }
   const text = String(answer || '').trim().slice(0, 500)
   if (!text) { const e = new Error('empty answer'); e.code = 400; throw e }
+  // the page sends the hash of the question it showed: one changed since is
+  // not answered blind (the phone buttons check the same hash)
+  if (opts && opts.hash !== undefined && String(opts.hash) !== require('./notify.cjs').questionHash(g)) { const e = new Error('This question changed since it was shown; read it again'); e.code = 409; throw e }
   // the dashboard, or a phone tap that came back through a signed token
   const via = opts && /^(dashboard|phone:\w+|desktop-notification)$/.test(String(opts.via || '')) ? String(opts.via) : 'dashboard'
+  // an Approve for a merge or a next phase must say which question it saw;
+  // a phone tap checked the hash in its signed token (notify.accept)
+  const type = g.action && typeof g.action === 'object' ? String(g.action.type || '') : ''
+  if ((type === 'merge' || type === 'next-phase') && /^(approve|approved|yes)$/i.test(text) && !(opts && opts.hash !== undefined) && !/^phone:/.test(via)) {
+    const e = new Error('This approval needs the question it was given for; reload the page and approve again'); e.code = 409; throw e
+  }
   const extra = opts && opts.hiredAt ? { hiredAt: opts.hiredAt } : {}
+  // decided from the stored gate and the owner's setting only: an autoRun in
+  // the request is never read (spec 1.1, rule 31)
+  let autoRun = false
+  try { autoRun = require('./automation.cjs').grant(g, text) } catch { /* unreadable setting: off */ }
   const saved = saveGate(Object.assign({ id: g.id, status: 'answered', answer: text, by: 'user' }, extra), via)
   // answers.jsonl is what the supervisor session reads to pick the answer up
   // (`log-agent-run.cjs --answers`). `kind` is the gate's kind, so what the
@@ -476,7 +521,11 @@ function answerGate(id, answer, opts) {
   fs.appendFileSync(ANSWERS, JSON.stringify(Object.assign({
     at: saved.answeredAt, type: 'answer', gate: saved.id, project: saved.project, kind: saved.kind, run: saved.run,
     question: saved.question, answer: text, by: 'user', via,
-  }, saved.clientId ? { clientId: saved.clientId } : {}, saved.versionRun ? { versionRun: saved.versionRun } : {})) + '\n')
+  }, saved.clientId ? { clientId: saved.clientId } : {}, saved.versionRun ? { versionRun: saved.versionRun } : {},
+  saved.action && saved.action.type ? { action: { type: saved.action.type, ref: saved.action.ref || '', versionRun: saved.action.versionRun || '' } } : {},
+  autoRun ? { autoRun: true } : {})) + '\n')
+  // in the reply only (the page says "runs by itself"); the gate file is written already
+  if (autoRun) saved.autoRun = true
   return saved
 }
 
@@ -484,6 +533,10 @@ function answerGate(id, answer, opts) {
  *  longer relevant). The gate becomes "expired" and the supervisor is told. */
 function dismissGate(id) {
   const file = fileFor(GATES, id)
+  if (!fs.existsSync(file)) { const e = new Error('no such gate'); e.code = 404; throw e }
+  return withLock(file, () => dismissGateLocked(file))
+}
+function dismissGateLocked(file) {
   let g
   try { g = JSON.parse(fs.readFileSync(file, 'utf8')) } catch { const e = new Error('no such gate'); e.code = 404; throw e }
   if (g.status !== 'waiting') { const e = new Error('gate is ' + g.status); e.code = 409; throw e }
@@ -561,16 +614,23 @@ function pinnedDesks(raw) {
 
 /** Everything the page shows, read fresh from disk. */
 function collect() {
+  const { questionHash } = require('./notify.cjs')
   const prices = readPrices()
   const seen = answersRead()
   const runs = readJsonDir(RUNS)
   // finishRun writes the final record before it removes the active file: a
   // run in both places is finished
   const done = new Set(runs.map((r) => r && r.id).filter(Boolean))
+  // the page cannot test a process: the run monitor's verdict (watch.health,
+  // the same one api/live shows) travels with each active run
+  let verdict = () => null
+  try { verdict = require('./watch.cjs').health() } catch { /* the page falls back to the quiet hint */ }
   const active = readJsonDir(ACTIVE).filter((a) => !(a && a.id && done.has(a.id))).map((a) => {
     // a running agent's counts are read from its transcript as it grows
     const t = a.transcript && a.transcript.found ? a.transcript : transcriptFor(a.id, a.startedAt, a.transcriptPath, 10000)
-    return describe(Object.assign({}, a, { transcript: t }), prices)
+    let monitor = null
+    try { monitor = verdict(a) } catch { /* a record the monitor cannot read */ }
+    return describe(Object.assign({}, a, { transcript: t, monitor }), prices)
   })
   const state = {
     runs: runs.map((r) => describe(r, prices)).sort((a, b) => String(b.finishedAt).localeCompare(String(a.finishedAt))),
@@ -578,6 +638,8 @@ function collect() {
     agents: readAgents(),
     gates: readJsonDir(GATES).map((g) => Object.assign(g, {
       projectKey: projectKey(g.project),
+      // what a page sends back with an answer (answerGate): the gate it showed
+      qhash: questionHash(g),
       // answered or dismissed on the dashboard, and the supervisor has read it
       // (log-agent-run --answers) since: shown as "read" next to the answer
       seen: (g.history || []).some((x) => x.via === 'dashboard') && !!seen.through && String(g.answeredAt || g.expiredAt || '') <= seen.through,

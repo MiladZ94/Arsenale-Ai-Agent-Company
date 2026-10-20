@@ -88,6 +88,8 @@
       $('stage-in').innerHTML = sc.svg + overlays.map((o) => overlayHtml(o, current)).join('')
     }
     $('insp').innerHTML = inspector(S, current)
+    $('needs').innerHTML = needsLook(S)
+    $('needs').hidden = !$('needs').innerHTML
     const dr = $('drawer')
     dr.classList.toggle('open', drawerOpen)
     dr.innerHTML = drawer(S, current)
@@ -212,11 +214,18 @@
   function tick() {
     const now = Date.now()
     document.querySelectorAll('[data-since]').forEach((e) => { e.textContent = span(now - Number(e.dataset.since)) })
-    document.querySelectorAll('[data-quiet]').forEach((e) => { e.textContent = minsFa(now - Number(e.dataset.quiet)) })
+    document.querySelectorAll('[data-quiet]').forEach((e) => { e.textContent = quietMins(now - Number(e.dataset.quiet)) })
     const c = $('clock')
     if (c) c.textContent = hhmm(now)
   }
 
+  // Nudge and Clean ("Needs a look" and the inspector): one click each, as on Live
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-runact]')
+    if (!t || t.disabled) return
+    const [op, id] = t.dataset.runact.split('|')
+    runAct(op, id)
+  })
   document.addEventListener('click', (e) => {
     const t = e.target.closest('[data-key],[data-toggle],[data-filter],[data-open]')
     if (!t) return
@@ -238,7 +247,7 @@
   window.addEventListener('resize', () => { if (drawerOpen) renderAll(); else applyLayout(); if (CO && mode === 'campus') CO.fit() })
   splitter($('split-v'), 'x')
   splitter($('split-h'), 'y')
-  $('legend').innerHTML = '<span><span class="g g-running">▶</span> ' + T('Working') + '</span><span><span class="g g-ok">✓</span> ' + T('No issues') + '</span><span><span class="g g-findings">!</span> ' + T('Has findings') + '</span><span><span class="g g-failed">✕</span> ' + T('Failed') + '</span><span><span class="g g-stopped">■</span> ' + T('Stopped') + '</span><span><span class="g warn">◷</span> ' + T('Quiet for more than ') + fa(QUIET_MIN) + T(' min') + '</span>'
+  $('legend').innerHTML = '<span><span class="g g-running">▶</span> ' + T('Working') + '</span><span><span class="g g-ok">✓</span> ' + T('No issues') + '</span><span><span class="g g-findings">!</span> ' + T('Has findings') + '</span><span><span class="g g-failed">✕</span> ' + T('Failed') + '</span><span><span class="g g-stopped">■</span> ' + T('Stopped') + '</span><span><span class="g warn">◷</span> ' + T('Quiet for more than ') + digits(QUIET_MIN) + T(' min') + '</span>'
 
   // A redraw replaces every button. One that lands between mouse-down and
   // mouse-up on a button throws that click away, so with agents logging all

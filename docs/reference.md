@@ -167,27 +167,55 @@ tokens.
 
 ## The screens
 
-The 1.0 screens, from the shop demo (`arsenale demo --shop`; everything invented):
+The screens below are from `arsenale demo`: an invented company, so nothing of yours is shown.
 
 ![Org chart: you, your assistant, and one column per office](media/org-chart.png)
 
 | | |
 |---|---|
 | ![Tasks](screenshots/tasks-en.png) **Tasks**: a board of what you asked for (To do, Working on it, Waiting for you, Done this week), or a list. A question your team asks shows on its task. **New task** is a page of its own: what you need, who should do it, when, and whether you want to check it first. Writing a task starts nothing: your assistant picks it up the next time you talk to it. | ![Task](screenshots/task-detail-en.png) **A task**: the question waiting for you with its buttons, what happened (newest first), comments, the finished work, and the time spent; the task number and tokens only under Details. |
-| ![Approvals](screenshots/approvals-en.png) **Approvals**: one letter at a time: who asks, the question in plain words, what would happen, why it matters, what happens if you say no, and whether it leaves your computer. Two clicks to answer; or ask for a change. | ![Finished work](screenshots/deliverables-en.png) **Finished work**: documents, images, spreadsheets and links your team handed in, searchable by name or person, with previews from Arsenale's own copies. |
-| ![Team](screenshots/team-profile-en.png) **Team**: each office as a 3D room of desks with the named people at them, the offices on the left and the members below; the profile opens at the side (right now, this month, good at, asks you first before). | ![New desk](screenshots/team-hire-en.png) **New desk**: hire in plain words (name, job title, what they should do, good at, a look, what they ask first), then check the file before it is written; edits keep a backup. |
-| ![Settings](screenshots/settings-safety-en.png) **Settings**: Assistants (connect in three steps), Phone alerts (with what your phone shows), Safety rules in plain words, Office packs, Privacy. | ![Wizard](screenshots/wizard-offices-en.png) **First start**: four steps (welcome, offices, connect, review) while your campus builds itself on the left; nothing is saved before the last one. |
+| ![Decisions](screenshots/approvals-en.png) **A decision** (**Details** on the Decisions page): one letter at a time, who asks, the question in plain words, what would happen, why it matters, what happens if you say no, and whether it leaves your computer. Two clicks to answer; or ask for a change. | ![Finished work](screenshots/deliverables-en.png) **Finished work**: documents, images, spreadsheets and links your team handed in, searchable by name or person, with previews from Arsenale's own copies. |
+| ![Team](screenshots/team-profile-en.png) **Team**: a table of everyone, grouped by office, with status, current task, runs and tokens; the offices are chips above it, and a row opens the profile at the side (right now, this month, good at, asks you first before). | ![New desk](screenshots/team-hire-en.png) **New desk**: hire in plain words (name, job title, what they should do, good at, a look, what they ask first), then check the file before it is written; edits keep a backup. |
+| ![Settings](screenshots/settings-safety-en.png) **Settings**: Assistants (connect in three steps), Notifications, Decisions, Safety rules in plain words, Office packs, Privacy. | ![Wizard](screenshots/wizard-offices-en.png) **First start**: four steps (welcome, offices, connect, review) while your campus builds itself on the left; nothing is saved before the last one. |
 
 
 The screens from before 1.0:
 
 | | |
 |---|---|
-| ![Office](media/office.png) **Office**: one floor per office; agents at their desks with what they are doing now, reports landing on the lead's table, the shift board below. | ![Activity](screenshots/activity-en.png) **Activity**: who did what and when, grouped by day, filterable; company changes from the log, everything else derived from the runs. |
+| ![Office](media/office.png) **Office**: one floor per office; agents at their desks with what they are doing now, reports landing on the lead's table, the shift board below. A quiet, stalled or dead run wears a small pill, and a **Needs a look** box offers **Nudge** and **Clean**. | ![Activity](screenshots/activity-en.png) **Activity**: who did what and when, grouped by day, filterable; company changes from the log, everything else derived from the runs. |
 | ![Campus](media/campus.png) **Campus**: one building per office, budgets and questions on the right. | ![Tools and usage](screenshots/usage-en.png) **Tools & usage**: tokens by agent, tools allowed against tools used, today's runs. |
 
-Also: **Decisions & gates** (a timeline of who decided what), an **archive** of
-every run. The interface is English only.
+The 1.1 screens:
+
+| | |
+|---|---|
+| ![Live](screenshots/live-en.png) **Live**: every run working now, with its step, percent and time left; a stalled run is flagged on top. | ![Decisions](screenshots/inbox-en.png) **Decisions**: every waiting question and approval in three columns. |
+| ![Notifications](screenshots/settings-notifications-en.png) **Settings, Notifications**: one tab for each way to be told, with its own test. | ![Settings, Decisions](screenshots/settings-decisions-en.png) **Settings, Decisions**: what may go ahead by itself, and when a run counts as quiet, stalled or dead. |
+
+- **Live** (`#/live`): one row per working run, with the agent, the task, the
+  step, the percent (reported, or estimated and marked "est."), files changed,
+  last activity, time so far and the time left; the version run's overall
+  percent on top; the test queue (who holds the suite, who waits); unfinished
+  work with Resume and Dismiss; and the closed dead runs with Clean. A run quiet
+  for 10 minutes is amber, for the stall limit red; a run waiting in the test
+  queue is never quiet. A stalled run shows a bar at the top with **Nudge**
+  (asks your supervisor to check on it) and **Stop** (asks it to end the run;
+  Arsenale stops no process itself). **All phases and requests** opens the
+  Version run page.
+- **Decisions** (`#/inbox`; `#/approvals` still opens it): every waiting question and
+  approval in three columns (needs your answer, approve to continue, always
+  waits for you), the evidence behind **Details**, and "Done without you": what
+  ran by itself in the last hour, with **Undo** for 10 minutes.
+- **Team** (`#/team`): a table of everyone, grouped by office, with status, the
+  current task, runs today and last active; search and filters; a row opens the
+  profile.
+- **Settings**: Notifications (desktop, ntfy, Telegram, Pushover) and Decisions
+  (the auto-run switch, the stall and dead limits) next to Assistants, Safety
+  rules, Office packs and Privacy.
+
+Also: **Gate history** (`#/decisions`, under More: a timeline of who decided
+what), an **archive** of every run. The interface is English only.
 
 ### Desks
 
@@ -204,11 +232,14 @@ each office above its building (its name, who is working and who waits, the mont
 spend and budget, **Enter office**). Only the lots in use are on show; the first
 offices of an older company start as a block three lots wide. The office profile
 selects one of 12 building types (engineering, verification, security, release,
-docs, design, data, planning, legal, business, archive hall, domain lab); they
-share four shapes (a shop with an awning, a tower with an annex, a corner
-building, a wide block) and differ in height and in what stands on the roof (a
-tank, a mast, solar panels). A window on a top floor is one employee, lit in the
-colour of their state. Click a building to enter its office. **Build** opens build
+docs, design, data, planning, legal, business, archive hall, domain lab). The
+shape comes from the size of the office: 8 or more desks is a tower (a slab on a
+podium, or a stepped tower), 4 to 7 a glass block (with a cantilever over the
+lobby, or with a low wing), 3 or fewer a long bar with a glass atrium. Each has
+rows of windows, a door under a flat canopy and the office name on a sign; the
+type picks the variant, keeps its colour band and what stands on the roof (a
+tank, a mast, solar panels). A tower never rises over the name sign of the lot
+behind it. A window is one employee, lit in the colour of their state. Click a building to enter its office. **Build** opens build
 mode, with every lot of the grid outlined: a hotbar of the 12 types (keys 1 to
 9), a tool column (select, move, rotate, archive), a ghost building that follows
 the pointer (blue on a free lot; red with "Lot taken: <office>" on a used one),
@@ -225,8 +256,13 @@ change the campus.
 **The office floor** is a bright 3D room: a work station for each person round the
 supervisor's station, a lounge where idle people rest, a reception, windows and
 the project screens. People walk between them as their state changes (lounge,
-supervisor, desk, supervisor, lounge). A card with the person's portrait, name
-and state stands over each desk. A run is a person: two runs of one agent are two
+supervisor, desk, supervisor, lounge). One small pill above each head shows the
+first name and the state (working, waiting, quiet, stalled, dead, idle, done,
+failed); pills that would touch are moved apart, and the details open in the side
+panel. A **Needs a look** box lists the floor's stalled runs (**Nudge** asks the
+supervisor, through its inbox, to check on the run) and the dead runs Arsenale
+closed (**Clean** hides one from the office and Live; its log stays in Activity).
+The side panel of such a run has the same button. A run is a person: two runs of one agent are two
 people at two desks ("implementer" and "implementer · run 2"), and a run keeps its
 desk for its whole life. Drag to pan, right-drag to orbit, wheel to zoom, click a
 desk to fly to it, **Fit** (or Esc) for the whole office; the camera stays where you
@@ -280,7 +316,7 @@ assistant's own settings. Payments are never approved from a phone.
 ## Notifications
 
 While the dashboard is open in a tab, your browser can notify you of a new
-question, a task waiting for you, or a budget alert (Settings → Phone alerts;
+question, a task waiting for you, or a budget alert (Settings → Notifications;
 on once you allow it in the browser).
 
 **On your phone (experimental):** ntfy and Telegram can carry Approve /
@@ -288,14 +324,99 @@ Decline buttons, Pushover only notifies. They are off until you set them up and
 a test arrived. By default a phone message says only "Arsenale: 1 question
 waiting"; the question text and buttons need "details mode", which names the
 service that will see the text. Each button carries an HMAC-signed, single-use
-token that expires after 30 minutes and dies if the question changes. The
+token that expires after 30 minutes and dies if the question changes. On an ntfy server that is not on this computer and has no access token, a typed topic needs at least 20 characters and buttons go only to the generated topic, since anyone who guesses a topic can read it. An approval to build or publish a release never gets buttons: it is answered on the computer. The
 dashboard picks the tap up over its own outbound connection; no port is
-opened. Secrets come only from environment variables, never from a file:
-`ARSENALE_PHONE_KEY` (32+ characters, signs the buttons),
-`ARSENALE_TELEGRAM_TOKEN`, `ARSENALE_NTFY_TOKEN` (optional),
-`ARSENALE_PUSHOVER_TOKEN` and `ARSENALE_PUSHOVER_USER`. The channels have
-been tested against their protocol in this repository, not yet on real phones.
-Email is not built yet.
+opened. The channels have been tested against their protocol in this
+repository, not yet on real phones. Email is not built yet.
+
+**Stalled runs.** When a run has been quiet for the stall limit (20 minutes by
+default), the dashboard server sends one alert to each phone channel that is
+on: "A run has been quiet for 20 min". The agent name is added only when the
+channel's details mode is on; the task, steps and paths never leave the
+machine. A dashboard tab raises the desktop notification. Alerts need the
+dashboard server running.
+
+**Secrets.** The tokens are typed in Settings and saved in
+`<data>/notify/secrets.json`, written atomically. The page and the API show
+only whether each one is set and where from, never the value; no log or
+activity line holds one. On macOS and Linux the `notify` folder is mode 0700
+and every file in it (secrets, config, pending buttons, used nonces) is 0600,
+checked at every write. On Windows every `arsenale serve` reads the folder's
+access list (`icacls`) and, when it is not limited to your account alone,
+limits it again; the page shows the access list it finds, not a remembered
+mark. Each phone button is signed for one channel and refused on any other.
+An environment variable of the same name wins
+over the file: `ARSENALE_PHONE_KEY` (32+ characters, signs the buttons; made
+for you at the first save when neither exists), `ARSENALE_NTFY_TOKEN`
+(optional), `ARSENALE_TELEGRAM_TOKEN`, `ARSENALE_PUSHOVER_TOKEN` and
+`ARSENALE_PUSHOVER_USER`.
+
+### Notifications API (dashboard)
+
+For the Settings page; every write is the owner's only and refused for any
+other actor in the library.
+
+`GET api/notify` answers:
+
+| Key | What |
+|---|---|
+| `secrets` | `{phoneKey, ntfyToken, telegramToken, pushoverToken, pushoverUser}`, each `{set, from}`; `from` is `"env"`, `"file"` or `""` |
+| `secretsFile.ownerOnly` | `true`, `false`, or `null` when no secret is saved yet |
+| `events` | `{desktop, ntfy, telegram, pushover}`, each `{question, task, budget, stalled, findings, queueWait}` true/false |
+| `eventDefaults` | the defaults (all on except `queueWait`) |
+| `limits` | `{stallMinutes, deadMinutes, repeatMinutes}` in force |
+| `expiryMin` | phone request expiry, minutes |
+| `ntfy`, `telegram`, `pushover` | `enabled`, `details`, `testedAt`, `lastTest` `{at, ok, reason}`, `lastSentAt`, `lastError` `{at, reason}`; ntfy also `server`, `topic`; Telegram also `paired`, `pairedName`, `pairLink`, `pairCommand`, `pairExpiresAt` |
+| `env` | the 1.0 page's view: `{key, ntfyToken, telegram, pushover}` true when set from either place |
+| `readOnly` | `true` when `notify/config.json` was written by a newer Arsenale: every `POST` is refused with 409 and nothing is written |
+
+`POST api/notify` takes `{op, channel, ...}` and answers `{ok, result}` with
+the same state:
+
+| `op` | Body | Notes |
+|---|---|---|
+| `setup` | ntfy: `server`, `topic`, `token`; Telegram: `token`; Pushover: `token`, `user` | a secret as a string is saved, as `null` removed, left out kept; ntfy topic is made when empty. A changed server, topic or token (the one in force: an environment variable wins) clears `testedAt` and `lastTest` and turns the channel off (with a new epoch, as `disable`): a changed target is tested again |
+| `test` | `channel` | sends one test; on success `lastTest.ok` and `testedAt`; on failure `lastTest.ok: false` is kept and the call fails with the reason |
+| `enable`, `disable` | `channel` | `enable` needs a successful test first |
+| `details` | `channel`, `on` | |
+| `pair` | `channel: "telegram"` | needs the bot token |
+| `events` | `channel` (`desktop` or a phone channel), `events: {stalled: false, ...}` | only the events given change |
+| `expiry` | `minutes` | |
+| `signout` | | every button already sent stops working |
+
+A refusal is `{error, field}` where `field` names the form field
+(`server`, `topic`, `minutes`, `events`, `ntfyToken`, `telegramToken`,
+`pushoverToken`, `pushoverUser`); the error text starts with the field's name
+and says the rule: server `https://`, or `http://` on 127.0.0.1 or localhost;
+topic 3 to 64 letters, digits, `-` or `_`; expiry whole minutes 5 to 1440;
+tokens non-empty, no spaces, at most 200 characters. The stall, dead and
+repeat limits are saved with `POST api/limits` `{stallMinutes, deadMinutes,
+repeatMinutes}` (5-240, 30-10080, 0-1440 whole minutes).
+
+### Live, Decisions and run actions API (dashboard)
+
+The pages read these; nothing here starts, stops or ends a process. Every
+`POST` takes the same checks as the other writes (the page's Origin,
+`Sec-Fetch-Site` same-origin when the browser sends it, the page token, JSON
+only) and is the owner's only in the library: an agent or supervisor actor is
+refused.
+
+| Route | What |
+|---|---|
+| `GET api/live` | the Live page: `runs` (each with `state` working, quiet, stalled or dead, `quietMin`, `inQueue`, the percents, files, step and ETA), `versionRuns` with their overall percent, `queue`, `resume` (unfinished work), `alerts`, `limits`, `automation` |
+| `GET api/run-actions` | `{dead, readOnly}`: the runs Arsenale closed in the last 7 days that nobody cleaned |
+| `POST api/run-action` | `{op: "nudge" | "stop" | "clean", run}`: Nudge and Stop write a line to the supervisor's inbox (Stop asks the supervisor to end the run; Arsenale never does); Clean hides a closed dead run (`run: "all"` hides every one shown), its record stays |
+| `GET api/auto-log` | `{windowMin, items}`: approvals that ran by themselves in the last hour, each with `canUndo` and `undoneAt` |
+| `POST api/undo` | `{gate}`: once per item, within 10 minutes of the approval; writes an `undo` line to `answers.jsonl` and the supervisor's inbox |
+| `GET` / `POST api/automation` | `{autoRun, kinds: {merge, "next-phase"}}`; building and publishing have no switch |
+| `POST api/limits` | `{stallMinutes, deadMinutes, repeatMinutes}` |
+| `POST api/resume` | `{op: "resume" | "dismiss", run}`: Resume writes the stored brief to the supervisor's inbox |
+| `POST api/alerts` | `{run}`: hides that run's stall banner until it stalls again |
+| `POST api/answer` | `{gate, answer, hash}`: `hash` is the gate's `qhash` as the page showed it; an answer to a question that changed since is refused (409), and an Approve of a merge or next phase needs it |
+
+A run id or gate id that names an `Object.prototype` key (`__proto__`,
+`constructor`, `prototype`) is refused. A file written by a newer Arsenale is
+read-only: the change is refused with 409.
 
 ## Companies, offices and budgets (optional)
 
@@ -333,6 +454,10 @@ arsenale log --company-init --seed company.example/seed.json
 | `arsenale task / comment --stdin` | create or move a task, comment on one |
 | `arsenale deliverable --stdin` | register a link, a file (copied only from your deliverable folders) or text |
 | `arsenale check-action --stdin` | ask the safety rules before an outside action (exit 0 allow, 2 never, 3 ask) |
+| `arsenale progress <run id> "<step>" [<pct>]` | a progress line for fixed text without quotes, the same as `{"id","doing","pct"}` |
+| `arsenale testq run --run <id> [--repo <path>] -- <command ...>` | run a full test suite when it is this run's turn (one suite at a time on this machine); exits with the command's code. `testq status [--json]`, `testq leave --run <id>` |
+| `arsenale resume-scan [--dir <repo>] [--json]` | list runs that ended without finishing and left changes in their worktree (read-only git) |
+| `arsenale alerts [--json]` | stalled and dead runs now (read-only) |
 | `arsenale log --help` | every logging mode, its JSON fields and exit codes |
 | `arsenale paths` | where data, agents and transcripts are read |
 
@@ -349,6 +474,25 @@ EOF
 Set-Content -Encoding UTF8 -Path "$env:TEMP\step.json" -Value '{"id":"<run id>","doing":"reading src/app.ts"}'
 arsenale progress --file "$env:TEMP\step.json"
 ```
+
+A progress line may also carry a plan and the step being done, which gives
+an honest percent: send the plan once, then the step, with `pct` as that
+step's own progress. `files` is the number of files changed so far:
+
+```bash
+arsenale progress --stdin <<'EOF'
+{"id":"<run id>","doing":"editing the form","plan":[{"name":"read","weight":1},{"name":"edit","weight":2},{"name":"test","weight":1}],"step":"edit","pct":50,"files":3}
+EOF
+```
+
+Which `pid` to record on `arsenale start`: the agent's own process, the one
+that runs as long as the agent works (for an agent in a terminal, its main
+process). Never the shell or the `arsenale start` command that records it:
+those end at once. Arsenale fills `pidStartedAt` itself from the system where
+the system tells it (Linux) and ignores a `pidStartedAt` in the input. A run
+whose pid is gone is closed only when two checks in a row (30 s apart) see it
+gone and the run has also been quiet for the stall limit, or its start time
+came from the system; a run with no pid is closed after the dead limit.
 
 Exit codes: `0` done, `1` failed (bad input, unknown id, port taken), `2`
 `budget-check` said stop or `check-action` said never, `3` `check-action`
@@ -371,7 +515,7 @@ said ask.
 | Folders deliverables may be copied from | `deliverableRoots` | `<data>/workspace` |
 | Model per strength for hired members (Claude Code) | `tierModels` | `{"light":"haiku","standard":"sonnet","heavy":"opus"}` |
 | MCP over HTTP | `ARSENALE_MCP_TOKEN` (environment only) | off |
-| Phone channels | Settings → Phone alerts, secrets in environment variables | off |
+| Phone channels | Settings → Notifications; secrets in `<data>/notify/secrets.json`, or environment variables, which win | off |
 
 Arsenale's own team-member folder, `<data>/agents`, is always read (last), so
 hired and pack members show up even when `agentDirs` names other folders.
@@ -414,7 +558,8 @@ instructions, not here: the bundled rules say "the user's language".
   nonce made fresh for each response.
 - The server never runs a command and never starts a process. The launcher
   starts your browser, once, unless you pass `--no-open`; on Windows it also
-  runs `icacls` once, when it makes the key file, to limit it to you.
+  runs `icacls` once when it makes the key file, and once for the `notify`
+  folder where phone secrets are saved, to limit them to you.
 - Transcripts are read only inside the folders you list. Secret-looking paths
   (`.env`, keys, licences) are counted, never shown.
 - `"by":"board"` on the command line is a label, not authentication:
@@ -440,7 +585,7 @@ back from the backup), the launchers and the PATH entry. Your run logs stay in
 
 ## Status
 
-Version 1.0.0. There is no desktop app yet: Arsenale runs as `arsenale serve`
+Version 1.1.0. There is no desktop app yet: Arsenale runs as `arsenale serve`
 in your browser, so the installer still needs Node.js. Tested on Windows 11
 with Node.js 24; the CI runs the test
 suite on Windows, macOS and Ubuntu with Node.js 20, 22 and 24. The transcript

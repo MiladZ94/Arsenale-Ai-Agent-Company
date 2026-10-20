@@ -48,9 +48,10 @@ async function open(t, where, opts) {
 
 test('the Team page lists no existing office as "not set up"', { skip: SKIP || false }, async (t) => {
   const page = await open(t, '?v=' + Date.now() + '#/team')
-  await page.waitFor("document.querySelector('.float.camp') && /not set up/.test(document.querySelector('.float.camp').textContent)")
-  const offices = await page.eval("[...document.querySelectorAll('.float.camp button[data-ev=team-office] .sp')].map((e) => e.textContent)")
-  const line = await page.eval("[...document.querySelectorAll('.float.camp p')].map((e) => e.textContent).join(' ')")
+  // the office chips above the Team table, and the line of packs not set up next to them
+  await page.waitFor("document.querySelector('.tfil .tnsu') && /not set up/.test(document.querySelector('.tfil .tnsu').textContent)")
+  const offices = await page.eval("[...document.querySelectorAll('.tfil button[data-ev=team-office] .tnm')].map((e) => e.textContent)")
+  const line = await page.eval("[...document.querySelectorAll('.tfil .tnsu')].map((e) => e.textContent).join(' ')")
   assert.ok(offices.includes('Research'), 'Research is an office here: ' + offices)
   for (const o of offices) assert.ok(!new RegExp('\\b' + o + '\\b').test(line), o + ' exists and is listed as not set up: ' + line)
 })

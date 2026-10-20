@@ -202,11 +202,11 @@ h1.co{white-space:nowrap;font-size:17px}
 `
 
 function companyViews(h) {
-  const { esc, fa, hhmm, ms, T, k, usd, errTxt, portrait, sprite, post, redraw, go, refresh } = h
+  const { esc, digits, hhmm, ms, T, k, usd, errTxt, portrait, sprite, post, redraw, go, refresh } = h
   const QUIET_MS = 10 * 60000
   const st = { armed: '', armT: 0, retired: false, dlg: null, busy: false, mmsg: '' }
   // the campus is drawn, zoomed and panned by the shared art (office-world.cjs); this file says what is on it
-  const CA = campusArt({ esc, fa, go, post, refresh, redraw })
+  const CA = campusArt({ esc, digits, go, post, refresh, redraw })
   window.__campus = CA
   const ST_COL = CA.ST_COL
   const C = () => COMPANY
@@ -225,7 +225,7 @@ function companyViews(h) {
     if (m) return T('project ') + m[1] + T(' names an unknown office ') + '«' + m[2] + '»'
     return p
   }
-  const pctTxt = (p) => (p === null || p === undefined ? '—' : fa(Math.min(999, Math.round(p))) + T('%'))
+  const pctTxt = (p) => (p === null || p === undefined ? '—' : digits(Math.min(999, Math.round(p))) + T('%'))
 
   /** Spend as "1.24M tok · $3.20". USD that needs a missing price is "USD
    *  n/a"; a sum that misses some runs says so. */
@@ -236,7 +236,7 @@ function companyViews(h) {
     // nothing measured is not "$0": like every unpriced sum it is n/a
     if (sp.usdStatus === 'none') return tok + '<bdi dir="ltr">' + T('USD n/a') + '</bdi>'
     if (sp.usdStatus === 'na') return tok + '<bdi dir="ltr" class="dim" title="' + T('Model prices are not set in model-prices.json') + '">' + T('USD n/a') + '</bdi>'
-    return tok + '<bdi dir="ltr">' + usd(sp.usd) + (sp.usdStatus === 'partial' ? '<span class="dim" title="' + fa(sp.usdMissing) + T(' runs have tokens but no price') + '">+</span>' : '') + '</bdi>'
+    return tok + '<bdi dir="ltr">' + usd(sp.usd) + (sp.usdStatus === 'partial' ? '<span class="dim" title="' + digits(sp.usdMissing) + T(' runs have tokens but no price') + '">+</span>' : '') + '</bdi>'
   }
   /** The budget bar, with the alert threshold as a tick; nothing at all when
    *  the budget is off, so a switched-off budget never looks like a limit. */
@@ -366,9 +366,9 @@ function companyViews(h) {
       const sd = o.standing || {}
       return {
         id: o.id, name: oname(o), color: o.color || '#8A97A6', small, kind: small ? 'shed' : '', wins: small ? [] : windowsOf(S, o.id),
-        label: oname(o) + T(', ') + fa(c.working) + ' ' + T('working'),
+        label: oname(o) + T(', ') + digits(c.working) + ' ' + T('working'),
         sign: '<h3 title="' + esc(oname(o)) + '">' + esc(oname(o)) + '</h3>' +
-          '<div class="n"><span class="a" title="' + T('working') + '">▸ ' + fa(c.working) + '</span><span class="b" title="' + T('waiting for you') + '">! ' + fa(c.waiting) + '</span>' + (small ? '' : '<span class="c">' + money(sd.spend) + '</span>') + '</div>' +
+          '<div class="n"><span class="a" title="' + T('working') + '">▸ ' + digits(c.working) + '</span><span class="b" title="' + T('waiting for you') + '">! ' + digits(c.waiting) + '</span>' + (small ? '' : '<span class="c">' + money(sd.spend) + '</span>') + '</div>' +
           (small ? '' : bar(sd.budget)) +
           '<button type="button" class="cbtn go" data-goto="office:' + esc(o.id) + '">' + T('Enter office →') + '</button>',
       }
@@ -398,14 +398,14 @@ function companyViews(h) {
     const waitingAll = (DATA.gates || []).filter((g) => g.status === 'waiting').length
     const working = new Set(S.active.map((a) => a.agent)).size
     let html = '<aside class="cside" aria-label="' + T('Company summary') + '">'
-    if (co.readOnly) html += '<p class="cbanner">' + T('Company data was written by a newer dashboard (v') + fa(co.schemaVersion) + T('). Editing is disabled.') + '</p>'
+    if (co.readOnly) html += '<p class="cbanner">' + T('Company data was written by a newer dashboard (v') + digits(co.schemaVersion) + T('). Editing is disabled.') + '</p>'
     else if (!LIVE) html += '<p class="cbanner">' + T('Open from the live server to edit.') + '</p>'
     for (const p of co.problems || []) html += '<p class="cbanner">' + esc(problemTxt(p)) + '</p>'
     html += '<div class="ch">' + T('Company this month') + ' <span class="dim">' + esc(periodTxt(co.periodKey)) + '</span></div>'
-    html += '<div class="ckpis"><div class="ckpi cw"><b>' + fa(waitingAll) + '</b><span>' + T('waiting for you') + '</span></div>' +
-      '<div class="ckpi cg"><b>' + fa(working) + '</b><span>' + T('working now') + '</span></div>' +
+    html += '<div class="ckpis"><div class="ckpi cw"><b>' + digits(waitingAll) + '</b><span>' + T('waiting for you') + '</span></div>' +
+      '<div class="ckpi cg"><b>' + digits(working) + '</b><span>' + T('working now') + '</span></div>' +
       '<div class="ckpi"><b dir="ltr">' + k(sd.spend.tokens).replace(/(\s?[^\d.\s]+)$/, '<small>$1</small>') + '</b><span>' + (sd.budget.on && sd.budget.tokens ? T('tokens of ') + k(sd.budget.tokens.limit) : T('tokens this month')) + '</span></div></div>'
-    html += '<p class="cnote">' + money(sd.spend) + (sd.spend.unmeasured ? ' · ' + fa(sd.spend.unmeasured) + T(' runs unmeasured') : '') + (sd.budget.on ? ' · ' + T('company budget ') + pctTxt(sd.budget.pct) : '') + '</p>'
+    html += '<p class="cnote">' + money(sd.spend) + (sd.spend.unmeasured ? ' · ' + digits(sd.spend.unmeasured) + T(' runs unmeasured') : '') + (sd.budget.on ? ' · ' + T('company budget ') + pctTxt(sd.budget.pct) : '') + '</p>'
     if (sd.budget.on) html += bar(sd.budget) + '<p></p>'
     const on = co.company.budgetsEnabled
     const armed = st.armed === 'master'
@@ -418,7 +418,7 @@ function companyViews(h) {
       if (o.builtIn && !(c.working || c.today || c.waiting)) continue
       const b = o.standing.budget
       html += '<div class="orow"><span class="sq" style="background:' + esc(o.color) + '"></span><button type="button" class="on" data-goto="office:' + esc(o.id) + '">' + esc(oname(o)) + '</button>' +
-        '<span class="ct"><u>▸' + fa(c.working) + '</u> &nbsp;<s>!' + fa(c.waiting) + '</s> &nbsp;' + money(o.standing.spend) + '</span>' +
+        '<span class="ct"><u>▸' + digits(c.working) + '</u> &nbsp;<s>!' + digits(c.waiting) + '</s> &nbsp;' + money(o.standing.spend) + '</span>' +
         '<div class="bw"><span>' + budgetWord(b) + '</span>' + (b.on ? bar(b) + '<span class="num">' + pctTxt(b.pct) + '</span>' : '<span style="flex:1"></span>') + (o.builtIn ? '' : editBtn('office', o.id)) + '</div></div>'
     }
     html += '<div class="ch" style="margin-top:14px">' + T('Supervisor') + '</div>'
@@ -430,7 +430,7 @@ function companyViews(h) {
       html += '<div class="ch">' + T('Decisions today') + '</div><ul class="cfeed">' + feed.map((d) => '<li><time dir="ltr">' + hhmm(ms(d.at)) + '</time><span><b dir="ltr">' + esc(d.by === 'agent' ? d.agent || T('agent') : T(d.by === 'user' ? 'You' : 'Supervisor')) + '</b> ' + esc(String(d.text || '').slice(0, 120)) + '</span></li>').join('') + '</ul>'
     }
     const un = Object.entries(co.unmapped || {})
-    if (un.length) html += '<p class="cnote">' + T('Project names this month that no project claims: ') + un.map(([n, c]) => '<code dir="ltr">' + esc(n) + '</code> ×' + fa(c)).join(T(', ')) + '</p>'
+    if (un.length) html += '<p class="cnote">' + T('Project names this month that no project claims: ') + un.map(([n, c]) => '<code dir="ltr">' + esc(n) + '</code> ×' + digits(c)).join(T(', ')) + '</p>'
     return html + '</aside>'
   }
 
@@ -446,7 +446,7 @@ function companyViews(h) {
     const sd = o.standing || {}
     const b = sd.budget
     return '<div class="crumb"><button type="button" data-goto="campus">' + T('Campus') + '</button><span class="dim">/</span><span class="sq" style="background:' + esc(o.color) + '"></span><b>' + esc(oname(o)) + '</b>' + '</div>' +
-      '<div class="ostats"><div class="a"><b>' + fa(c.working) + '</b>' + T('working') + '</div><div class="b"><b>' + fa(c.waiting) + '</b>' + T('waiting for you') + '</div><div><b>' + fa(idle) + '</b>' + T('idle') + '</div>' +
+      '<div class="ostats"><div class="a"><b>' + digits(c.working) + '</b>' + T('working') + '</div><div class="b"><b>' + digits(c.waiting) + '</b>' + T('waiting for you') + '</div><div><b>' + digits(idle) + '</b>' + T('idle') + '</div>' +
       '<div><b dir="ltr">' + (sd.spend ? k(sd.spend.tokens) : '—') + '</b>' + T('tokens this month') + '</div>' +
       '<div><b dir="ltr">' + (!sd.spend || sd.spend.usdStatus === 'na' || sd.spend.usdStatus === 'none' ? T('n/a') : usd(sd.spend.usd)) + '</b>' + T('USD') + '</div>' +
       (b && b.on ? '<div class="' + (b.level === 'stop' || b.level === 'over' ? 'r' : b.level === 'soft' ? 'b' : '') + '"><b>' + pctTxt(b.pct) + '</b>' + T('monthly budget') + '</div>' : '<div><b>—</b>' + budgetWord(b) + '</div>') +
@@ -468,7 +468,7 @@ function companyViews(h) {
     // this month's model, tokens or budget: the board reads what each person costs here
     const b = e.standing && e.standing.budget
     const sp = e.standing && e.standing.spend
-    const al = b && b.on ? (b.level === 'stop' ? '<span class="alert h">' + T('HARD STOP') + '</span>' : b.level === 'over' ? '<span class="alert h">' + fa(100) + T('%') + '+</span>' : b.level === 'soft' ? '<span class="alert s">' + fa(b.softAlertPct) + T('%') + '+</span>' : '') : ''
+    const al = b && b.on ? (b.level === 'stop' ? '<span class="alert h">' + T('HARD STOP') + '</span>' : b.level === 'over' ? '<span class="alert h">' + digits(100) + T('%') + '+</span>' : b.level === 'soft' ? '<span class="alert s">' + digits(b.softAlertPct) + T('%') + '+</span>' : '') : ''
     const num = b && b.on ? limitTxt(b) : sp && sp.tokens ? k(sp.tokens) + ' ' + T('tok') : ''
     const stat = e.kind === 'retired' || !(e.model || al || num) ? '' : '<span class="ost"><span class="ostl">' + (e.model ? '<span class="mdlc">' + esc(e.model) + '</span>' : '') + al + '</span>' + (num ? '<span class="num" dir="ltr">' + num + '</span>' : '') + bar(b) + '</span>'
     return '<li class="opr' + (e.kind === 'retired' ? ' retired' : '') + '"><button type="button" class="opb" data-ev="member-open" data-arg="' + esc(e.id) + '" data-to-team="1"' + (e.kind === 'retired' ? ' disabled' : '') + '><span class="oav" style="background:' + esc(ART.shade(o.color || '#56B6C2', 0.42)) + '">' + ART.person(e.id + (e.look ? ':' + e.look : ''), o.color, 30) + (dot ? '<i style="background:' + dot + '" title="' + esc(T(STATUS_TXT[s])) + '"></i>' : '') + '</span><span class="otx"><b dir="auto">' + esc(pname(e)) + '</b>' + (ptitle(e) || e.kind === 'retired' ? '<span dir="auto">' + esc(e.kind === 'retired' ? T('retired: definition file removed') : ptitle(e)) + '</span>' : '') + '</span></button>' + (stat || budget ? '<span class="oside">' + stat + budget + '</span>' : '') + '</li>'
@@ -484,10 +484,10 @@ function companyViews(h) {
     const away = ceoAway()
     const cname = co.company.name
     const asst = (co.company.assistants || []).map((a) => CLIENT_NAMES[a]).filter(Boolean)
-    let html = '<div class="org"><div class="otools"><div><h2 dir="auto">' + esc(cname || T('Org chart')) + '</h2><p class="osub">' + T('Your AI team: ') + '<span class="ochip">' + fa(staffN) + ' ' + T('team members') + '</span> ' + T('in') + ' <span class="ochip">' + fa(offices.length) + ' ' + T(offices.length === 1 ? 'office' : 'offices') + '</span>. ' + T('They ask you first before anything leaves the computer.') + '</p></div><span class="sp"></span>' +
+    let html = '<div class="org"><div class="otools"><div><h2 dir="auto">' + esc(cname || T('Org chart')) + '</h2><p class="osub">' + T('Your AI team: ') + '<span class="ochip">' + digits(staffN) + ' ' + T('team members') + '</span> ' + T('in') + ' <span class="ochip">' + digits(offices.length) + ' ' + T(offices.length === 1 ? 'office' : 'offices') + '</span>. ' + T('They ask you first before anything leaves the computer.') + '</p></div><span class="sp"></span>' +
       '<button type="button" class="cbtn" data-retired="1" aria-pressed="' + st.retired + '">' + (st.retired ? T('Hide retired') : T('Show retired')) + '</button></div>'
     html += '<div class="olvl">'
-    html += '<div class="onode own">' + ART.owner(36) + '<div><b>' + T('You') + '</b><span>' + T('Owner. Gives tasks and says yes or no.') + (waitingAll ? ' <span class="ochip w">' + fa(waitingAll) + ' ' + T('waiting for you') + '</span>' : '') + (co.company.budgetsEnabled && co.standing && co.standing.budget && co.standing.budget.on ? ' <span class="ochip">' + T('company budget ') + pctTxt(co.standing.budget.pct) + '</span>' : '') + '</span></div></div>'
+    html += '<div class="onode own">' + ART.owner(36) + '<div><b>' + T('You') + '</b><span>' + T('Owner. Gives tasks and says yes or no.') + (waitingAll ? ' <span class="ochip w">' + digits(waitingAll) + ' ' + T('waiting for you') + '</span>' : '') + (co.company.budgetsEnabled && co.standing && co.standing.budget && co.standing.budget.on ? ' <span class="ochip">' + T('company budget ') + pctTxt(co.standing.budget.pct) + '</span>' : '') + '</span></div></div>'
     html += '<div class="olink"><i></i><span>' + T('gives tasks, answers questions') + '</span></div>'
     html += '<div class="onode asst">' + ART.robot(36) + '<div><b>' + T('Your assistant') + '</b><span>' + (asst.length ? esc(asst.join(T(', '))) + '. ' : '') + T('Takes on each role.') + ' · ' + (hb && hb.lastSeenAt ? (away ? T('last seen ') : T('active, last seen ')) + '<span dir="ltr">' + hhmm(ms(hb.lastSeenAt)) + '</span>' : T('not seen yet')) + '</span></div></div>'
     html += '<div class="olink"><i></i><span>' + T('hands each job to a team member') + '</span></div>'
@@ -499,13 +499,13 @@ function companyViews(h) {
       const rest = staff.filter((e) => !head || e.id !== head.id).sort((a, b) => pname(a).localeCompare(pname(b)))
       const ob = o.standing && o.standing.budget
       const otok = ob && ob.on ? limitTxt(ob) : o.standing && o.standing.spend && o.standing.spend.tokens ? k(o.standing.spend.tokens) + ' ' + T('tok') : ''
-      html += '<div class="ocol"><div class="ocolh" style="background:' + esc(o.color) + '"><b dir="auto">' + esc(oname(o)) + '</b>' + (otok ? '<span class="ocsp" dir="ltr">' + otok + '</span>' : '') + '<span class="ocnt">' + fa(staff.length) + '</span></div><ul class="ompl">' + (head ? orgRow(S, head, o) : '') + rest.map((e) => orgRow(S, e, o)).join('') + (staff.length ? '' : '<li class="onone">' + T('No one works here yet.') + '</li>') + '</ul></div>'
+      html += '<div class="ocol"><div class="ocolh" style="background:' + esc(o.color) + '"><b dir="auto">' + esc(oname(o)) + '</b>' + (otok ? '<span class="ocsp" dir="ltr">' + otok + '</span>' : '') + '<span class="ocnt">' + digits(staff.length) + '</span></div><ul class="ompl">' + (head ? orgRow(S, head, o) : '') + rest.map((e) => orgRow(S, e, o)).join('') + (staff.length ? '' : '<li class="onone">' + T('No one works here yet.') + '</li>') + '</ul></div>'
     }
     html += '</div></div>'
     // the office packs not installed yet, read once from the server
     if (LIVE && st.packsLeft === undefined) { st.packsLeft = null; fetch('api/packs', { cache: 'no-store' }).then((r) => r.json()).then((d) => { st.packsLeft = (d.packs || []).filter((p) => !p.installed && !officeList().some((o) => p.office && o.id === p.office.id)).map((p) => p.name); redraw() }, () => { st.packsLeft = [] }) }
     const cons = co.employees.filter((e) => e.kind === 'contractor')
-    if (cons.length) html += '<div class="ocont"><div class="ch">' + T('Contractors') + ' <span class="dim" style="text-transform:none;letter-spacing:0">' + T('agent names with no definition in the agent folders, this month') + '</span></div><div class="chips">' + cons.map((e) => '<span class="ochip" dir="ltr">' + esc(e.id) + ' ×' + fa(e.runsThisPeriod) + (e.standing && e.standing.spend && e.standing.spend.tokens ? ' · ' + k(e.standing.spend.tokens) + ' ' + T('tok') : '') + '</span>').join('') + '</div></div>'
+    if (cons.length) html += '<div class="ocont"><div class="ch">' + T('Contractors') + ' <span class="dim" style="text-transform:none;letter-spacing:0">' + T('agent names with no definition in the agent folders, this month') + '</span></div><div class="chips">' + cons.map((e) => '<span class="ochip" dir="ltr">' + esc(e.id) + ' ×' + digits(e.runsThisPeriod) + (e.standing && e.standing.spend && e.standing.spend.tokens ? ' · ' + k(e.standing.spend.tokens) + ' ' + T('tok') : '') + '</span>').join('') + '</div></div>'
     html += '<div class="oft"><span><i style="background:#0C8A62"></i>' + T('working') + '</span><span><i style="background:#B8720F"></i>' + T('waiting for you') + '</span><span><i style="background:#C8372D"></i>' + T('paused or stopped by budget') + '</span>' +
       (co.company.budgetsEnabled ? '<span><span class="t"></span>' + T('tick on the bar = alert threshold') + '</span><span style="margin-inline-start:auto">' + T('Bar = this month’s spend against the budget') + '</span>' : '<span style="margin-inline-start:auto">' + T('Budgets are off: tokens this month only') + '</span>') + '</div>'
     if (LIVE && !(st.packsLeft && !st.packsLeft.length)) html += '<div class="oready"><span class="ic">' + ART.ic('box', 18) + '</span><b>' + T('Ready to add') + '</b>' + (st.packsLeft && st.packsLeft.length ? st.packsLeft.map((x) => '<span class="opk" dir="auto">' + esc(x) + '</span>').join('') : '<span class="dim">' + T('Office packs in Settings') + '</span>') + '<button type="button" class="cbtn" data-ev="goto-packs">' + T('Add an office') + '</button></div>'

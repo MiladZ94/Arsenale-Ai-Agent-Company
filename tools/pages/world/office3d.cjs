@@ -4,7 +4,7 @@ const { clientFunction } = require('../source.cjs')
 /* ======================================================================
  * The office floor in 3D (Arsenale office v3: a room on the ground, no shadows).
  *
- * h: { esc, fa, calm(), onPick(id), onView(view), characters: { default,
+ * h: { esc, digits, calm(), onPick(id), onView(view), characters: { default,
  *      byAgent } (base64 GLB), onLost() }.
  * The page calls sync(model) on every redraw. Nothing in sync touches the
  * camera except a change of office (model.key) or the first layout; the

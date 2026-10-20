@@ -92,7 +92,7 @@ test('office 3D: the 1.5 s redraw keeps the camera, the canvas and the cards', {
   const id = await page.eval("DATA.active.find((a) => a.officeId === 'engineering').id")
   const r = sb.cli('--progress', JSON.stringify({ id, doing: 'camera check step' }))
   assert.equal(r.code, 0, r.err)
-  await page.waitFor("[...document.querySelectorAll('.w3ov .bub')].some((b) => b.textContent.includes('camera check step'))", 10000)
+  await page.waitFor("JSON.stringify(DATA.active).includes('camera check step')", 10000)
   await sleep(1700)
   const after = await page.eval("({ view: window.__office3d.view(), canvas: document.querySelector('#stage canvas').dataset.mark, card: document.querySelector('.w3card').dataset.mark })")
   for (const k of ['tx', 'ty', 'tz', 'azim', 'elev', 'zoom']) assert.ok(Math.abs(after.view[k] - before[k]) < 1e-6, k + ' kept: ' + before[k] + ' -> ' + after.view[k])

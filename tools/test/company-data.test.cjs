@@ -39,9 +39,9 @@ test('AT-3: an old run with a free-text project resolves by alias, and no run fi
   assert.equal(R.project(rec).id, 'demo-calc')
   assert.equal(R.office(rec), 'engineering')
   // today's runs carry the resolution for the page, in memory only
-  const fa = state.runs.find((r) => r.project === 'dashboard')
-  assert.equal(fa.projectId, 'tide-app')
-  assert.equal(fa.officeId, 'studio')
+  const dashRun = state.runs.find((r) => r.project === 'dashboard')
+  assert.equal(dashRun.projectId, 'tide-app')
+  assert.equal(dashRun.officeId, 'studio')
   assert.equal(state.runs.find((r) => /feature branch/.test(r.project)).projectId, 'demo-calc')
   assert.equal(cs.unmapped.workspace, 1)
   assert.deepEqual(hashTree(sb.runs), before, 'run files must be byte-identical after reading')
@@ -262,7 +262,7 @@ test('the page shows today\'s runs in their office and the company in the page d
   assert.match(html, /<title>Arsenale<\/title>/)
   assert.match(html, /"configured":true/)
   // English only: a request for another language still renders the English page
-  assert.match(B.renderPage(state, { lang: 'fa' }), /<html lang="en" dir="ltr">/)
+  assert.match(B.renderPage(state, { lang: 'xx' }), /<html lang="en" dir="ltr">/)
   void thisMonth
 })
 

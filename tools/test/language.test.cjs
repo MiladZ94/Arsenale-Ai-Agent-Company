@@ -1,6 +1,6 @@
 /* English only (owner, 2026-10-12). Nothing a person
  * reads may be in Arabic script, in any view of the dashboard; there is no
- * language switch, and neither ?lang=fa nor an old dash-lang=fa cookie
+ * language switch, and neither ?lang=xx nor an old dash-lang=xx cookie
  * brings another language back.
  *
  * "Data" is allowed to be in either language: agent ids, model names, project
@@ -117,17 +117,19 @@ const VIEWS = (offices) => [
   ['new task', "location.hash = '#/tasks'; WAIT('[data-ev=task-new]', (e) => e.click())"],
   ['approvals', "location.hash = '#/approvals'"],
   // every letter: an action, a hire, a choice, a plain approval
-  ...[1, 2, 3, 4].map((n) => ['approvals letter ' + n, "location.hash = '#/approvals'; WAIT('.ai:nth-child(" + n + ")', (e) => { e.click(); WAIT('[data-ev=appr-note]', (x) => x.click()) })"]),
+  ...[1, 2, 3, 4].map((n) => ['approvals letter ' + n, "location.hash = '#/approvals'; WAIT('.dcol:first-child .dc:nth-child(" + (n + 1) + ") [data-ev=dec-open]', (e) => { e.click(); WAIT('[data-ev=appr-note]', (x) => x.click()) })"]),
+  ['live', "location.hash = '#/live'"],
+  ['settings decisions', "location.hash = '#/settings'; WAIT('[data-ev=stab][data-arg=decisions]', (e) => e.click())"],
   ['team', "location.hash = '#/team'"],
-  ['team profile', "location.hash = '#/team'; WAIT('[data-ev=team-office][data-arg=support]', (o) => { o.click(); WAIT('.roster [data-ev=member-open][data-arg=reply-drafter]', (e) => { e.click(); WAIT('.ev-drawer details', (d) => document.querySelectorAll('.ev-drawer details').forEach((x) => { x.open = true })) }) })"],
+  ['team profile', "location.hash = '#/team'; WAIT('[data-ev=team-office][data-arg=support]', (o) => { o.click(); WAIT('tr.trow[data-arg=reply-drafter]', (e) => { e.click(); WAIT('.ev-drawer details', (d) => document.querySelectorAll('.ev-drawer details').forEach((x) => { x.open = true })) }) })"],
   ['hire form', "location.hash = '#/team'; WAIT('[data-ev=hire-new]', (e) => { e.click(); WAIT('.ev-drawer details', (d) => { d.open = true }) })"],
   ['hire review', "location.hash = '#/team'; WAIT('[data-ev=hire-new]', (e) => { e.click(); WAIT('form[data-evform=hire] input[name=title]', (i) => { const f = i.form; f.elements.name.value = 'Sample'; i.value = 'sample title'; f.elements.instructions.value = 'sample instructions, sample reason'; f.requestSubmit() }) })"],
   ['deliverables', "location.hash = '#/deliverables'"],
   ['deliverable preview', "location.hash = '#/deliverables'; WAIT('[data-ev=dlv-open]', (e) => e.click())"],
-  ...['assistants', 'phone', 'safety', 'packs', 'privacy'].map((tab) => ['settings ' + tab, "location.hash = '#/settings'; WAIT('[data-ev=stab][data-arg=" + tab + "]', (e) => e.click())"]),
+  ...['assistants', 'notifications', 'safety', 'packs', 'privacy'].map((tab) => ['settings ' + tab, "location.hash = '#/settings'; WAIT('[data-ev=stab][data-arg=" + tab + "]', (e) => e.click())"]),
   ['settings assistant steps', "location.hash = '#/settings'; WAIT('[data-ev=stab][data-arg=assistants]', (e) => { e.click(); WAIT('[data-ev=copen][data-arg=claude-code]', (c) => c.click()) })"],
   ['settings pack detail', "location.hash = '#/settings'; WAIT('[data-ev=stab][data-arg=packs]', (e) => { e.click(); WAIT('[data-ev=pack-open][data-arg=finance]', (c) => c.click()) })"],
-  ...['telegram', 'pushover'].map((ch) => ['settings phone ' + ch, "location.hash = '#/settings'; WAIT('[data-ev=stab][data-arg=phone]', (e) => { e.click(); WAIT('[data-ev=nchan][data-arg=" + ch + "]', (c) => c.click()) })"]),
+  ...['telegram', 'pushover'].map((ch) => ['settings notifications ' + ch, "location.hash = '#/settings'; WAIT('[data-ev=stab][data-arg=notifications]', (e) => { e.click(); WAIT('[data-ev=nchan][data-arg=" + ch + "]', (c) => c.click()) })"]),
 ]
 
 const WAIT_DEF = "window.WAIT = (sel, f) => { const n = Date.now(); const t = setInterval(() => { const e = document.querySelector(sel); if (e) { clearInterval(t); f(e) } else if (Date.now() - n > 8000) clearInterval(t) }, 100) }; "
@@ -182,7 +184,7 @@ test('English: no Arabic script on any screen, and the typed text is shown as wr
   assert.ok(views.decisions.includes(TYPED_DECISION), 'a decision text keeps its language')
   assert.ok(views.campus.includes('Engineering') && views.campus.includes('Operations'), 'English office names')
   // the 1.0 screens were drawn with their data, not left loading
-  const drawn = { tasks: EN_TASK + ' six', 'tasks list': 'not seen yet', 'task detail': 'Copy a message for your assistant', 'task edit': 'Ask me before it is finished', 'new task': 'File paths, one per line', approvals: 'sample title', 'approvals letter 1': 'Why it matters', 'approvals letter 2': 'If you say no', team: 'Your campus', 'team profile': 'Safety rules for this member', 'hire form': 'Pick a look', 'hire review': 'This is the file Arsenale will write', deliverables: 'deliverable sample', 'deliverable preview': 'Close', 'settings assistants': 'Claude Desktop', 'settings phone': 'Sign out all phones', 'settings safety': 'Paying or spending money', 'settings packs': 'Customer support', 'settings privacy': 'api.telegram.org', 'settings assistant steps': 'Let Arsenale add itself', 'settings pack detail': 'Add this office', 'settings phone telegram': 'Telegram', 'settings phone pushover': 'Pushover' }
+  const drawn = { tasks: EN_TASK + ' six', 'tasks list': 'not seen yet', 'task detail': 'Copy a message for your assistant', 'task edit': 'Ask me before it is finished', 'new task': 'File paths, one per line', approvals: 'sample title', 'approvals letter 1': 'Why it matters', 'approvals letter 2': 'If you say no', team: 'Current or last task', 'team profile': 'Safety rules for this member', 'hire form': 'Pick a look', 'hire review': 'This is the file Arsenale will write', deliverables: 'deliverable sample', 'deliverable preview': 'Close', 'settings assistants': 'Claude Desktop', 'settings notifications': 'Sign out all phones', live: 'Running now', 'settings decisions': 'Let approved actions run by themselves', 'settings safety': 'Paying or spending money', 'settings packs': 'Customer support', 'settings privacy': 'api.telegram.org', 'settings assistant steps': 'Let Arsenale add itself', 'settings pack detail': 'Add this office', 'settings notifications telegram': 'Bot token', 'settings notifications pushover': 'User key' }
   for (const [name, text] of Object.entries(drawn)) assert.ok(views[name].includes(text), name + ' shows "' + text + '"')
 })
 
@@ -277,21 +279,21 @@ test('the first-start wizard: every one of its four steps is English, with no la
   }
 })
 
-test('English only: no EN/FA switch, and ?lang=fa or an old dash-lang=fa cookie still gives English', { skip: SKIP || false }, async (t) => {
+test('English only: no second-language switch, and ?lang=xx or an old dash-lang=xx cookie still gives English', { skip: SKIP || false }, async (t) => {
   const w = await world()
-  for (const url of ['/?lang=fa#/campus', '/archive?lang=fa']) {
+  for (const url of ['/?lang=xx#/campus', '/archive?lang=xx']) {
     await w.page.goto('http://127.0.0.1:' + w.port + url)
     const got = await w.page.eval("({ lang: document.documentElement.lang, dir: document.documentElement.dir, sw: document.querySelectorAll('.langsw, [data-lang]').length, LANG: typeof LANG === 'string' ? LANG : '' })")
-    got.fa = stripData(await w.page.readable()).split('\n').some((l) => ARABIC.test(l))
+    got.arabic = stripData(await w.page.readable()).split('\n').some((l) => ARABIC.test(l))
     assert.equal(got.lang, 'en', url)
     assert.equal(got.dir, 'ltr', url)
     assert.equal(got.sw, 0, 'no language switch on ' + url)
     if (!url.startsWith('/archive')) assert.equal(got.LANG, 'en')
-    assert.equal(got.fa, false, 'no Arabic-script interface on ' + url)
+    assert.equal(got.arabic, false, 'no Arabic-script interface on ' + url)
   }
   // a cookie an older dashboard set is ignored: the server answers in English and sets no cookie
   const res = await new Promise((resolve, reject) => {
-    http.get({ host: '127.0.0.1', port: w.port, path: '/?lang=fa', agent: false, headers: { Cookie: 'dash-lang=fa; ' + (cookies[w.port] || '') } }, (r) => { let b = ''; r.on('data', (c) => { b += c }); r.on('end', () => resolve({ headers: r.headers, body: b })) }).on('error', reject)
+    http.get({ host: '127.0.0.1', port: w.port, path: '/?lang=xx', agent: false, headers: { Cookie: 'dash-lang=xx; ' + (cookies[w.port] || '') } }, (r) => { let b = ''; r.on('data', (c) => { b += c }); r.on('end', () => resolve({ headers: r.headers, body: b })) }).on('error', reject)
   })
   assert.match(res.body, /<html lang="en" dir="ltr">/)
   assert.ok(!res.headers['set-cookie'] || !String(res.headers['set-cookie']).includes('dash-lang'), 'no language cookie is set')
