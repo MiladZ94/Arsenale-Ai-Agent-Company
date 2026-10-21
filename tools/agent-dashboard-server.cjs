@@ -344,6 +344,17 @@ function start(opts = {}) {
         res.end(html.replace(/<script>/g, '<script nonce="' + nonce + '">'))
         return
       }
+      // Help: the user guide, read from docs/guide/src only when someone opens it
+      if (url === '/help' && (req.method === 'GET' || req.method === 'HEAD')) {
+        const nonce = crypto.randomBytes(16).toString('base64')
+        res.writeHead(200, Object.assign({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Security-Policy': csp(nonce, port).replace('img-src ', "img-src 'self' ") }, FRAME))
+        res.end(require('./help-page.cjs').render('help'))
+        return
+      }
+      if (url.startsWith('/help/img/') && (req.method === 'GET' || req.method === 'HEAD')) {
+        const p = require('./help-page.cjs').imagePath(url.slice('/help/img/'.length))
+        if (p) { res.writeHead(200, Object.assign({ 'Content-Type': 'image/png', 'Cache-Control': 'no-store' }, FRAME)); fs.createReadStream(p).pipe(res); return }
+      }
       res.writeHead(404, Object.assign({ 'Content-Type': 'text/plain; charset=utf-8' }, FRAME))
       res.end('nothing here')
     } catch (e) {

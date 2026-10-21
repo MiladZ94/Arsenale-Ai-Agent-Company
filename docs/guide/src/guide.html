@@ -1,0 +1,122 @@
+<section id="start">
+<h2>Start</h2>
+<p>You need <a href="https://nodejs.org">Node.js</a> 20 or newer.</p>
+<p><b>See it first.</b> The demo is an invented company in a temporary folder. It never touches your data.</p>
+<pre>node bin/arsenale.cjs demo</pre>
+<p><b>Install.</b> The installer asks before every change. Add <code>--dry-run</code> to see the plan.</p>
+<table><tr><td>Windows</td><td><code>powershell -ExecutionPolicy Bypass -File .\install.ps1</code></td></tr>
+<tr><td>macOS, Linux</td><td><code>./install.sh</code></td></tr></table>
+<p><b>Run.</b> <code>arsenale serve</code> opens <code>http://localhost:4310</code> in your browser. <code>arsenale open</code> opens it again.</p>
+<p><b>Connect your tools.</b> Open <b>Settings, Assistants</b>. Claude Desktop, Claude Code, Cursor, VS Code, Codex CLI, Gemini CLI and Aider each have a card with the exact command. Press <b>Test</b>. It turns green when the tool says hello.</p>
+<p class="note">Arsenale only watches. It never starts or stops your assistants.</p>
+</section>
+
+<section id="campus">
+<h2>Campus</h2>
+<p>One building per office. Click a building to go in. <b>Build</b> lets you place, move, rotate and archive buildings.</p>
+<img src="@img/media/campus.png" alt="The campus">
+</section>
+
+<section id="office">
+<h2>Office</h2>
+<p>People sit at their desks and show what they are doing. A small pill marks a person who is quiet, stalled or dead. The <b>Needs a look</b> box lists them. <b>Nudge</b> asks your supervisor to check the run. <b>Clean</b> hides a closed run; its log stays.</p>
+<img src="@img/media/office.png" alt="An office with a Needs a look box">
+</section>
+
+<section id="live">
+<h2>Live</h2>
+<p>Every run that is working now: the step, a percent, files changed, last activity, time so far and time left. The percent is what the agent reports. Without one, Arsenale estimates it and marks it "est.".</p>
+<p>A run quiet for 10 minutes turns amber. At the stall limit (20 minutes) it turns red and a bar appears with <b>Nudge</b> and <b>Stop</b>. Stop only asks your supervisor to end the run.</p>
+<p>Live also shows the test queue and unfinished work.</p>
+<img src="@img/screenshots/live-en.png" alt="Live">
+</section>
+
+<section id="decisions">
+<h2>Decisions</h2>
+<p>Every waiting question and approval, in three columns.</p>
+<ul><li><b>Needs your answer.</b> Questions from your team.</li>
+<li><b>Approve to continue.</b> A merge or a next phase. <b>Approve all</b> answers them together.</li>
+<li><b>Always waits for you.</b> Builds and releases.</li></ul>
+<p><b>Details</b> shows the evidence. Under the columns, <b>Done without you</b> lists what ran by itself in the last hour. <b>Undo</b> works once, for 10 minutes.</p>
+<p>The switch at the top right, <b>Approved merges and phases run by themselves</b>, is off by default. Set it in Settings, Decisions.</p>
+<img src="@img/screenshots/inbox-en.png" alt="Decisions">
+</section>
+
+<section id="team">
+<h2>Team</h2>
+<p>Everyone, grouped by office: status, current task, runs today, last active. Search, or filter by office or status. A row opens the profile. <b>New desk</b> hires someone in plain words.</p>
+<img src="@img/screenshots/team-profile-en.png" alt="Team">
+</section>
+
+<section id="tasks">
+<h2>Tasks</h2>
+<p>A board: To do, Working on it, Waiting for you, Done this week. Or a list. <b>New task</b> takes what you need, who should do it and when. Writing a task starts nothing: your assistant picks it up the next time you talk to it.</p>
+<img src="@img/screenshots/tasks-en.png" alt="Tasks">
+</section>
+
+<section id="finished">
+<h2>Finished work</h2>
+<p>Documents, images, spreadsheets and links your team handed in. Search by name or person. Previews come from Arsenale's own copies.</p>
+<img src="@img/screenshots/deliverables-en.png" alt="Finished work">
+</section>
+
+<section id="activity">
+<h2>Activity</h2>
+<p>Who did what and when, grouped by day. Filter it. Closed and stopped runs stay here; nothing is deleted.</p>
+<img src="@img/screenshots/activity-en.png" alt="Activity">
+</section>
+
+<section id="versionrun">
+<h2>Version run</h2>
+<p>For an autonomous run of a version: its phases, overall percent, agents, token budget and owner gates. Open it with <b>All phases and requests</b> on Live.</p>
+<img src="@img/media/version-run.png" alt="Version run">
+</section>
+
+<section id="gatehistory">
+<h2>Gate history</h2>
+<p>Under <b>More</b>. A timeline of who decided what.</p>
+</section>
+
+<section id="settings">
+<h2>Settings</h2>
+<ul><li><b>Assistants.</b> Connect a tool in three steps, with a Test button.</li>
+<li><b>Notifications.</b> Desktop and phone. See the next section.</li>
+<li><b>Decisions.</b> The auto-run switch, one switch each for merges and next phases, and the limits for a quiet, stalled and dead run.</li>
+<li><b>Safety rules.</b> See Safety.</li>
+<li><b>Office packs.</b> Add a ready-made office, or remove one. Your own files are kept.</li>
+<li><b>Privacy.</b> Everything stays on this computer. No account, no tracking.</li></ul>
+<img src="@img/screenshots/settings-decisions-en.png" alt="Settings, Decisions">
+</section>
+
+<section id="phone">
+<h2>Phone notifications</h2>
+<p>Settings, Notifications has a tab each for Desktop, ntfy, Telegram and Pushover.</p>
+<ol><li>Fill in the channel. Tokens are saved in a file only you can read and are never shown again.</li>
+<li>Press <b>Save</b>, then <b>Send test</b>.</li>
+<li>When the test arrives, the channel's switch can go on. It stays off until a test has arrived.</li></ol>
+<p>Change a server, topic or token and the channel switches off until the next test arrives. Each channel has its own list of events.</p>
+<p>By default a phone message says only that something is waiting. Turn on details to include the question; that shows its text to the service. ntfy and Telegram can carry Approve and Reject. Pushover only notifies. Arsenale must be running on your computer to send.</p>
+<img src="@img/screenshots/settings-notifications-en.png" alt="Notifications">
+</section>
+
+<section id="safety">
+<h2>Safety</h2>
+<p><b>Builds and releases always wait for you.</b> Building, tagging, publishing or uploading a release is never approved by the auto-run switch and never gets a phone button. Payments and hires are not approved from a phone either.</p>
+<p>Settings, Safety rules sets, for each kind of action that leaves your computer, whether it is allowed, must ask you first (the default), or is never allowed.</p>
+<p class="note">These rules are advisory. Arsenale asks your assistant to check and records what happened; it cannot block a tool inside another program.</p>
+<img src="@img/screenshots/settings-safety-en.png" alt="Safety rules">
+</section>
+
+<section id="queue">
+<h2>The test queue</h2>
+<p>Only one full test suite should run on a machine at a time. A builder runs it like this:</p>
+<pre>arsenale testq run --run &lt;run id&gt; -- &lt;command&gt;</pre>
+<p>It waits its turn, runs the command and exits with its result. <code>arsenale testq status</code> shows who holds the suite and who waits. <code>arsenale testq leave --run &lt;run id&gt;</code> leaves the queue. A run that waits is not counted as quiet. Live shows the same queue.</p>
+</section>
+
+<section id="resume">
+<h2>After a restart</h2>
+<p>Run <code>arsenale resume-scan</code> at the start of a session. It finds runs that ended without finishing and left changes behind. Live lists them under unfinished work.</p>
+<ul><li><b>Resume</b> sends the stored brief to your supervisor's inbox. It starts nothing.</li>
+<li><b>Dismiss</b> hides the item. Nothing in the worktree is deleted.</li></ul>
+</section>

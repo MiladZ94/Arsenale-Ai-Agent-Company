@@ -19,6 +19,7 @@ h1{font-size:17px;margin:0;font-weight:700}
 .counts b{font:700 15px var(--font-ui);color:var(--ink);margin-left:3px}
 .acc{color:var(--accent)!important}.warn{color:var(--warn-ink)!important}.bad{color:var(--bad)!important}
 .live{font-size:12px;color:var(--ink-dim);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.helpl{width:20px;height:20px;border:1px solid var(--line,#c9d0d9);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--ink-dim);text-decoration:none}.helpl:hover{color:var(--accent)}
 .live i{width:7px;height:7px;background:var(--accent);display:inline-block;animation:pulse 2s ease-in-out infinite}
 .live.stale{color:var(--bad)}.live.stale i{background:var(--bad);animation:none}
 .arch{font-size:12px;color:var(--ink-soft);text-decoration:none;border:1px solid var(--line);border-radius:3px;padding:2px 8px;background:var(--panel-raised);white-space:nowrap}
