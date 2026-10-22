@@ -10,7 +10,7 @@ const fs = require('fs')
 const path = require('path')
 const { spawn } = require('child_process')
 const http = require('http')
-const { makeSandbox, SEED, track, startServer } = require('./helpers.cjs')
+const { makeSandbox, SEED, track, exitOf, startServer } = require('./helpers.cjs')
 
 function setup(t) {
   const sb = makeSandbox()
@@ -24,7 +24,7 @@ function child(sb, name, body) {
   fs.writeFileSync(file, 'const tools = ' + JSON.stringify(sb.tools) + '\n' + body)
   return track(spawn(process.execPath, [file], { env: sb.env, stdio: ['ignore', 'pipe', 'pipe'] }))
 }
-const ended = (c) => new Promise((res) => { let err = ''; c.stderr.on('data', (d) => { err += d }); c.on('exit', (code) => res({ code, err })) })
+const ended = (c) => { let err = ''; c.stderr.on('data', (d) => { err += d }); return exitOf(c).then((code) => ({ code, err })) }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 test('H1: two processes write employees.json 200 times each; the file always parses and no update is lost', async (t) => {

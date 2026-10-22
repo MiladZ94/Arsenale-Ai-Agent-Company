@@ -102,20 +102,25 @@ test('H6: demo --no-open with stdout in a file writes the key URL within 5 s, be
   let folder = ''
   // a killed demo cannot remove its folder itself
   t.after(() => { try { process.kill(child.pid) } catch { /* stopped */ } sb.cleanup(); if (folder) fs.rmSync(folder, { recursive: true, force: true }) })
-  let text = ''
-  while (Date.now() - t0 < 30000 && !/\?k=[a-f0-9]{64}/.test(text)) { await new Promise((r) => setTimeout(r, 50)); text = fs.readFileSync(out, 'utf8') }
+  let text = '', printed = 0
+  while (Date.now() - t0 < 30000 && !/\?k=[a-f0-9]{64}[^]*Data folder: .+\n/.test(text)) { await new Promise((r) => setTimeout(r, 50)); printed = fs.statSync(out).mtimeMs; text = fs.readFileSync(out, 'utf8') }
   const took = Date.now() - t0
   const m = /Arsenale demo \(invented data\): (http:\S+\?k=([a-f0-9]{64}))/.exec(text)
   assert.ok(m, 'no key URL in the file: ' + text)
-  // the seed comes after the address, so the folder it names is still filling
   folder = /Data folder: (.+)/.exec(text)[1].trim()
   assert.ok(path.basename(folder).startsWith('arsenale-demo-'), folder)
-  const seeded = fs.existsSync(path.join(folder, 'company', 'issues'))
+  // The seed comes after the address. Whether it is still running when this
+  // test looks depends on the machine (a fast runner seeds in a few ms), so
+  // the order is read from the file times: the seed's issues folder was made
+  // no earlier than the last line of the address was written.
+  assert.equal(text.split('\n').filter(Boolean).length, 2, 'only the address and the folder were printed: ' + text)
   // a request made now waits for the seed and sees the whole invented company
   const cookie = (await get(port, '/?k=' + m[2])).headers['set-cookie'][0].split(';')[0]
   const tasks = JSON.parse((await get(port, '/api/tasks', cookie)).text).tasks
   assert.ok(tasks.length >= 3, 'the seeded tasks are there: ' + tasks.length)
-  assert.equal(seeded, false, 'the key URL came only after the seed')
+  const issues = fs.statSync(path.join(folder, 'company', 'issues'))
+  // a file system with no creation time reports 0 (or the change time, which is later still)
+  if (issues.birthtimeMs > 0) assert.ok(issues.birthtimeMs >= printed, 'the key URL came only after the seed (' + issues.birthtimeMs + ' < ' + printed + ')')
   assert.ok(took < 5000, 'the key URL took ' + took + ' ms')
   process.kill(child.pid)
   await exited

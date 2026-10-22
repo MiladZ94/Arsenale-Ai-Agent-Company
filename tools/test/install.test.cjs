@@ -26,8 +26,10 @@ function world() {
   return { base, claude, data: path.join(base, 'data') }
 }
 
-function suite(name, runner) {
-  test(name + ': dry run, install, re-run, uninstall', (t) => {
+// `missing` names the shell this machine lacks: the test is skipped with that
+// reason, instead of carrying on against files no installer wrote.
+function suite(name, missing, runner) {
+  test(name + ': dry run, install, re-run, uninstall', { skip: missing || false }, (t) => {
     const w = world()
     t.after(() => fs.rmSync(w.base, { recursive: true, force: true }))
     const before = hashTree(w.base)
@@ -69,8 +71,7 @@ function suite(name, runner) {
   })
 }
 
-suite('install.ps1 (Windows PowerShell 5.1)', (w, flags) => {
-  if (!PS) return { status: 0, stdout: 'dry run tester.md', skip: true }
+suite('install.ps1 (Windows PowerShell 5.1)', !PS && 'needs Windows PowerShell (powershell.exe), which only Windows has', (w, flags) => {
   const args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(REPO, 'install.ps1'), '-NoPath',
     '-DataDir', w.data, '-ClaudeDir', w.claude, '-CodexDir', path.join(w.base, 'none1'), '-GeminiDir', path.join(w.base, 'none2')]
   if (flags.includes('dry')) args.push('-DryRun')
@@ -79,8 +80,7 @@ suite('install.ps1 (Windows PowerShell 5.1)', (w, flags) => {
   return spawnSync('powershell.exe', args, { encoding: 'utf8' })
 })
 
-suite('install.sh', (w, flags) => {
-  if (!BASH) return { status: 0, stdout: 'dry run tester.md', skip: true }
+suite('install.sh', !BASH && 'needs bash, which this machine does not have', (w, flags) => {
   const args = [path.join(REPO, 'install.sh'), '--no-path', '--data-dir', w.data, '--claude-dir', w.claude, '--codex-dir', path.join(w.base, 'none1'), '--gemini-dir', path.join(w.base, 'none2')]
   if (flags.includes('dry')) args.push('--dry-run')
   if (flags.includes('yes')) args.push('--yes')

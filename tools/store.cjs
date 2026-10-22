@@ -139,6 +139,10 @@ function tryLock(lock, me) {
   } catch (e) {
     try { fs.rmSync(tmp, { recursive: true, force: true }) } catch { /* never made */ }
     if (e.code === 'ENOENT' && !fs.existsSync(path.dirname(lock))) throw e
+    // a read-only folder stays read-only: waiting would only turn that into
+    // "busy" after LOCK_WAIT_MS. Not EACCES on Windows, which also reports a
+    // lock folder being removed or scanned with it.
+    if (e.code === 'EROFS' || (e.code === 'EACCES' && process.platform !== 'win32')) throw e
     // EEXIST, ENOTEMPTY (POSIX) or EPERM (Windows): the lock is there; EPERM,
     // EACCES, EBUSY: a lock folder being removed or scanned; ENOENT: our
     // temp folder was taken away. All pass, so the caller tries again.

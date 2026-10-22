@@ -69,9 +69,23 @@ function track(child) {
   for (const s of [child.stdin, child.stdout, child.stderr]) if (s && typeof s.unref === 'function') s.unref()
   return child
 }
+/** The exit code of a tracked child. As nothing of the child holds the event
+ *  loop, a test waiting on its exit alone was cancelled on macOS and Linux
+ *  ("the event loop has already resolved"): a timer holds the loop while it
+ *  waits, for at most `ms`, so a stuck child still lets the file end. */
+function exitOf(child, ms) {
+  return new Promise((res) => {
+    if (child.exitCode !== null || child.signalCode !== null) return res(child.exitCode)
+    const hold = setTimeout(() => {}, ms || 120000)
+    child.on('exit', (code) => { clearTimeout(hold); res(code) })
+  })
+}
 
 function makeSandbox(opts = {}) {
-  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-company-test-'))
+  // the real path: on macOS the temp folder is behind a symlink (/var ->
+  // /private/var), and require() keys its cache by the real path, so mod()
+  // would not find the copies it must drop and hand back stale modules
+  const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-company-test-')))
   const root = path.join(base, 'arsenale-home')
   const tools = path.join(root, 'tools')
   fs.mkdirSync(tools, { recursive: true })
@@ -250,4 +264,4 @@ function startServer(sb, opts = {}) {
   })
 }
 
-module.exports = { track, linkTree, makeSandbox, hashTree, thisMonth, SEED, AGENTS, mcpClient, startServer }
+module.exports = { track, exitOf, linkTree, makeSandbox, hashTree, thisMonth, SEED, AGENTS, mcpClient, startServer }

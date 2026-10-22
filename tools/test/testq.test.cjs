@@ -7,7 +7,7 @@ const assert = require('node:assert/strict')
 const fs = require('fs')
 const path = require('path')
 const { spawn } = require('child_process')
-const { makeSandbox, track } = require('./helpers.cjs')
+const { makeSandbox, track, exitOf } = require('./helpers.cjs')
 
 const box = (t) => { const sb = makeSandbox({ flat: true }); t.after(() => sb.cleanup()); return sb }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -24,7 +24,7 @@ function queued(sb, run, ms, code) {
   if (!fs.existsSync(script)) fs.writeFileSync(script, SUITE)
   const log = path.join(sb.base, 'suite.log')
   const child = track(spawn(process.execPath, [path.join(sb.tools, 'log-agent-run.cjs'), '--testq', 'run', '--run', run, '--repo', sb.base, '--', process.execPath, script, log, run, String(ms), String(code || 0)], { env: sb.env, cwd: sb.base, stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true }))
-  child.done = new Promise((r) => child.on('exit', (c) => r(c)))
+  child.done = exitOf(child)
   return child
 }
 const status = (sb) => JSON.parse(sb.cli('--testq', 'status', '--json').out)

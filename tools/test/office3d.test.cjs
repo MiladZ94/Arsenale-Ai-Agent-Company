@@ -41,7 +41,8 @@ test.after(async () => {
 const READY = "window.__office3d && window.__office3d.info().podiums.some((p) => p.character)"
 const pageErrors = (log) => log.filter((m) => m.method === 'Runtime.exceptionThrown' || (m.method === 'Log.entryAdded' && m.params.entry.level === 'error')).map((m) => JSON.stringify(m.params).slice(0, 300))
 
-test('office 3D: every person of the office has a podium, a card and a character; the tray is there', { skip: SKIP || false }, async () => {
+test('office 3D: every person of the office has a podium, a card and a character; the tray is there', { skip: SKIP || false }, async (t) => {
+  if (await browser.skipWithout3d(t)) return
   const { page, base, log } = await world()
   await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
   await page.waitFor(READY, 15000)
@@ -81,7 +82,8 @@ test('office 3D: every person of the office has a podium, a card and a character
   assert.deepEqual(pageErrors(log), [], 'no page or CSP errors')
 })
 
-test('office 3D: the 1.5 s redraw keeps the camera, the canvas and the cards', { skip: SKIP || false }, async () => {
+test('office 3D: the 1.5 s redraw keeps the camera, the canvas and the cards', { skip: SKIP || false }, async (t) => {
+  if (await browser.skipWithout3d(t)) return
   const { page, base, sb } = await world()
   await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
   await page.waitFor(READY, 15000)
@@ -154,7 +156,8 @@ function warmUp(sb) {
   assert.equal(sb.cli(JSON.stringify({ agent: 'walker-agent', task: 'warm-up', project: 'democalc', model: 'sonnet', status: 'ok', summary: 'warm-up done' })).code, 0)
 }
 
-test('office 3D: no shadows, and everything stands on the floor; the campus has no shadows either', { skip: SKIP || false }, async () => {
+test('office 3D: no shadows, and everything stands on the floor; the campus has no shadows either', { skip: SKIP || false }, async (t) => {
+  if (await browser.skipWithout3d(t)) return
   const { page, base } = await world()
   await page.goto(base + '/?v=s1#/office/engineering')
   await page.waitFor(READY, 15000)
@@ -181,7 +184,8 @@ test('office 3D: no shadows, and everything stands on the floor; the campus has 
   assert.ok(c.plots > 0, 'the plots are drawn')
 })
 
-test('office 3D: the lounge and the supervisor station; idle people rest in the lounge, workers sit at their desks', { skip: SKIP || false }, async () => {
+test('office 3D: the lounge and the supervisor station; idle people rest in the lounge, workers sit at their desks', { skip: SKIP || false }, async (t) => {
+  if (await browser.skipWithout3d(t)) return
   const { page, base, sb } = await world()
   warmUp(sb)
   await page.goto(base + '/?v=s3#/office/engineering')
@@ -206,7 +210,8 @@ test('office 3D: the lounge and the supervisor station; idle people rest in the 
   assert.equal(signs, i.podiums.length, 'every desk keeps its card')
 })
 
-test('office 3D: starting work walks from the lounge to the supervisor and the desk; finishing walks back by the supervisor to the lounge', { skip: SKIP || false }, async () => {
+test('office 3D: starting work walks from the lounge to the supervisor and the desk; finishing walks back by the supervisor to the lounge', { skip: SKIP || false }, async (t) => {
+  if (await browser.skipWithout3d(t)) return
   const { page, base, sb, log } = await world()
   warmUp(sb)
   await page.goto(base + '/?v=s4#/office/engineering')
@@ -227,7 +232,8 @@ test('office 3D: starting work walks from the lounge to the supervisor and the d
   assert.deepEqual(pageErrors(log), [], 'no page errors')
 })
 
-test('office 3D: a state that changes halfway through a walk is taken from where the person is', { skip: SKIP || false }, async () => {
+test('office 3D: a state that changes halfway through a walk is taken from where the person is', { skip: SKIP || false }, async (t) => {
+  if (await browser.skipWithout3d(t)) return
   const { page, base, sb, log } = await world()
   warmUp(sb)
   await page.goto(base + '/?v=s5#/office/engineering')
@@ -251,7 +257,8 @@ test('office 3D: a state that changes halfway through a walk is taken from where
   assert.deepEqual(pageErrors(log), [], 'no page errors')
 })
 
-test('office 3D: a character file without a walk clip still walks, in its idle pose', { skip: SKIP || false }, async () => {
+test('office 3D: a character file without a walk clip still walks, in its idle pose', { skip: SKIP || false }, async (t) => {
+  if (await browser.skipWithout3d(t)) return
   const { page, base, sb, log } = await world()
   fs.writeFileSync(path.join(sb.root, 'characters', 'walker-agent.glb'), withoutWalk(fs.readFileSync(path.join(sb.tools, 'characters', 'default.glb'))))
   warmUp(sb)
@@ -306,7 +313,8 @@ test('three.js is pinned to r184', () => {
   assert.equal(require('crypto').createHash('sha256').update(three).digest('hex'), '0fe243aabd03faa48e4156b51bf5b4c943fea15748aa623047aab539ab3b9624', 'three.cjs is three@0.184.0 build/three.cjs')
 })
 
-test('office 3D, the shipped set: each state plays its own clip (Walk, Stand, Typing, Celebrate, then Sit or Stand in the lounge), read from the mixer state', { skip: SKIP || false }, async () => {
+test('office 3D, the shipped set: each state plays its own clip (Walk, Stand, Typing, Celebrate, then Sit or Stand in the lounge), read from the mixer state', { skip: SKIP || false }, async (t) => {
+  if (await browser.skipWithout3d(t)) return
   const { page, base, sb, log } = await world()
   warmUp(sb)
   await page.goto(base + '/?v=s7#/office/engineering')

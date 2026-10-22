@@ -32,7 +32,8 @@ test.after(async () => {
 const READY = "window.__office3d && window.__office3d.info().podiums.filter((p) => p.character).length >= 9"
 const cells = (page) => page.eval("window.__office3d.info().podiums.filter((p) => p.kind === 'desk').map((p) => p.id + ':' + p.cell.join(',')).sort()")
 
-test('8 runs are 8 people at work (the implementer twice), each at a desk of its own with its own card; a pill never covers a head', { skip: SKIP || false }, async () => {
+test('8 runs are 8 people at work (the implementer twice), each at a desk of its own with its own card; a pill never covers a head', { skip: SKIP || false }, async (t) => {
+  if (await browser.skipWithout3d(t)) return
   const { page, base } = await world()
   await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
   await page.waitFor(READY, 20000)
@@ -79,7 +80,8 @@ test('8 runs are 8 people at work (the implementer twice), each at a desk of its
   assert.ok(got.quietSeen.every((o) => o === '0'), 'a free or finished person shows no pill until hovered: ' + JSON.stringify(got.quietSeen))
 })
 
-test('a person keeps their desk while the page redraws; a third run of the same agent adds a person, nobody else moves', { skip: SKIP || false }, async () => {
+test('a person keeps their desk while the page redraws; a third run of the same agent adds a person, nobody else moves', { skip: SKIP || false }, async (t) => {
+  if (await browser.skipWithout3d(t)) return
   const { sb, page, base } = await world()
   await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
   await page.waitFor(READY, 20000)

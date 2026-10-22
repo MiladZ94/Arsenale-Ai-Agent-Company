@@ -146,15 +146,19 @@ test('T-1.4: two assistants each get only the answers to their own questions, on
   assert.match(sb.cli('--answers', '--peek').out, /2 new answers/)
 })
 
-test('T-1.6: storage fails: the tool says so in one sentence and the server lives on', async (t) => {
+// root writes through any file mode, so there the folder cannot be made read-only
+const ROOT = typeof process.getuid === 'function' && process.getuid() === 0
+test('T-1.6: storage fails: the tool says so in one sentence and the server lives on', { skip: ROOT && 'runs as root, which can write in a read-only folder' }, async (t) => {
   const { sb, client } = world(t)
   const c = client()
   await c.init()
   const id = (await c.call('start_job', { team_member: 'copywriter', task: 'x' })).data.job_id
-  const f = path.join(sb.runs, 'active', id + '.json')
-  fs.chmodSync(f, 0o444)
-  t.after(() => { try { fs.chmodSync(f, 0o666) } catch { /* gone */ } })
-  const r = await c.call('log_step', { job_id: id, doing: 'step' })
+  // Windows: a read-only file cannot be renamed over. POSIX: the mode of the
+  // file does not stop a rename onto it, the folder's mode does.
+  const f = process.platform === 'win32' ? path.join(sb.runs, 'active', id + '.json') : path.join(sb.runs, 'active')
+  fs.chmodSync(f, process.platform === 'win32' ? 0o444 : 0o555)
+  let r
+  try { r = await c.call('log_step', { job_id: id, doing: 'step' }) } finally { fs.chmodSync(f, process.platform === 'win32' ? 0o666 : 0o755) }
   assert.equal(r.error, true)
   assert.equal(r.text, 'Arsenale could not save this step: the data folder is read-only.')
   assert.ok(c.alive())

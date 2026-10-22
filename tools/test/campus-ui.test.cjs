@@ -106,7 +106,8 @@ test('lot outlines show in build mode only, and then the whole grid is on show',
   await page.sleep(400)
 })
 
-test('a building enters its office, with the keyboard too', { skip: SKIP || false }, async () => {
+test('a building enters its office, with the keyboard too', { skip: SKIP || false }, async (t) => {
+  if (await browser.skipWithout3d(t)) return
   const { page } = await world()
   await page.eval("document.querySelector('#cmap g.bld[data-office=docs]').dispatchEvent(new MouseEvent('click', { bubbles: true })); 1")
   await page.waitFor("location.hash === '#/office/docs'", 5000)
@@ -120,7 +121,8 @@ test('a building enters its office, with the keyboard too', { skip: SKIP || fals
   await page.waitFor("document.querySelector('#cmap g.bld[data-office=docs]')", 5000)
 })
 
-test('leaving an office keeps you on the campus: a camera report that is still on its way never pulls the address back', { skip: SKIP || false }, async () => {
+test('leaving an office keeps you on the campus: a camera report that is still on its way never pulls the address back', { skip: SKIP || false }, async (t) => {
+  if (await browser.skipWithout3d(t)) return
   const { page } = await world()
   await page.eval("location.hash = '#/campus'; 1")
   await page.waitFor("document.querySelector('#cmap g.bld[data-office=hq]')", 5000)

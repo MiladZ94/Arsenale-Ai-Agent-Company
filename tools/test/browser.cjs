@@ -72,7 +72,9 @@ async function sharedBrowser() {
 async function startBrowser(me) {
   me.profile = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-company-browser-'))
   me.child = spawn(findBrowser(), [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+    // with no GPU, WebGL needs a software renderer: Windows has WARP, macOS
+    // and Linux only SwiftShader, which Chrome no longer falls back to unasked
+    '--headless=new', '--disable-gpu', '--enable-unsafe-swiftshader', '--no-first-run', '--no-default-browser-check',
     '--remote-debugging-port=0', '--user-data-dir=' + me.profile, '--window-size=1600,950', 'about:blank',
   ], { stdio: 'ignore' })
   me.child.unref()
@@ -144,7 +146,8 @@ async function launch() {
     },
     /** Wait until an expression is true in the page. */
     async waitFor(expr, ms) {
-      const end = Date.now() + Math.max(ms || 0, 20000)
+      // a CI runner draws WebGL in software on two cores: three times the time
+      const end = Date.now() + Math.max(ms || 0, 20000) * (process.env.CI ? 3 : 1)
       while (Date.now() < end) { if (await api.eval('!!(' + expr + ')')) return; await sleep(100) }
       throw new Error('the page never became: ' + expr)
     },
@@ -175,6 +178,29 @@ async function launch() {
   return api
 }
 
+/* The 3D office and campus need WebGL 2 (three.js). Where the browser has
+ * none, the page draws the flat office instead, so a 3D test can only wait
+ * for nothing: it is skipped, saying why. Asked once per file. */
+let glWhy = null
+function webglUnavailable() {
+  if (!glWhy) {
+    glWhy = (async () => {
+      const p = await launch()
+      try {
+        await p.goto('about:blank')
+        return (await p.eval("!!document.createElement('canvas').getContext('webgl2')")) ? '' : 'this browser has no WebGL 2 (no GPU and no software renderer), so the 3D view cannot start'
+      } finally { await p.close() }
+    })()
+  }
+  return glWhy
+}
+/** In a 3D test: true (and the test skipped) when the 3D view cannot start here. */
+async function skipWithout3d(t) {
+  const why = await webglUnavailable()
+  if (why) t.skip(why)
+  return !!why
+}
+
 /** What a person can read on the page: every text, plus the words in tooltips,
  *  aria-labels, placeholders and the tab title. Script, style and the archive's
  *  decorative terminal prompt are not text for a person. */
@@ -194,4 +220,4 @@ const READABLE = `(() => {
   return out.join('\\n')
 })()`
 
-module.exports = { launch, unavailable, READABLE }
+module.exports = { launch, unavailable, webglUnavailable, skipWithout3d, READABLE }

@@ -122,6 +122,7 @@ test('the key file is the owner\'s only (mode 0600), and a wider one is narrowed
   const sb = makeSandbox()
   t.after(() => sb.cleanup())
   const LK = sb.mod('launch-key.cjs')
+  fs.rmSync(LK.FILE, { force: true }) // the sandbox makes one for the CLI board tests
   const first = LK.ensure()
   assert.equal(first.created, true)
   assert.equal(fs.statSync(first.file).mode & 0o777, 0o600)
