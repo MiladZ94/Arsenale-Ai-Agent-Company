@@ -110,16 +110,25 @@ function Backup([string]$path) {
   return $dest
 }
 
+# SHA-256 of a file, upper-case hex as Get-FileHash gives it. Not Get-FileHash
+# itself: Windows PowerShell 5.1 started from PowerShell 7 (pwsh) inherits a
+# PSModulePath where that command cannot be found.
+function Hash-Of([string]$path) {
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  $stream = [System.IO.File]::OpenRead($path)
+  try { return [System.BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-', '') } finally { $stream.Dispose(); $sha.Dispose() }
+}
+
 # One line per file written: its hash, its path, and the backup of what it
 # replaced (if anything), so -Uninstall can put the original back.
 function Note-Installed([string]$path, [string]$backup) {
   if ($DryRun) { return }
-  $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+  $hash = (Hash-Of $path)
   [System.IO.File]::AppendAllText($Manifest, "$hash`t$path`t$backup`r`n", $Utf8)
 }
 
 function Same-File([string]$a, [string]$b) {
-  return (Get-FileHash -LiteralPath $a -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $b -Algorithm SHA256).Hash
+  return (Hash-Of $a) -eq (Hash-Of $b)
 }
 
 # Copies files side by side: new ones are added, identical ones skipped, and
@@ -195,7 +204,7 @@ if ($Uninstall) {
         $parts = $l.Split("`t"); $hash = $parts[0]; $f = $parts[1]; $orig = ''
         if ($parts.Count -gt 2) { $orig = $parts[2] }
         if (-not (Test-Path -LiteralPath $f)) { continue }
-        if ((Get-FileHash -LiteralPath $f -Algorithm SHA256).Hash -ne $hash) { Say "  kept $f (changed since install)"; continue }
+        if ((Hash-Of $f) -ne $hash) { Say "  kept $f (changed since install)"; continue }
         if ($orig -and (Test-Path -LiteralPath $orig)) {
           Act "restore $f from $orig"
           if (-not $DryRun) { Copy-Item -LiteralPath $orig -Destination $f -Force }

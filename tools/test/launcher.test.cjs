@@ -113,7 +113,9 @@ test('H6: demo --no-open with stdout in a file writes the key URL within 5 s, be
   // test looks depends on the machine (a fast runner seeds in a few ms), so
   // the order is read from the file times: the seed's issues folder was made
   // no earlier than the last line of the address was written.
-  assert.equal(text.split('\n').filter(Boolean).length, 2, 'only the address and the folder were printed: ' + text)
+  // (the file time is the folder line's only while nothing came after it; a
+  // warning before the address, such as one about the folder's rights, may)
+  assert.match(text, /Data folder: .+\n$/, 'nothing was printed after the folder: ' + text)
   // a request made now waits for the seed and sees the whole invented company
   const cookie = (await get(port, '/?k=' + m[2])).headers['set-cookie'][0].split(';')[0]
   const tasks = JSON.parse((await get(port, '/api/tasks', cookie)).text).tasks

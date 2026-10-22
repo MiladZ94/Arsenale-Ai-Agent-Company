@@ -116,6 +116,10 @@ async function launch() {
   const send = (method, params) => new Promise((res, rej) => { const n = ++id; waiting.set(n, { res, rej }); ws.send(JSON.stringify({ id: n, method, params: params || {} })) })
   await send('Page.enable')
   await send('Runtime.enable')
+  // the pages follow the system's reduced-motion setting, which a CI runner
+  // turns on (the 3D office then puts people in place without walking);
+  // the tests check the motion, so the tab asks for it
+  await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] })
 
   const api = {
     /** Open an address and wait for the load event and half a second of drawing. */

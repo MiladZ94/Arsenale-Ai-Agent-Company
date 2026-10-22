@@ -614,7 +614,10 @@ test('Windows: each arsenale serve reads the notify folder ACL back and re-appli
   fs.writeFileSync(path.join(dir, '.owner-only'), '2026-01-01T00:00:00.000Z\n')
   await N.configure({ op: 'setup', channel: 'pushover', token: PUSH_TOKEN, user: PUSH_USER }, board(L))
   const acl = () => spawnSync('icacls', [dir], { encoding: 'utf8', windowsHide: true }).stdout
-  assert.match(acl(), /\(I\)/, 'inherited to begin with')
+  // inherited from the temp folder, or (where that passes nothing down, as on
+  // a CI runner) the creator's default entries: either way not the owner's only
+  const first = acl().split(/\r?\n/).filter((l) => /:\(/.test(l))
+  assert.ok(first.length > 1 || /\(I\)/.test(first.join('\n')), 'not owner-only to begin with: ' + acl())
   assert.equal(N.publicState().secretsFile.ownerOnly, false, 'the mark alone is not believed')
   const port = 47000 + Math.floor(Math.random() * 2000)
   const child = spawn(process.execPath, [path.join(__dirname, '..', '..', 'bin', 'arsenale.cjs'), 'serve', '--no-open', '--port', String(port)], { env: sb.env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true })
@@ -633,4 +636,21 @@ test('Windows: each arsenale serve reads the notify folder ACL back and re-appli
   assert.doesNotMatch(lines[0], /\(I\)/)
   assert.match(lines[0], /\(OI\)\(CI\)\(F\)/)
   assert.equal(require(path.join(sb.tools, 'owner-only.cjs')).check(dir).ok, true)
+})
+
+test('Windows: a notify folder whose entries are its own, none inherited, is made the owner\'s only too', { skip: process.platform !== 'win32' && 'Windows ACLs' }, (t) => {
+  const { spawnSync } = require('child_process')
+  const sb = box(t)
+  const dir = path.join(sb.root, 'notify')
+  fs.mkdirSync(dir)
+  // the inherited entries become the folder's own: /inheritance:r alone keeps them
+  assert.equal(spawnSync('icacls', [dir, '/inheritance:d'], { windowsHide: true }).status, 0)
+  const acl = () => spawnSync('icacls', [dir], { encoding: 'utf8', windowsHide: true }).stdout
+  const before = acl().split(/\r?\n/).filter((l) => /:\(/.test(l))
+  assert.ok(before.length > 1 && !/\(I\)/.test(before.join('\n')), 'several entries, none inherited: ' + acl())
+  const r = sb.mod('owner-only.cjs').ensure(dir)
+  assert.equal(r.ok, true, r.reason + ': ' + acl())
+  const lines = acl().split(/\r?\n/).filter((l) => /:\(/.test(l))
+  assert.equal(lines.length, 1, acl())
+  assert.match(lines[0], /\(OI\)\(CI\)\(F\)/)
 })

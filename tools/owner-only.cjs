@@ -94,6 +94,18 @@ function ensure(dir) {
     applied = true
     cache.delete(key)
     if (!r || r.error || r.status !== 0) return { ok: false, applied, reason: 'icacls: ' + why(r) }
+    // /inheritance:r only drops what is inherited: a folder whose entries
+    // are its own (made where the parent passes nothing down, or copied
+    // with them) keeps Users or Authenticated Users, so those go one by one
+    const left = icacls([key])
+    const list = !left || left.error || left.status !== 0 ? null : entries(left.stdout, key)
+    const me = who().toLowerCase(), name = '\\' + user().toLowerCase()
+    for (const e of list || []) {
+      const w = e.who.toLowerCase()
+      if (w === me || w.endsWith(name)) continue
+      icacls([key, '/remove', /^S-1-[\d-]+$/i.test(e.who) ? '*' + e.who : e.who])
+    }
+    cache.delete(key)
     now = check(key)
   }
   if (now.ok) { try { fs.writeFileSync(path.join(key, MARK), new Date().toISOString() + '\n') } catch { /* the reading is what counts */ } }
