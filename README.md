@@ -68,7 +68,7 @@ Try it first. This shows an invented company in a temporary folder and never
 touches your data:
 
 ```
-git clone https://github.com/emadbarandan/Arsenale.git
+git clone https://github.com/emadbarandan/Arsenale-Ai-Agent-Company.git
 cd Arsenale
 node bin/arsenale.cjs demo
 ```
@@ -78,7 +78,7 @@ node bin/arsenale.cjs demo
 To install it with npm:
 
 ```
-npm install -g github:emadbarandan/Arsenale
+npm install -g github:emadbarandan/Arsenale-Ai-Agent-Company
 ```
 
 Or run the installer. It asks before every change, and `--dry-run` shows the
