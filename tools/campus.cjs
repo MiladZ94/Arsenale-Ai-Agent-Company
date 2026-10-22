@@ -16,6 +16,10 @@
  * writes a decision (A4); an agent cannot use it at all. Removing a building
  * archives its office: the office's history stays.
  *
+ * office() is the owner's New office and Edit office form (spec 1.2): create
+ * (the office and its building together), edit, archive. The owner only,
+ * through POST /api/office or `arsenale log --office` with the board token.
+ *
  * The file is written whole into a temporary file and renamed (store.cjs), under a lock, so a reader never sees half a file and two
  * writers lose no update.
  */
@@ -133,7 +137,8 @@ function view(co) {
 const slug = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^[^a-z]+|-+$/g, '').slice(0, 28)
 function freshOfficeId(name, co) {
   const base = slug(name) || 'office'
-  const ids = new Set(co.offices.map((o) => o.id))
+  // "constructor" would be found on every object a lookup by id is made in
+  const ids = new Set(co.offices.map((o) => o.id).concat(['constructor', 'prototype']))
   if (base.length >= 2 && !ids.has(base)) return base
   for (let n = 2; n < 1000; n++) { const id = (base.length >= 2 ? base : 'office') + '-' + n; if (!ids.has(id)) return id }
   throw fail(409, 'no free office id')
@@ -168,6 +173,16 @@ function allowed(actor) {
 }
 
 const label = (b, o) => (o ? o.name : b.officeId)
+
+/** Writes the whole layout as it stands, its derived part included. */
+function save(cur) {
+  const file = {
+    schemaVersion: SCHEMA, grid: cur.grid, roads: cur.roads, props: cur.props,
+    buildings: cur.buildings.map((b) => ({ id: b.id, officeId: b.officeId, type: b.type, x: b.x, y: b.y, rot: b.rot, floors: b.floors, createdBy: b.createdBy, createdAt: b.createdAt })),
+  }
+  fs.mkdirSync(P.COMPANY, { recursive: true })
+  writeAtomic(FILE(), JSON.stringify(file, null, 2))
+}
 
 /** The one write path. input: {op: place|move|rotate|remove, ...}. `via` is
  *  the door ('dashboard', 'cli'). Returns {summary, building?, office?}. */
@@ -236,12 +251,7 @@ function apply(input, actor, via) {
       summary = 'removed the building of ' + nameOf(b) + ' (the office is archived, its history stays)'
       building = b; office = b.officeId
     }
-    const file = {
-      schemaVersion: SCHEMA, grid: cur.grid, roads: cur.roads, props: cur.props,
-      buildings: cur.buildings.map((b) => ({ id: b.id, officeId: b.officeId, type: b.type, x: b.x, y: b.y, rot: b.rot, floors: b.floors, createdBy: b.createdBy, createdAt: b.createdAt })),
-    }
-    fs.mkdirSync(P.COMPANY, { recursive: true })
-    writeAtomic(FILE(), JSON.stringify(file, null, 2))
+    save(cur)
     return { summary, building, office, op }
   })
   // the office is archived after the lot is free: a crash in between leaves an
@@ -255,4 +265,93 @@ function apply(input, actor, via) {
   return { summary: out.summary, building: out.building, office: out.office }
 }
 
-module.exports = { TYPES, TYPE_IDS, typeById, typeOfProfile, readCampus, view, apply, SCHEMA, DEFAULT_GRID, MAX_GRID, FILE }
+// ---------- offices the owner makes (spec 1.2 rules 15 to 19)
+/** Create, edit and archive an office: the owner only, whatever door. The
+ *  supervisor keeps its 1.1 campus right (apply), which sets no kinds. */
+function office(input, actor, via) {
+  if (!actor || actor.role !== 'board') throw fail(403, require('./runlog.cjs').OWNER_ONLY)
+  company().noProtoKeys(input)
+  const op = String(input && input.op || '')
+  if (op === 'create') return createOffice(input, via)
+  if (op === 'edit') return editOffice(input, via)
+  if (op === 'archive') return archiveOffice(input, actor, via)
+  throw fail(400, 'op must be create, edit or archive')
+}
+
+/** The New office form: the office and its building, under the campus lock.
+ *  The office is written archived, then the building, then the office is
+ *  brought back: a crash or a failed write on the way leaves an archived
+ *  office, never an office without a building (rule 16). */
+function createOffice(input, via) {
+  const C = company()
+  const type = input.type === undefined ? '' : input.type
+  const form = { name: input.name === undefined ? '' : input.name, type, kinds: input.kinds === undefined ? [] : input.kinds, theme: input.theme === undefined ? (typeById(type) || {}).theme : input.theme }
+  // refused before the lock is taken; checked again under it (addOffice)
+  const v = C.checkOfficeForm(form, C.readCompany(), '')
+  const out = withLock(FILE(), () => {
+    const co = C.readCompany()
+    if (!co.configured) throw fail(409, 'no company configured: run arsenale log --company-init first')
+    if (co.readOnly) throw fail(409, 'Company data was written by a newer dashboard. Editing is disabled.')
+    const cur = readCampus(co)
+    if (cur.readOnly) throw fail(409, 'campus.json was written by a newer Arsenale. Editing is disabled.')
+    const taken = new Set(cur.buildings.map((b) => b.x + ',' + b.y))
+    const lotFail = (m) => { const e = fail(409, m); e.field = 'lot'; return e }
+    let lot
+    if (input.x !== undefined || input.y !== undefined) {
+      const x = int(input.x), y = int(input.y)
+      if (!(x >= 0 && x < cur.grid.cols && y >= 0 && y < cur.grid.rows)) throw lotFail('Lot: outside the grid')
+      const there = cur.buildings.find((b) => b.x === x && b.y === y)
+      if (there) throw lotFail('Lot taken: ' + label(there, co.offices.find((o) => o.id === there.officeId)))
+      lot = [x, y]
+    } else {
+      lot = freeLot(cur.grid, taken)
+      if (!lot && cur.grid.rows < MAX_GRID) { cur.grid.rows++; lot = freeLot(cur.grid, taken) }
+      if (!lot) throw fail(409, 'The campus is full: archive an office first')
+    }
+    const id = freshOfficeId(v.name, co)
+    C.addOffice({ id }, 'board', via, { form, quiet: true, archived: true })
+    const building = { id: 'b-' + id, officeId: id, type: v.profile, x: lot[0], y: lot[1], rot: 0, floors: 1, createdBy: 'board', createdAt: new Date().toISOString() }
+    cur.buildings.push(building)
+    save(cur)
+    C.addOffice({ id }, 'board', via, { quiet: true })
+    return { id, building }
+  })
+  const summary = 'office created: ' + v.name + ' (' + typeById(v.profile).name + (v.kinds.length ? '; ' + v.kinds.map(require('./kinds.cjs').labelOf).join(', ') : '') + ') on lot ' + out.building.x + ',' + out.building.y
+  C.activity({ actor: 'board', action: 'office.created', entityType: 'office', entityId: out.id, officeId: out.id, summary, via: via || 'cli' })
+  if (via === 'dashboard') C.inboxLine({ type: 'office.created', scope: 'office', id: out.id, summary }, via)
+  return { id: out.id, building: out.building, summary }
+}
+
+/** Edit office: name, colour, building type, kinds. A new type re-draws the
+ *  building on the lot it has. */
+function editOffice(input, via) {
+  const C = company()
+  return withLock(FILE(), () => {
+    if (input.type !== undefined && readCampus(C.readCompany()).readOnly) throw fail(409, 'campus.json was written by a newer Arsenale. Editing is disabled.')
+    const r = C.editOffice(Object.assign({}, input, { op: undefined }), 'board', via)
+    if (r.changed.includes('profile')) {
+      // only the type of its building changes; the rest of the file stays as it is
+      const raw = readJson(FILE(), null)
+      const b = raw && Array.isArray(raw.buildings) && raw.buildings.find((x) => x && x.officeId === r.id)
+      if (b) { b.type = r.profile; writeAtomic(FILE(), JSON.stringify(raw, null, 2)) }
+    }
+    return { id: r.id, changed: r.changed, summary: r.summary }
+  })
+}
+
+/** Archive office: its building goes and the office is archived, as the
+ *  campus's own Archive tool does; an office with no lot is archived alone. */
+function archiveOffice(input, actor, via) {
+  const C = company()
+  const id = String(input.id == null ? '' : input.id)
+  const o = C.readCompany().offices.find((x) => x.id === id && !x.builtIn)
+  if (!o) throw fail(404, 'no such office: ' + clip(id, 40))
+  if (o.archived) return { id, summary: 'office ' + id + ' is archived already' }
+  try { return apply({ op: 'remove', officeId: id }, actor, via) } catch (e) {
+    if (e.code !== 404) throw e
+    C.archiveOffice(id, 'board', via)
+    return { id, summary: 'office ' + id + ' archived' }
+  }
+}
+
+module.exports = { TYPES, TYPE_IDS, typeById, typeOfProfile, readCampus, view, apply, office, SCHEMA, DEFAULT_GRID, MAX_GRID, FILE }

@@ -100,7 +100,9 @@
     return '#' + ((1 << 24) | (f(n >> 16) << 16) | (f((n >> 8) & 255) << 8) | f(n & 255)).toString(16).slice(1)
   }
   let AGENT = new Map()
-  const CR = controlRoom({ esc, digits, hhmm, ms, span, cleanTask, isHeavy, agents: () => AGENT, T, k, usd, errTxt })
+  // a person by name (employees.json name, else the job title) on the floor and in the panel; the file id stays the data
+  const personName = (agent) => { const e = COMPANY && COMPANY.configured && Array.isArray(COMPANY.employees) ? COMPANY.employees.find((x) => x.id === agent) : null; return (e && (e.name || e.title)) || agent }
+  const CR = controlRoom({ esc, digits, hhmm, ms, span, cleanTask, isHeavy, agents: () => AGENT, T, k, usd, errTxt, ic: everyoneArt().ic })
   function palette(agent, dim) {
     let hair, skin, shirt
     if (agent === 'supervisor') { hair = '#3A3A3A'; skin = '#D9A77C'; shirt = '#56606C' } else if (agent === 'board') { hair = '#C8A24A'; skin = '#F0C8A0'; shirt = '#C9A63A' } else {
@@ -123,9 +125,30 @@
     })
     return '<g ' + (extra || '') + '>' + out + '</g>'
   }
+  // The rendered characters (tools/characters, OFFICE_LOOK) stand in for the pixel
+  // people below whenever the page has them: the seed (id and the look number) picks the
+  // character, the person's office the shirt, the same on every screen. Without the
+  // sprite files `picture` is null and the pixel people are drawn.
+  const seedOf = (agent) => { const e = CO && CO.emp(agent); return agent + (e && e.look ? ':' + e.look : '') }
+  const toneOf = (agent) => { const e = CO && CO.emp(agent), o = CO && ((e && e.homeOfficeId && CO.officeById(e.homeOfficeId)) || CO.officeById(officeId)); return (o && o.color) || '#6F7B88' }
+  const picture = (kind, agent) => (typeof OFFICE_LOOK === 'object' && OFFICE_LOOK.url ? OFFICE_LOOK.url(kind, seedOf(agent), toneOf(agent)) : null)
   // anchor (x, y) = bottom centre of the sprite
   function sprite(kind, agent, x, y, px, opts) {
     opts = opts || {}
+    const pic = picture(kind === 'stand' ? 's' : 'p', agent)
+    if (pic) {
+      const dim = opts.dim ? ' opacity="0.6"' : ''
+      if (kind === 'stand') {
+        // the first frame of the strip: a nested svg shows only that frame
+        const S = 15 * px, top = y - 14 * px
+        let s = '<svg x="' + (x - S / 2) + '" y="' + (top + 14 * px - S) + '" width="' + S + '" height="' + S + '" viewBox="0 0 64 64"' + dim + '><image href="' + pic + '" width="320" height="64"/></svg>'
+        if (opts.paper) s += '<rect x="' + (x - 4 * px + 2 * px) + '" y="' + (top + 7 * px) + '" width="' + 4 * px + '" height="' + 3 * px + '" fill="#F4F1EA" stroke="#B9B2A3" stroke-width="0.6"/>'
+        return s
+      }
+      // seated, at a desk or on a sofa: head and shoulders, the desk or the sofa hides the rest
+      const S = 9 * px
+      return '<image href="' + pic + '" x="' + (x - S / 2) + '" y="' + (y - (kind === 'sofa' ? 11 : 9) * px) + '" width="' + S + '" height="' + S + '"' + dim + '/>'
+    }
     const pal = palette(agent, opts.dim)
     const left = x - (8 * px) / 2
     if (kind === 'seat') {
@@ -146,6 +169,12 @@
   const LEGS_A = ['..p..p..', '.p....p.', 'kk....kk']
   const LEGS_B = ['..p..p..', '..p..p..', '.kk..kk.']
   function walker(agent, path, dur, el, paper) {
+    const pic = picture('s', agent)
+    if (pic) {
+      // the four walk frames of the strip, stepped by CSS (people.cjs); the same path animation as the pixel walker
+      return '<span class="walker" aria-hidden="true" style="width:45px;height:45px;offset-path:path(\'' + path + '\');animation-duration:' + dur.toFixed(2) + 's;animation-delay:' + (-el).toFixed(2) + 's"><i class="wf" style="background-image:url(' + pic + ')"></i>' +
+        (paper ? '<i style="position:absolute;left:17px;top:24px;width:12px;height:9px;background:#F4F1EA;border:1px solid #B9B2A3"></i>' : '') + '</span>'
+    }
     const pal = palette(agent)
     let s = grid(STAND.slice(0, 11), pal, 3, 0, 0) + grid(LEGS_A, pal, 3, 0, 33, 'class="lf1"') + grid(LEGS_B, pal, 3, 0, 33, 'class="lf2"')
     if (paper) s += '<rect x="6" y="21" width="12" height="9" fill="#F4F1EA" stroke="#B9B2A3" stroke-width="0.6"/>'
@@ -153,6 +182,8 @@
       ' style="offset-path:path(\'' + path + '\');animation-duration:' + dur.toFixed(2) + 's;animation-delay:' + (-el).toFixed(2) + 's"><g class="wb">' + s + '</g></svg>'
   }
   function portrait(agent, px, dim) {
+    const pic = picture('p', agent)
+    if (pic) return '<img class="portrait" src="' + pic + '" width="' + 10 * px + '" height="' + 10 * px + '" alt=""' + (dim ? ' style="opacity:.6"' : '') + ' />'
     const pal = palette(agent, dim)
     const rows = STAND.slice(0, 9)
     const w = 10 * px, h = rows.length * px + px
@@ -206,7 +237,7 @@
   try {
     const saved = JSON.parse(sessionStorage.getItem('agent-office') || '{}')
     sel = saved.sel || null; drawerOpen = !!saved.drawer; filter = saved.filter || ''
-    if (['office', 'dec', 'use', 'campus', 'org', 'act', 'vr', 'live', 'tasks', 'appr', 'team', 'dlv', 'set'].includes(saved.mode)) mode = saved.mode
+    if (['office', 'dec', 'use', 'campus', 'org', 'act', 'vr', 'live', 'tasks', 'appr', 'team', 'dlv', 'set', 'market'].includes(saved.mode)) mode = saved.mode
     if (typeof saved.office === 'string') officeId = saved.office
     const v = saved.view
     if (v && [v.z, v.x, v.y].every((n) => typeof n === 'number' && isFinite(n))) view = { z: v.z, x: v.x, y: v.y }
@@ -227,13 +258,13 @@
   }) : null
   // Live replaced the Version run tab and Decisions the Approvals tab: the old addresses still open the new screens
   // (the first key of a screen is the one the address bar shows). #/decisions was already the older gates view.
-  const HASH = { campus: 'campus', org: 'org', decisions: 'dec', usage: 'use', office: 'office', activity: 'act', live: 'live', versionrun: 'live', rundetail: 'vr', tasks: 'tasks', inbox: 'appr', approvals: 'appr', team: 'team', deliverables: 'dlv', settings: 'set' }
+  const HASH = { campus: 'campus', org: 'org', decisions: 'dec', usage: 'use', office: 'office', activity: 'act', live: 'live', versionrun: 'live', rundetail: 'vr', tasks: 'tasks', inbox: 'appr', approvals: 'appr', team: 'team', deliverables: 'dlv', settings: 'set', marketplace: 'market' }
   const AV = activityView({ esc, digits, hhmm, ms, T, cleanTask, redraw: () => renderAll() })
   const VV = versionRunView({ esc, T, ms, live: () => LIVE, shown: () => mode === 'vr', answerBox: (g) => CR.answerBox(g), redraw: () => renderAll() })
   // the 1.0 screens (everyone-page.cjs): tasks, approvals, team, deliverables, settings, the wizard
   const EV = everyoneViews({ esc, digits, T, errTxt, k, health: (a, q) => runHealth(a, q), span: (v) => quietSpan(v), post: (u, b) => CR.post(u, b), redraw: () => redrawLater(), refresh: () => fetchCompany(true) })
   function fromHash() {
-    const m = /^#\/(campus|org|decisions|usage|office|activity|live|versionrun|rundetail|tasks|inbox|approvals|team|deliverables|settings)(?:\/([\w-]+))?/.exec(location.hash || '')
+    const m = /^#\/(campus|org|decisions|usage|office|activity|live|versionrun|rundetail|tasks|inbox|approvals|team|deliverables|settings|marketplace)(?:\/([\w-]+))?/.exec(location.hash || '')
     if (!m) return false
     mode = HASH[m[1]]
     if (m[2]) officeId = m[2]

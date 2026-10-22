@@ -77,15 +77,17 @@
     const oname = (id) => (id === 'unassigned' ? T('No office') : officeName(id))
     const ocol = (id) => (id === 'unassigned' ? '#8A97A6' : colorOf(id))
     const sel = (name, label, val, opts) => '<label class="tf">' + label + '<select name="' + name + '" data-ev-change="' + name + '"><option value="">' + T('Any') + '</option>' + opts.map(([v, t]) => '<option value="' + esc(v) + '"' + (val === v ? ' selected' : '') + '>' + esc(t) + '</option>').join('') + '</select></label>'
-    let html = '<div class="eh"><div><h1>' + T('Team') + '</h1><div class="sub">' + digits(rows.length) + ' ' + T(rows.length === 1 ? 'employee' : 'employees') + ' · ' + digits(offs.length) + ' ' + T(offs.length === 1 ? 'office' : 'offices') + ' · ' + digits(working) + ' ' + T('working now') + '</div></div><div class="ea"><button type="button" class="b sm" data-goto="org">' + T('Org chart') + '</button><button type="button" class="b sm" data-ev="goto-packs">' + T('Add an office') + '</button>' +
+    let html = '<div class="eh"><div><h1>' + T('Team') + '</h1><div class="sub">' + digits(rows.length) + ' ' + T(rows.length === 1 ? 'person' : 'people') + ' · ' + digits(offs.length) + ' ' + T(offs.length === 1 ? 'office' : 'offices') + (working ? ' · ' + digits(working) + ' ' + T('working now') : '') + '</div></div><div class="ea"><button type="button" class="b sm" data-goto="org">' + T('Org chart') + '</button>' + (canWrite() ? (st.teamOffice && officeById(st.teamOffice) && !officeById(st.teamOffice).builtIn ? '<button type="button" class="b sm" data-ev="office-edit" data-arg="' + esc(st.teamOffice) + '">' + T('Edit office') + '</button>' : '') + '<button type="button" class="b sm" data-ev="office-new">' + T('Add an office') + '</button>' : '<button type="button" class="b sm" data-ev="goto-packs">' + T('Add an office') + '</button>') +
       (canWrite() ? '<button type="button" class="b pri sm" data-ev="hire-new">' + ic('plus', 14, 2.4) + T('Hire an employee') + '</button>' : '') + '</div></div>'
     html += '<div class="tfil"><span class="rw" style="gap:6px;flex-wrap:wrap"><button type="button" class="chip" data-ev="team-office" data-arg="" aria-pressed="' + !st.teamOffice + '">' + T('All offices') + ' ' + digits(rows.length) + '</button>' +
       offs.map((o) => '<button type="button" class="chip" data-ev="team-office" data-arg="' + esc(o.id) + '" aria-pressed="' + (st.teamOffice === o.id) + '"><span class="sw" style="background:' + esc(ocol(o.id)) + '"></span><span class="tnm">' + esc(oname(o.id)) + '</span> ' + digits(rows.filter((r) => r.off === o.id).length) + '</button>').join('') +
-      // the packs not installed yet; an office that exists is never listed here
-      (notSetUp() ? '<span class="mut sm tnsu">' + esc(notSetUp()) + '</span>' : '') + '</span>' +
+      // the packs not installed yet, as one link (their names in its tooltip); an office that exists is never counted here
+      (notSetUp() ? '<button type="button" class="lnk tnsu" data-ev="goto-packs" title="' + esc(notSetUp()) + '">' + esc(digits(notSetUpN()) + ' ' + T(notSetUpN() === 1 ? 'more office in the Marketplace' : 'more offices in the Marketplace') + ' →') + '</button>' : '') + '</span>' +
       sel('teamStatus', T('Status'), st.teamStatus, [['working', T('Working')], ['waiting', T('Waiting for you')], ['quiet', T('Quiet')], ['stalled', T('Stalled')], ['dead', T('Dead')], ['done', T('Finished today')], ['idle', T('Free')], ['paused', T('Paused')]]) +
       sel('teamModel', T('Model'), st.teamModel, models.map((x) => [x, x])) +
-      '<label class="rw" style="gap:0;position:relative;margin:0"><span style="position:absolute;inset-inline-start:12px;color:var(--ink-dim);line-height:0">' + ic('search', 15) + '</span><input type="search" name="tq" data-ev-input="tq" value="' + esc(st.teamQ) + '" placeholder="' + T('Search by name or task') + '" aria-label="' + T('Search by name or task') + '" style="width:260px;padding-inline-start:36px"></label></div>'
+      '<label class="rw" style="gap:0;position:relative;margin:0"><span style="position:absolute;inset-inline-start:12px;color:var(--ink-dim);line-height:0">' + ic('search', 15) + '</span><input type="search" name="tq" data-ev-input="tq" value="' + esc(st.teamQ) + '" placeholder="' + T('Search by name or task') + '" aria-label="' + T('Search by name or task') + '" style="width:260px;padding-inline-start:36px"></label>' +
+      '<span class="seg" role="group" aria-label="' + T('Show the team as') + '"><button type="button" data-ev="team-view" data-arg="tiles" aria-pressed="' + (st.teamView !== 'table') + '">' + T('Tiles') + '</button><button type="button" data-ev="team-view" data-arg="table" aria-pressed="' + (st.teamView === 'table') + '">' + T('Table') + '</button></span></div>'
+    if (st.teamView !== 'table') return html + teamTiles(shown, oname, ocol, hot)
     html += '<div class="card tdir"><table class="dir"><thead><tr><th>' + T('Employee') + '</th><th>' + T('Office') + '</th><th>' + T('Model') + '</th><th>' + T('Status') + '</th><th>' + T('Current or last task') + '</th><th class="n">' + T('Runs, 30 d') + '</th><th class="n">' + T('Tokens, 30 d') + '</th><th>' + T('Last 14 days') + '</th><th class="n">' + T('Good runs') + '</th><th></th></tr></thead><tbody>'
     let lastOff = null
     for (const r of shown) {
@@ -103,13 +105,38 @@
     html += '</div><p class="note" style="margin-top:10px">' + T('Good runs: finished with no findings and no failure. Sorted by office, then working first. A row opens the person’s profile.') + '</p>'
     return html
   }
+  /** The people as portrait tiles, grouped by office: status, the portrait, name, title, the task and the runs.
+   *  The whole tile opens the profile. The portrait is the character pipeline's still (everyoneArt). */
+  function teamTiles(shown, oname, ocol, hot) {
+    if (!shown.length) return '<p class="empty" style="padding:24px">' + T('No one matches these filters.') + '</p>'
+    const groups = []
+    for (const r of shown) { const g = groups[groups.length - 1]; if (g && g.off === r.off) g.list.push(r); else groups.push({ off: r.off, list: [r] }) }
+    return groups.map((g) => '<section class="tgrp"><h2 class="rw tgh"><span class="sw" style="background:' + esc(ocol(g.off)) + '"></span>' + esc(oname(g.off)) + ' <span class="mut">' + digits(g.list.length) + ' ' + T(g.list.length === 1 ? 'person' : 'people') + '</span></h2><div class="tgrid">' +
+      g.list.map((r) => {
+        const m = r.m, u = usage(m.id), live = (DATA.active || []).find((x) => x.agent === m.id)
+        const last = runsOf((x) => x.agent === m.id).sort((a, b) => String(b.finishedAt).localeCompare(String(a.finishedAt)))[0]
+        const chip = r.rs.key === 'idle' || r.rs.key === 'done' ? '' : '<span class="pill ' + r.rs.key + '">' + esc(r.rs.word) + '</span>'
+        const task = live ? esc(live.task || live.doing || '') : last ? esc(String(last.task || '').replace(/\s*\(under\s+[^)]*\)\s*/gi, ' ').trim()) : ''
+        const when = !live && last ? (isToday(last.finishedAt) ? T('finished ') + hm(last.finishedAt) : T('last active ') + esc(day(last.finishedAt))) : ''
+        return '<button type="button" class="ttile" data-ev="member-open" data-arg="' + esc(m.id) + '" aria-current="' + (m.id === hot) + '" style="--oc:' + esc(ocol(r.off)) + '">' +
+          '<span class="tpic">' + chip + '<span class="tface">' + face(m.id, 96) + '</span></span>' +
+          '<span class="tbody"><b class="hi ell" dir="auto">' + esc(nameOf(m.id)) + '</b><span class="soft ell" dir="auto">' + esc(m.name && titleOf(m) && m.name !== titleOf(m) ? titleOf(m) : m.model || '') + '</span>' +
+          '<span class="ell ttask" dir="auto">' + (task || '<span class="mut">' + T('No task yet') + '</span>') + '</span>' +
+          '<span class="mut ell">' + [u.runs ? digits(u.runs) + ' ' + T(u.runs === 1 ? 'run in 30 days' : 'runs in 30 days') : '', when].filter(Boolean).join(' · ') + '</span></span></button>'
+      }).join('') + '</div></section>').join('') +
+      '<p class="note" style="margin-top:14px">' + T('A tile opens the person’s profile: tokens, the last 14 days and good runs are there, and in the table.') + '</p>'
+  }
   /** "Operations, Research, Design: not set up": the packs not installed yet. */
   function notSetUp() {
-    load('packs', 'api/packs', false, 60000)
-    // an office that exists is set up, whether a pack or the seed made it
-    const left = ((st.data.packs && st.data.packs.packs) || []).filter((p) => !p.installed && !offices().some((o) => p.office && o.id === p.office.id))
+    const left = packsLeft()
     return left.length ? left.map((p) => p.name).join(T(', ')) + T(': not set up') : ''
   }
+  function packsLeft() {
+    load('packs', 'api/packs', false, 60000)
+    // an office that exists is set up, whether a pack or the seed made it
+    return ((st.data.packs && st.data.packs.packs) || []).filter((p) => !p.installed && !offices().some((o) => p.office && o.id === p.office.id))
+  }
+  const notSetUpN = () => packsLeft().length
   function monthRuns(id) {
     const d0 = new Date(); d0.setDate(1); d0.setHours(0, 0, 0, 0)
     return runsOf((r) => r.agent === id && Date.parse(r.finishedAt) >= d0.getTime())
@@ -130,7 +157,7 @@
     const cost = co().company.payModel === 'plan' ? T('Included in your plan') : runs.some((x) => typeof x.costUsd === 'number') ? '$' + digits(runs.reduce((n, x) => n + (x.costUsd || 0), 0).toFixed(2)) : T('not counted')
     const u = usage(m.id)
     const tile = (lbl, val, cls) => '<div class="stat"><div class="lbl">' + lbl + '</div><div class="hi' + (cls ? ' ' + cls : '') + '" style="font-size:22px;font-weight:700;margin-top:4px">' + val + '</div></div>'
-    html += '<div class="rw tiles" style="gap:10px;align-items:stretch">' + tile(T('Runs, 30 days'), digits(u.runs)) + tile(T('Good runs'), u.runs ? digits(Math.round(u.good / u.runs * 100)) + ' %' : '—', u.runs && u.good / u.runs >= 0.9 ? 'ok' : '') + tile(T('Average run'), u.avg ? esc(dur(u.avg)) : '—') + tile(T('Tokens, 30 days'), tokens(u.tok)) + tile(T('Dead runs'), digits(u.dead), u.dead ? 'bad' : '') + '</div>'
+    html += '<div class="rw tiles" style="gap:10px;align-items:stretch">' + tile(T('Runs, 30 days'), u.runs ? digits(u.runs) : '—') + tile(T('Good runs'), u.runs ? digits(Math.round(u.good / u.runs * 100)) + ' %' : '—', u.runs && u.good / u.runs >= 0.9 ? 'ok' : '') + tile(T('Average run'), u.avg ? esc(dur(u.avg)) : '—') + tile(T('Tokens, 30 days'), u.tok ? tokens(u.tok) : '—') + tile(T('Dead runs'), u.dead ? digits(u.dead) : '—', u.dead ? 'bad' : '') + '</div>'
     const mx = Math.max(1, ...u.days)
     html += '<div><div class="sec" style="margin-bottom:8px">' + T('Runs per day, last 14 days') + '</div><div class="bars" role="img" aria-label="' + T('Runs per day, last 14 days') + '">' + u.days.map((n) => '<i style="height:' + (n ? Math.max(8, Math.round(n / mx * 100)) : 3) + '%" class="' + (n ? '' : 'z') + '" title="' + digits(n) + '"></i>').join('') + '</div><div class="mut" style="font-size:12px;margin-top:6px">' + T('Cost this month: ') + esc(cost) + ' · ' + T('Role file: ') + ltr(m.id) + (m.tier ? ' · ' + T('Strength: ') + T(TIER[m.tier]) : '') + '</div></div>'
     const def = (DATA.agents || []).find((x) => x.name === m.id) || {}
@@ -278,7 +305,7 @@
     const n = (k) => list.filter((d) => groupOf(d) === k).length
     const chip = (v, label, icon) => '<button type="button" class="chip" data-ev="dkind" data-arg="' + v + '" aria-pressed="' + (st.dlvKind === v) + '">' + (icon ? ic(icon, 12) : '') + label + ' ' + digits(v ? n(v) : list.length) + '</button>'
     const fresh = list.filter((d) => isToday(d.createdAt)).length
-    html += '<div class="rw" style="gap:8px;margin:-6px 0 20px;flex-wrap:wrap">' + chip('', T('All')) + chip('document', T(KIND.document), 'doc') + chip('image', T(KIND.image), 'image') + chip('sheet', T(KIND.sheet), 'table') + chip('link', T(KIND.link), 'link') + '<span class="sp"></span><span class="mut" style="font-size:13px">' + T('Today') + ' <b class="hi">' + digits(fresh) + ' ' + T('new') + '</b></span></div>'
+    html += '<div class="rw" style="gap:8px;margin:-6px 0 20px;flex-wrap:wrap">' + chip('', T('All')) + chip('document', T(KIND.document), 'doc') + chip('image', T(KIND.image), 'image') + chip('sheet', T(KIND.sheet), 'table') + chip('link', T(KIND.link), 'link') + '<span class="sp"></span>' + (fresh ? '<span class="mut" style="font-size:13px">' + T('Today') + ' <b class="hi">' + digits(fresh) + ' ' + T('new') + '</b></span>' : '') + '</div>'
     if (!shown.length) html += '<p class="empty">' + T('Nothing matches.') + '</p>'
     html += '<div class="gal">' + shown.slice(0, 80).map((d) => {
       const c = colorOfMember(d.agent)
@@ -337,7 +364,7 @@
   }
 
   // ========== settings
-  const SETTABS = [['assistants', 'Assistants', 'plug'], ['notifications', 'Notifications', 'bell'], ['decisions', 'Decisions', 'check'], ['safety', 'Safety rules', 'shield'], ['packs', 'Office packs', 'box'], ['privacy', 'Privacy', 'lock']]
+  const SETTABS = [['assistants', 'Assistants', 'plug'], ['notifications', 'Notifications', 'bell'], ['decisions', 'Decisions', 'check'], ['safety', 'Safety rules', 'shield'], ['packs', 'Marketplace', 'box'], ['privacy', 'Privacy', 'lock']]
   function setMain() {
     if (!LIVE) return liveOnly()
     if (!SETTABS.some((x) => x[0] === st.setTab)) st.setTab = 'assistants'
@@ -406,7 +433,7 @@
     else if (!wizard) html += '<div><button type="button" class="' + B + ' sm" data-ev="ctest" data-arg="' + esc(c.id) + '">' + T('Test') + '</button></div>'
     return html + '</div>'
   }
-  /** Whether a phone gets Approve / Decline for this question: an action whose
+  /** Whether a phone gets Approve / Reject for this question: an action whose
    *  rule allows phone approval (never a payment), or a choice; never a hire
    *  or a bare approval (notify.cjs decides the same on the server). */
   function phoneButtons(g) {
@@ -425,11 +452,12 @@
     for (const c of d.categories) eff[c.id] = { value: d.policy.defaults[c.id], from: 'default' }
     return html + policyTable(d.categories, eff, '') + '</div>' + msgHtml()
   }
-  function packsTab() {
+  // inMarket: drawn on the Marketplace page, which has the local packs below it
+  function packsTab(inMarket) {
     load('packs', 'api/packs', false, 10000)
     const d = st.data.packs
     if (!d) return '<p class="empty">' + T('Loading…') + '</p>'
-    let html = '<div><div class="sec">' + T('Office packs') + ' <small>' + T('Ready-made teams') + '</small></div>'
+    let html = '<div><div class="sec">' + T(inMarket ? 'Ready-made offices' : 'Marketplace') + ' <small>' + (inMarket ? T('Bundled with Arsenale') : T('Ready-made teams')) + '</small></div>'
     html += '<p class="soft" style="margin-bottom:14px">' + T('Adds the office and its team; removing keeps your changes.') + '</p>'
     if (!co()) html += '<p class="note" style="margin-bottom:12px">' + T('Set up your company first: the wizard installs the packs you choose.') + ' <button type="button" class="b sm pri" data-ev="wiz-open">' + T('Set up your company') + '</button></p>'
     const th = themes()
@@ -449,7 +477,7 @@
       if (st.packMsg && st.packMsg.id === p.id) b += '<p class="msg ' + (st.packMsg.ok ? 'ok' : 'err') + '">' + esc(st.packMsg.text) + '</p>'
       html += b + '</div>'
     }
-    return html + '<p class="note" style="margin-top:12px">' + ic('info', 13) + T('Only bundled packs can be installed.') + '</p></div>'
+    return html + (inMarket ? '' : '<p class="note" style="margin-top:12px">' + ic('info', 13) + T('A pack from a folder or a .zip installs in the Marketplace.') + ' <button type="button" class="b sm" data-ev="goto-market">' + T('Open the Marketplace') + '</button></p>') + '</div>'
   }
   function privacyTab() {
     const li = (s) => '<li style="margin:4px 0">' + s + '</li>'

@@ -24,7 +24,7 @@
     else news = '<dd dir="ltr">' + hhmm(r.end) + '</dd>'
     const who = (x) => '<button type="button" data-key="' + esc(x.key) + '"><b dir="ltr">' + esc(x.agent) + '</b></button>'
     let html = '<div class="who">' + portrait(r.agent, 5, false) +
-      '<div><h2 class="ih" dir="ltr">' + esc(r.agent) + '</h2><div class="muted" style="margin:0">' + esc((def && def.title) || (def ? '' : T('agent with no definition in the agent folders'))) + '</div></div></div>' +
+      '<div><h2 class="ih" dir="auto">' + esc(personName(r.agent)) + '</h2><div class="muted" style="margin:0">' + esc([(def && def.title) || (def ? '' : T('agent with no definition in the agent folders')), personName(r.agent) !== r.agent ? r.agent : ''].filter((x, i, a) => x && x !== personName(r.agent) && a.indexOf(x) === i).join(' · ')) + '</div></div></div>' +
       '<div class="chips"><span class="chip st-' + st + '"><span class="g">' + STATUS[st].g + '</span> ' + STATUS[st].label + '</span>' +
       '<span class="chip mdl ' + (isHeavy(r.modelKey) ? 'heavy' : 'std') + '">' + esc((r.modelKey || '—') + (r.effort ? ' · ' + r.effort : '')) + '</span>' +
       (r.projectKey ? '<span class="chip">' + esc(r.projectKey) + '</span>' : '') +
@@ -310,20 +310,31 @@
     // the control room keeps the header to three counts; findings and
     // failures stay one click away in the drawer's filters
     void findings; void failed; void ready
+    // one status group: working, quiet, handed in; what waits for you is the count on the Decisions tab
+    const waitN = CR.waiting().length
     $('counts').innerHTML =
-      '<li><b class="acc">' + digits(S.active.length) + '</b> <span class="g g-running">▶</span> ' + T('Working') + '</li>' +
-      (quiet ? '<li><b class="warn">' + digits(quiet) + '</b> <span class="g warn">◷</span> ' + T('Quiet') + '</li>' : '') +
+      '<li><i class="sdot ok" aria-hidden="true"></i><b class="acc">' + digits(S.active.length) + '</b> ' + T('working') + '</li>' +
+      (quiet ? '<li><i class="sdot warn" aria-hidden="true"></i><b class="warn">' + digits(quiet) + '</b> ' + T('quiet') + '</li>' : '') +
       '<li><b>' + digits(S.today.length) + '</b> ' + T('handed in') + '</li>' +
-      '<li><b class="gate-c">' + digits(CR.shown().length) + '</b> ' + T('waiting for you') + '</li>'
+      (CO ? '' : '<li><b class="gate-c">' + digits(CR.shown().length) + '</b> ' + T('waiting for you') + '</li>')
+    for (const id of ['tc-appr', 'tc-appr2']) {
+      const tc = $(id)
+      if (tc) { tc.textContent = waitN ? digits(waitN) : ''; tc.setAttribute('aria-label', digits(waitN) + ' ' + T('waiting for you')) }
+    }
     document.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === mode)))
+    // the narrow layout names the screen in the bar (the tabs are at the foot there)
+    const SCREEN = { campus: T('Campus'), office: T('Office'), live: T('Live'), appr: T('Decisions'), team: T('Team'), tasks: T('Tasks'), dlv: T('Finished work'), act: T('Activity'), org: T('Org chart'), dec: T('Gate history'), use: T('Tools & usage'), set: T('Settings'), market: T('Marketplace'), vr: T('Version run') }
+    const scrn = $('scrn')
+    if (scrn) scrn.textContent = mode === 'office' && CO && CO.officeById(officeId) ? CO.oname(CO.officeById(officeId)) : SCREEN[mode] || ''
     if (CO) {
       const o = CO.officeById(officeId)
       const tab = $('vtab-office')
-      if (tab) tab.textContent = T('Office') + (o && mode === 'office' ? ' · ' + CO.oname(o) : '')
+      if (tab) { tab.textContent = T('Office'); tab.title = o ? CO.oname(o) : '' }
       const legacy = $('omenu-legacy')
       if (legacy) {
-        legacy.textContent = (mode === 'dec' ? T('Gate history') : mode === 'use' ? T('Tools & usage') : mode === 'org' ? T('Org chart') : mode === 'set' ? T('Settings') : T('More')) + ' ▾'
-        legacy.setAttribute('aria-pressed', String(mode === 'dec' || mode === 'use' || mode === 'org' || mode === 'set'))
+        const MORE = { tasks: T('Tasks'), dlv: T('Finished work'), act: T('Activity'), dec: T('Gate history'), use: T('Tools & usage'), org: T('Org chart'), market: T('Marketplace'), set: T('Settings') }
+        legacy.textContent = (MORE[mode] || T('More')) + ' ▾'
+        legacy.setAttribute('aria-pressed', String(!!MORE[mode]))
       }
       const menu = $('omenu')
       if (menu) {
@@ -333,7 +344,7 @@
           menu.style.top = (r.bottom + 4) + 'px'
           menu.style.left = Math.max(8, (r.right - 220)) + 'px'
           menu.innerHTML = omenuOpen === 'legacy'
-            ? '<button type="button" data-view="org" aria-current="' + (mode === 'org') + '">' + T('Org chart') + '</button><button type="button" data-view="dec" aria-current="' + (mode === 'dec') + '">' + T('Gate history') + '</button><button type="button" data-view="use" aria-current="' + (mode === 'use') + '">' + T('Details: tools & usage') + '</button><button type="button" data-view="set" aria-current="' + (mode === 'set') + '">' + T('Settings') + '</button>'
+            ? '<button type="button" data-view="tasks" aria-current="' + (mode === 'tasks') + '">' + T('Tasks') + '</button><button type="button" data-view="dlv" aria-current="' + (mode === 'dlv') + '">' + T('Finished work') + '</button><button type="button" data-view="act" aria-current="' + (mode === 'act') + '">' + T('Activity') + '</button><button type="button" data-view="org" aria-current="' + (mode === 'org') + '">' + T('Org chart') + '</button><button type="button" data-view="dec" aria-current="' + (mode === 'dec') + '">' + T('Gate history') + '</button><button type="button" data-view="use" aria-current="' + (mode === 'use') + '">' + T('Details: tools & usage') + '</button><button type="button" data-view="market" aria-current="' + (mode === 'market') + '">' + T('Marketplace') + '</button><button type="button" data-view="set" aria-current="' + (mode === 'set') + '">' + T('Settings') + '</button>'
             : CO.officeList().filter((x) => !x.builtIn || CO.counts(S_FULL, x.id).today || CO.counts(S_FULL, x.id).working).map((x) => '<button type="button" data-goto="office:' + esc(x.id) + '" aria-current="' + (x.id === officeId) + '"><span class="sq" style="background:' + esc(x.color) + '"></span>' + esc(CO.oname(x)) + '</button>').join('')
         }
       }
@@ -377,8 +388,8 @@
       const z = sizes()
       const from = axis === 'x' ? e.clientX : e.clientY
       const v0 = axis === 'x' ? z.iw : z.dh
-      // the panel grows to the right; the drawer grows upward
-      const move = (ev) => setSize(axis, axis === 'x' ? v0 + ev.clientX - from : v0 - (ev.clientY - from))
+      // the panel sits on the right and grows to the left; the drawer grows upward
+      const move = (ev) => setSize(axis, axis === 'x' ? v0 - (ev.clientX - from) : v0 - (ev.clientY - from))
       const up = () => {
         el.classList.remove('drag')
         el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up); el.removeEventListener('pointercancel', up)
@@ -400,7 +411,7 @@
       const cur = axis === 'x' ? z.iw : z.dh
       const lim = axis === 'x' ? z.L.iw : z.L[z.k]
       const step = e.shiftKey ? 64 : 16
-      const more = axis === 'x' ? 'ArrowRight' : 'ArrowUp', less = axis === 'x' ? 'ArrowLeft' : 'ArrowDown'
+      const more = axis === 'x' ? 'ArrowLeft' : 'ArrowUp', less = axis === 'x' ? 'ArrowRight' : 'ArrowDown'
       let v = null
       if (e.key === more) v = cur + step
       else if (e.key === less) v = cur - step
@@ -422,9 +433,9 @@
   let W3 = null
   try {
     W3 = typeof office3d === 'function' && typeof OFFICE_CHARACTERS === 'object' ? office3d({
-      esc, digits, calm, characters: OFFICE_CHARACTERS,
-      // the office strip (company) over the top of the floor, the legend along its foot
-      pad: { top: CO ? 104 : 8, bottom: 36 },
+      esc, digits, calm, characters: OFFICE_CHARACTERS, crowd: crowdPills,
+      // the office strip (company) over the top of the floor; the legend waits behind the ? (1.2)
+      pad: { top: CO ? 104 : 8, bottom: 8 },
       onPick: (id, p) => { if (p && p.selKey) { sel = { key: p.selKey }; remember(); renderAll() } },
       onView: (v) => { view3[(CO ? officeId : '') || 'office'] = v; if (hashIsCurrent()) remember(); /* a late camera report must not pull the address back after the person left */ const z = $('zoomv'); if (z && W3) z.textContent = digits(W3.zoomPct()) + T('%') },
       onLost: () => { W3 = null; stage.classList.remove('w3on'); renderAll() },

@@ -126,6 +126,14 @@ const pushHistory = (t, by, field, from, to) => {
   if (t.history.length > 100) t.history = t.history.slice(-100)
 }
 
+/** A task's kind of work (spec 1.2): one of kinds.cjs, or '' for none. */
+function kindOf(input) {
+  const K = require('./kinds.cjs')
+  const v = input.kind === null ? '' : String(input.kind)
+  if (v && !K.isKind(v)) throw fail(400, 'Kind of work: unknown kind "' + clipCp(v, 30) + '"')
+  return v
+}
+
 function assigneeOf(co, input, out) {
   if (input.assignee !== undefined || input.assigneeAgentId !== undefined) {
     const a = String(input.assignee !== undefined ? input.assignee : input.assigneeAgentId)
@@ -181,6 +189,17 @@ function createTask(input, actor) {
     t.parentId = parent.id
   }
   assigneeOf(co, input, t)
+  if (input.kind !== undefined) {
+    t.kind = kindOf(input)
+    // a task with a kind and no office goes where a run of that kind would
+    // (spec 1.2 rule 24): the office holding the kind, the project's, the
+    // assignee's home office, Unassigned work
+    if (t.kind && !t.assigneeOfficeId) {
+      const R = C.resolver(co, new Map())
+      t.assigneeOfficeId = R.route({ kind: t.kind, projectId, agent: t.assigneeAgentId }).officeId
+    }
+    if (!t.kind) delete t.kind
+  }
   const id = allocate(prefixFor(co, projectId), (cand) => {
     t.id = cand
     fs.writeFileSync(fileOf(cand), JSON.stringify(t, null, 2), { flag: 'wx' })
@@ -238,8 +257,9 @@ function updateTaskLocked(input, actor) {
     if (input.labels !== undefined) set('labels', cleanLabels(input.labels))
     if (input.priority !== undefined) { if (!PRIORITIES.includes(String(input.priority))) throw fail(400, 'priority must be one of ' + PRIORITIES.join(', ')); set('priority', String(input.priority)) }
     if (input.needsSignOff !== undefined) set('needsSignOff', input.needsSignOff === true)
+    if (input.kind !== undefined) set('kind', kindOf(input))
   } else {
-    for (const k of ['title', 'description', 'dueDate', 'links', 'labels', 'priority', 'needsSignOff']) {
+    for (const k of ['title', 'description', 'dueDate', 'links', 'labels', 'priority', 'needsSignOff', 'kind']) {
       if (input[k] !== undefined) throw fail(403, 'Only the owner can change ' + k + '. ' + OWNER_ONLY)
     }
   }
@@ -308,7 +328,7 @@ function summaryOf(t) {
   const seen = t.seenBy && typeof t.seenBy === 'object' ? Object.values(t.seenBy).sort().pop() || '' : ''
   return {
     id: t.id, title: t.title, status: t.status, priority: t.priority, projectId: t.projectId,
-    assigneeAgentId: t.assigneeAgentId, assigneeUserId: t.assigneeUserId, assigneeOfficeId: t.assigneeOfficeId || '',
+    assigneeAgentId: t.assigneeAgentId, assigneeUserId: t.assigneeUserId, assigneeOfficeId: t.assigneeOfficeId || '', kind: t.kind || '',
     dueDate: t.dueDate || '', needsSignOff: !!t.needsSignOff, createdBy: t.createdBy, updatedAt: t.updatedAt, createdAt: t.createdAt, completedAt: t.completedAt || '',
     comments, seenAt: seen, runs: (t.runIds || []).length,
   }

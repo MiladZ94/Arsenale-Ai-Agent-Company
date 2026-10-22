@@ -166,13 +166,18 @@ test('office 3D: no shadows, and everything stands on the floor; the campus has 
   for (const p of i.podiums.filter((x) => x.pos)) assert.ok(p.pos[1] >= 0 && p.pos[1] < 0.1, p.id + ' stands on the floor (or the low platform): ' + p.pos[1])
   await page.goto(base + '/?v=s2#/campus')
   await page.waitFor("document.querySelector('#cmap svg')", 10000)
-  const c = await page.eval(`({
-    blur: document.querySelectorAll('#cmap feGaussianBlur, #cmap filter, #cmap [filter]').length,
-    shadowCss: [...document.querySelectorAll('#cmap .sign')].filter((e) => getComputedStyle(e).boxShadow !== 'none').length,
-    plots: document.querySelectorAll('#cmap .bld .pl').length,
-  })`)
+  // 1.2 rule 42: the office cards take depth, but only from the Stage shadow tokens
+  const c = await page.eval(`(() => {
+    const probe = (v) => { const d = document.createElement('div'); d.style.boxShadow = v; document.body.appendChild(d); const s = getComputedStyle(d).boxShadow; d.remove(); return s }
+    const ok = ['none', probe('var(--sh1)'), probe('var(--sh2)')]
+    return {
+      blur: document.querySelectorAll('#cmap feGaussianBlur, #cmap filter, #cmap [filter]').length,
+      other: [...document.querySelectorAll('#cmap .sign')].map((e) => getComputedStyle(e).boxShadow).filter((s) => !ok.includes(s)),
+      plots: document.querySelectorAll('#cmap .bld .pl').length,
+    }
+  })()`)
   assert.equal(c.blur, 0, 'no blurred shadow on the campus')
-  assert.equal(c.shadowCss, 0, 'the office cards cast no drop shadow')
+  assert.deepEqual(c.other, [], 'an office card shadow that is not a Stage token')
   assert.ok(c.plots > 0, 'the plots are drawn')
 })
 
@@ -299,4 +304,28 @@ test('the default character: CC0, made by our own script, with its six clip name
 test('three.js is pinned to r184', () => {
   const three = fs.readFileSync(path.join(__dirname, '..', 'vendor', 'three', 'three.cjs'))
   assert.equal(require('crypto').createHash('sha256').update(three).digest('hex'), '0fe243aabd03faa48e4156b51bf5b4c943fea15748aa623047aab539ab3b9624', 'three.cjs is three@0.184.0 build/three.cjs')
+})
+
+test('office 3D, the shipped set: each state plays its own clip (Walk, Stand, Typing, Celebrate, then Sit or Stand in the lounge), read from the mixer state', { skip: SKIP || false }, async () => {
+  const { page, base, sb, log } = await world()
+  warmUp(sb)
+  await page.goto(base + '/?v=s7#/office/engineering')
+  await page.waitFor(READY, 15000)
+  await page.eval('window.__office3d.pace(1); 1')
+  const P = "window.__office3d.info().podiums.find((x) => x.id === 'walker-agent')"
+  await page.waitFor("(() => { const p = " + P + "; return p && p.loc === 'lounge' })()", 10000)
+  // the one look function picks the model: the same pick the campus and the lists make
+  const pick = await page.eval("(() => { const i = window.__office3d.info(); return i.podiums.filter((p) => p.model && p.agent && p.agent !== 'tester').map((p) => [p.model, 'person-' + OFFICE_LOOK.variant(p.agent) + '.glb']) })()")
+  assert.ok(pick.length > 2, 'people with a shipped character')
+  for (const [got, want] of pick) assert.ok(got === want || (/^person-plain/.test(got) && /plain/.test(want)), got + ' is ' + want)
+  const id = sb.cli('--start', JSON.stringify({ agent: 'walker-agent', task: 'clip check', project: 'democalc', model: 'sonnet' })).out.trim()
+  assert.ok(id)
+  const seen = (cond) => page.waitFor("(() => { const p = " + P + "; return " + cond + " })()", 30000)
+  await seen("p.loc === 'walk' && p.clipName === 'Walk'")
+  await seen("p.loc === 'sup' && p.act === 'receive' && p.clipName === 'Stand'")
+  await seen("p.loc === 'desk' && p.state === 'working' && p.clipName === 'Typing'")
+  assert.equal(sb.cli(JSON.stringify({ id, agent: 'walker-agent', task: 'clip check', status: 'ok', summary: 'clip check done' })).code, 0)
+  await seen("p.loc === 'sup' && p.act === 'handin' && p.clipName === 'Celebrate'")
+  await seen("p.loc === 'lounge' && (p.clipName === 'Sit' || p.clipName === 'Stand')")
+  assert.deepEqual(pageErrors(log), [], 'no page errors')
 })

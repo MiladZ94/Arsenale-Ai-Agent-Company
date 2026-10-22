@@ -282,10 +282,10 @@
       const st = extra ? (extra.stale ? 'quiet' : 'working') : stateOf(agent)
       const pal = palette(agent)
       const run = extra || deskRuns(agent)[0] || lastBy.get(agent) || null
-      const name = agent === 'supervisor' ? T('Supervisor') : extra ? agent + T(' · run ') + digits(nums.get(extra.key)) : agent
+      const name = agent === 'supervisor' ? T('Supervisor') : extra ? personName(agent) + T(' · run ') + digits(nums.get(extra.key)) : personName(agent)
       const pill = pillOf(st, run)
       return {
-        id: extra ? podId(extra) : agent, kind, agent, state: st, anim: animOf(agent, st), shirt: pal.c, hair: pal.h, skin: pal.s,
+        id: extra ? podId(extra) : agent, kind, agent, state: st, anim: animOf(agent, st), shirt: pal.c, hair: pal.h, skin: pal.s, seed: seedOf(agent), tone: toneOf(agent),
         name, sub: WORD[st] || '', glyph: GLYPH[st] || '', pill, present: st !== 'away',
         attrs: run ? 'data-key="' + esc(run.key) + '"' : '', selKey: run ? run.key : '',
         aria: name + T(', ') + pill.word,
@@ -326,9 +326,11 @@
     // the same projects on the screens of the office's wall
     const boards = top.map((p) => ({ title: p.name, lines: [p.counts, p.flag], bad: !!p.e.failed }))
     const title = CO ? CO.oname(CO.officeById(officeId)) : ''
+    // the office's colour: the floor's border and the sign on the back wall
+    const color = CO ? ((CO.officeById(officeId) || {}).color || '') : ''
     // the head's station is the supervisor's, as the flat office labels it
     const supLabel = lead && lead !== 'supervisor' ? T('Lead desk') : T('Supervisor desk')
-    return { key, view: view3[key] || null, selected: current ? (current.live && has.has(podId(current)) ? podId(current) : has.has(current.agent) ? current.agent : null) : null, podiums: pods, links, overlay, projects, boards, title, supLabel, keys }
+    return { key, view: view3[key] || null, selected: current ? (current.live && has.has(podId(current)) ? podId(current) : has.has(current.agent) ? current.agent : null) : null, podiums: pods, links, overlay, projects, boards, title, color, supLabel, keys }
   }
 
   // a report handed in within the last minute and a half is still being delivered
@@ -376,10 +378,11 @@
     }
     // every person has one pill over the head; a pill that would touch one already placed
     // steps up until it clears (the renderer's own rule, as liftPills in the 3D office)
-    const pillW = (o) => (30 + (o.kind === 'idle' ? o.agent : o.run.agent).length * 6.6 + pillOf(o).word.length * 6) * k
+    const pillW = (o) => (30 + (o.kind === 'idle' ? o.agent : o.run.agent).length * 7.2) * k
     for (const o of bubbles.concat(list.filter((o) => o.kind === 'idle'))) {
       const w = pillW(o), h = 22 * k
       o.lift = 0
+      if (pillOf(o).tone === 'idle') continue
       for (let i = 0; i < 16; i++) {
         const r = [o.x - w / 2, o.y - o.lift - h, o.x + w / 2, o.y - o.lift]
         const hitP = placed.find((p) => r[0] < p[2] && r[2] > p[0] && r[1] < p[3] && r[3] > p[1])
@@ -401,6 +404,69 @@
     return ['', '']
   }
   const overlayId = (o) => (o.kind === 'bubble' ? 'b:' + o.run.key : o.kind === 'idle' ? 'i:' + o.last.key : o.kind === 'handin' ? 'h:' + o.run.key : '')
+
+  // ---------- crowded pills (owner, 1.2): pills that sit close together collapse into one
+  // counter chip ("3 working") that opens on hover, focus or a click; in the demo's showcase at
+  // most four pills show, the most urgent first, and nothing else. Both floors use it: the flat
+  // one after each draw, the 3D one through its declutter (h.crowd). `redo` draws the pills again.
+  const CROWD_WORD = { work: 'working', wait: 'waiting', quiet: 'quiet' }
+  const URGENT = { stalled: 0, dead: 0, wait: 1, quiet: 1, work: 2 }
+  const crowdOpen = new Set()
+  let crowdArea = null, crowdRedo = null
+  const toneOfPill = (e) => (/(?:^| )tone-(\w+)/.exec(e.className) || [])[1] || ''
+  const pillKey = (e) => e.dataset.anchor || e.dataset.key || ''
+  document.addEventListener('pointermove', (e) => {
+    // an opened group closes again once the pointer has left it
+    if (!crowdArea) return
+    const a = crowdArea
+    if (e.clientX < a.left - 40 || e.clientX > a.right + 40 || e.clientY < a.top - 90 || e.clientY > a.bottom + 30) { crowdOpen.clear(); crowdArea = null; if (crowdRedo) crowdRedo() }
+  })
+  function crowdPills(box, pills, redo) {
+    crowdRedo = redo
+    for (const c of box.querySelectorAll('.w3chip')) c.remove()
+    for (const e of pills) e.classList.remove('w3in')
+    const keep = (e) => e.classList.contains('sel') || e.classList.contains('hov') || e === document.activeElement
+    const board = document.getElementById('board')
+    if (board && board.classList.contains('showcase')) {
+      const rank = (e) => (keep(e) ? -1 : Object.hasOwn(URGENT, toneOfPill(e)) ? URGENT[toneOfPill(e)] : 9)
+      const order = pills.slice().sort((a, b) => rank(a) - rank(b))
+      order.forEach((e, i) => { if (i >= 4 || rank(e) === 9) e.classList.add('w3in') })
+      return
+    }
+    const cand = pills.filter((e) => Object.hasOwn(CROWD_WORD, toneOfPill(e)) && !keep(e))
+    const R = new Map(cand.map((e) => [e, e.getBoundingClientRect()]))
+    const near = (a, b) => a.left < b.right + 6 && a.right > b.left - 6 && a.top < b.bottom + 4 && a.bottom > b.top - 4
+    const seen = new Set()
+    for (const e of cand) {
+      if (seen.has(e)) continue
+      const tone = toneOfPill(e), g = [e]
+      seen.add(e)
+      for (let i = 0; i < g.length; i++) for (const f of cand) if (!seen.has(f) && toneOfPill(f) === tone && near(R.get(g[i]), R.get(f))) { g.push(f); seen.add(f) }
+      if (g.length < 2) continue
+      const key = tone + ':' + g.map(pillKey).sort()[0]
+      if (crowdOpen.has(key)) continue
+      for (const x of g) x.classList.add('w3in')
+      const names = g.map((x) => (x.querySelector('b') || x).textContent).join(', ')
+      const chip = document.createElement('button')
+      chip.type = 'button'
+      chip.className = 'w3chip tone-' + tone
+      chip.dataset.crowd = key
+      chip.title = names
+      chip.setAttribute('aria-label', digits(g.length) + ' ' + T(CROWD_WORD[tone]) + T(': ') + names)
+      chip.innerHTML = '<i class="dot" aria-hidden="true"></i><b>' + digits(g.length) + ' ' + T(CROWD_WORD[tone]) + '</b>'
+      // over the middle of the group, at its highest pill
+      const xs = g.map((x) => parseFloat(x.style.left) || 0), ys = g.map((x) => parseFloat(x.style.top) || 0)
+      chip.style.left = (xs.reduce((s, v) => s + v, 0) / xs.length).toFixed(1) + 'px'
+      chip.style.top = Math.min(...ys).toFixed(1) + 'px'
+      const rs = g.map((x) => R.get(x))
+      const area = { left: Math.min(...rs.map((r) => r.left)), right: Math.max(...rs.map((r) => r.right)), top: Math.min(...rs.map((r) => r.top)), bottom: Math.max(...rs.map((r) => r.bottom)) }
+      const open = (ev) => { if (ev && ev.type === 'click') ev.stopPropagation(); crowdOpen.add(key); crowdArea = area; if (redo) redo() }
+      chip.addEventListener('mouseenter', open)
+      chip.addEventListener('focus', open)
+      chip.addEventListener('click', open)
+      box.appendChild(chip)
+    }
+  }
 
   // the same tones and words as the 3D floor's pills (scene3d pillOf)
   function pillOf(o) {
@@ -424,12 +490,12 @@
       const isSel = current && (o.kind === 'bubble' ? current.key === run.key : current.agent === o.agent && !current.live)
       const [mc, ms_] = motion(o, overlayId(o))
       return '<button type="button" class="w3card tone-' + pl.tone + (isSel ? ' sel' : '') + mc + '" data-key="' + esc(run.key) + '" style="' + ms_ + 'left:' + o.x + 'px;top:' + (o.y - (o.lift || 0)) + 'px"' +
-        ' aria-label="' + esc(run.agent + T(', ') + pl.word) + '"><i class="dot" aria-hidden="true"></i><b dir="auto">' + esc(run.agent) + (o.kind === 'bubble' && o.count > 1 ? ' ×' + o.count : '') + '</b><small>' + esc(pl.word) + '</small></button>'
+        ' aria-label="' + esc(run.agent + T(', ') + pl.word) + '" title="' + esc(pl.word) + '"><i class="dot" aria-hidden="true"></i><b dir="auto">' + esc(run.agent) + (o.kind === 'bubble' && o.count > 1 ? ' ×' + o.count : '') + '</b></button>'
     }
     if (o.kind === 'boss') return '<span class="tag boss" style="left:' + o.x + 'px;top:' + o.y + 'px"><b' + (o.name && o.name !== 'supervisor' ? ' dir="ltr" class="mono"' : '') + '>' + (o.name && o.name !== 'supervisor' ? esc(o.name) : T('Supervisor')) + '</b></span>'
     if (o.kind === 'away') return '<button type="button" class="tag away" data-goto="office:' + esc(o.officeId) + '" style="left:' + o.x + 'px;top:' + o.y + 'px"><b dir="ltr">' + esc(o.agent) + '</b> ' + T('In ') + esc(CO ? CO.oname(CO.officeById(o.officeId)) : o.officeId) + ' →</button>'
     if (o.kind === 'ovf') return '<div class="ovf" style="left:' + o.x + 'px;top:' + o.y + 'px"><b>' + T('Overflow') + '</b> · ' + T('no free desk: ') + o.list.map((w) => '<button type="button" dir="ltr"' + (w.run ? ' data-key="' + esc(w.run.key) + '"' : '') + '>' + esc(w.agent) + '</button>').join(' ') + '</div>'
-    if (o.kind === 'tray') return '<button type="button" class="tray-label' + (o.wait != null && o.wait > -0.7 ? ' land' : '') + '" data-open="1" style="' + (o.wait != null && o.wait > -0.7 ? 'animation-delay:' + o.wait.toFixed(2) + 's;' : '') + 'left:' + (o.x + 30) + 'px;top:' + (o.y + 62) + 'px">' + digits(o.n) + T(' reports handed in') + '</button>'
+    if (o.kind === 'tray') return '<button type="button" class="tray-label badge' + (o.wait != null && o.wait > -0.7 ? ' land' : '') + '" data-open="1" style="' + (o.wait != null && o.wait > -0.7 ? 'animation-delay:' + o.wait.toFixed(2) + 's;' : '') + 'left:' + (o.x + 30) + 'px;top:' + (o.y + 62) + 'px" aria-label="' + esc(digits(o.n) + T(' reports handed in')) + '" title="' + esc(digits(o.n) + T(' reports handed in')) + '">' + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M3 13h5l1.5 3h5L16 13h5v6H3zM6 13l2-8h8l2 8"/></svg>' + '<b>' + digits(o.n) + '</b></button>'
     if (o.kind === 'more') return '<span class="tag more" style="left:' + o.x + 'px;top:' + o.y + 'px">+' + digits(o.n) + T(' more') + '</span>'
     if (o.kind === 'handin') {
       const r = o.run

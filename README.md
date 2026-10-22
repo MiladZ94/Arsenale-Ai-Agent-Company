@@ -1,13 +1,13 @@
-# Arsenale
+# <img src="docs/brand/arsenale-mark.svg" width="44" height="44" alt=""> Arsenale
 
-**Run a company of AI agents you can watch at work.**
+**Hire agents. Watch them work. Stay in charge.**
 
 A local dashboard and run log for AI assistants (Claude Desktop, Claude Code,
 Cursor, Codex, Gemini CLI, Aider, your own scripts). The assistant logs what it
 does; Arsenale draws it as an office, a campus, an org chart and a list of the
 questions waiting for you. It watches; it never runs agents.
 
-![Walkthrough: campus, build mode, an office, a version run, the org chart and the office packs](docs/media/arsenale-walkthrough.gif)
+![Walkthrough: campus, build mode, an office, a version run, the org chart and the Marketplace](docs/media/arsenale-walkthrough.gif)
 
 ![The campus: one building per office](docs/media/campus.png)
 
@@ -21,7 +21,7 @@ questions waiting for you. It watches; it never runs agents.
 
 ![The Version run page, opened from Live](docs/media/version-run.png)
 
-![Office packs](docs/media/packs.png)
+![Marketplace](docs/media/packs.png)
 
 ![Org chart](docs/media/org-chart.png)
 
@@ -36,7 +36,7 @@ node bin/arsenale.cjs demo
 ```
 
 `demo` shows an invented company in a temporary folder and never touches your
-data. `demo --shop` shows a small shop with office packs.
+data. `demo --shop` shows a small shop with Marketplace packs.
 
 To install it, run the installer (it asks before every change; `--dry-run`
 shows the plan):
@@ -77,4 +77,4 @@ exact command and a **Test** button. Adapters for each tool are in
 - Uninstall: `install.ps1 -Uninstall` or `./install.sh --uninstall`.
 
 More: [full reference](docs/reference.md), [CONTRIBUTING](CONTRIBUTING.md),
-[SECURITY](SECURITY.md). Version 1.1.0. License: [MIT](LICENSE). The default character is made by our own script and is CC0 ([tools/characters/LICENSE.txt](tools/characters/LICENSE.txt)).
+[SECURITY](SECURITY.md). Version 1.1.0. License: [MIT](LICENSE). The people are the KayKit characters by Kay Lousberg (CC0 1.0); the fallback character is made by our own script and is CC0. Sources, hashes and changes: [tools/characters/LICENCES.md](tools/characters/LICENCES.md).

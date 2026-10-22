@@ -1,0 +1,38 @@
+{
+ "schemaVersion": 1,
+ "portrait": 256,
+ "sprite": 64,
+ "frames": {
+  "idle": 0,
+  "walk": [
+   1,
+   2,
+   3,
+   4
+  ]
+ },
+ "variants": [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "plain"
+ ],
+ "plain": "plain",
+ "colours": {
+  "teal": "#1F9C7E",
+  "blue": "#3F7FD6",
+  "violet": "#7B66C9",
+  "coral": "#D4683F",
+  "amber": "#C98A2A",
+  "slate": "#7D8B9A",
+  "cyan": "#2B98AE",
+  "pink": "#C4578A",
+  "green": "#3E9B5A"
+ },
+ "file": {
+  "portrait": "p-{v}-{c}.webp",
+  "sprite": "s-{v}-{c}.webp"
+ }
+}

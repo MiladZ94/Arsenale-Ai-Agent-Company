@@ -29,14 +29,23 @@
     return !!(a && a.autoRun && !a.readOnly && a.kinds && a.kinds[t] && g.action.gatesPassed === true)
   }
   /** Approve and Reject for a merge, a phase, a build or a release (stored answers stay approve and decline). */
-  function typedButtons(g, big) {
+  function typedButtons(g, big, short) {
     const k2 = (v) => 'ap|' + g.id + '|' + v
     const lg = big ? ' big' : ''
-    const yes = g.action.type === 'publish' ? 'Approve release' : g.action.type === 'build' ? 'Approve build' : 'Approve'
+    // a queue row says just Approve; the card and the letter name what is approved
+    const yes = short ? 'Approve' : g.action.type === 'publish' ? 'Approve release' : g.action.type === 'build' ? 'Approve build' : 'Approve'
     return '<button type="button" class="b pri' + lg + armedCls(k2('approve')) + '" data-ev="ans" data-arg="' + esc(g.id) + '" data-val="approve">' + ic('check', 15, 2.6) + esc(armedLabel(k2('approve'), T(yes))) + '</button>' +
       '<button type="button" class="b bad' + lg + armedCls(k2('decline')) + '" data-ev="ans" data-arg="' + esc(g.id) + '" data-val="decline">' + ic('x', 14, 2.4) + esc(armedLabel(k2('decline'), T('Reject'))) + '</button>'
   }
-  function decCard(g, col) {
+  /** A compact row of the queue: the kind and project, how long it waits, the title, and its buttons. */
+  function decRow(g, col) {
+    const k = decKind(g), age = decAge(g)
+    const btns = !canWrite() ? '' : col === 'ask' ? '<button type="button" class="b sm" data-ev="dec-open" data-arg="' + esc(g.id) + '">' + T('Answer') + '</button>' : typedButtons(g, false, true)
+    return '<div class="dc dq' + (col === 'lock' ? ' lk' : '') + '"><div class="rw dqa">' + ic(k.icon, 17) + '<span class="dqk">' + esc(k.label) + (g.versionRun || g.project ? ' · ' + esc(g.project || g.versionRun) : '') + '</span><span class="sp"></span>' + (age.text ? '<span class="age ' + age.tone + '">' + esc(age.text) + '</span>' : '') + '</div>' +
+      '<div class="rw dqb"><button type="button" class="dqt" data-ev="dec-open" data-arg="' + esc(g.id) + '" dir="auto" title="' + T('Details') + '">' + esc(decTitle(g)) + '</button>' + btns + '</div>' +
+      (st.err['ap|' + g.id] ? '<p class="msg err">' + esc(errTxt(st.err['ap|' + g.id])) + '</p>' : '') + '</div>'
+  }
+  function decCard(g, col, focus) {
     const k = decKind(g), age = decAge(g)
     const who = nameOf(askerOf(g))
     const meta = [g.versionRun || g.project, who].filter(Boolean).join(' · ')
@@ -48,10 +57,10 @@
     else if (g.approvalType === 'action' && g.action && g.action.target) body = '<p class="soft sm" dir="auto">' + T('Where: ') + esc(g.action.target) + '</p>'
     let btns = ''
     if (canWrite()) {
-      if (col === 'ask') btns = answerButtons(g)
-      else btns = typedButtons(g, false)
+      if (col === 'ask') btns = answerButtons(g, focus ? 'lg' : '')
+      else btns = typedButtons(g, !!focus)
     }
-    return '<div class="card dc' + aged + (col === 'lock' ? ' lk' : '') + '"><div class="rw" style="gap:8px"><span class="kind ' + k.cls + '">' + ic(k.icon, 12) + ' ' + esc(k.label) + '</span><span class="sp"></span>' + (age.text ? '<span class="age ' + age.tone + '">' + (age.tone === 'bad' ? ic('warn', 12) + ' ' : '') + esc(age.text) + '</span>' : '') + '</div>' +
+    return '<div class="card dc' + (focus ? ' dfocus' : '') + aged + (col === 'lock' ? ' lk' : '') + '"><div class="rw" style="gap:8px"><span class="kind ' + k.cls + '">' + ic(k.icon, focus ? 16 : 12) + ' ' + esc(k.label) + '</span>' + '<span class="sp"></span>' + (age.text ? '<span class="age ' + age.tone + '">' + (age.tone === 'bad' ? ic('clock', focus ? 16 : 12) + ' ' : '') + (focus ? T('waiting ') : '') + esc(age.text) + '</span>' : '') + '</div>' +
       '<h3 class="dt" dir="auto">' + esc(decTitle(g)) + '</h3><div class="mut sm ell" dir="auto">' + esc(meta) + '</div>' + body +
       '<div class="rw dbt" style="gap:8px;flex-wrap:wrap">' + btns + '<span class="sp"></span><button type="button" class="b ghost" data-ev="dec-open" data-arg="' + esc(g.id) + '">' + T('Details') + '</button></div>' +
       (st.err['ap|' + g.id] ? '<p class="msg err">' + esc(errTxt(st.err['ap|' + g.id])) + '</p>' : '') + '</div>'
@@ -83,17 +92,26 @@
     for (const g of wait.slice().reverse()) cols[decCol(g)].push(g)
     const a = st.data.automation
     const on = !!(a && a.autoRun)
-    const sub = wait.length ? digits(wait.length) + ' ' + T('waiting') + ' · ' + T('nothing happens until you answer') : T('Nothing is waiting for you.')
+    const sub = wait.length ? digits(wait.length) + ' ' + T('waiting') + ' · ' + T('nothing happens until you answer') + ' · ' + T('oldest first') : T('Nothing is waiting for you.')
     const state = '<button type="button" class="chip' + (on ? ' ok' : '') + '" data-ev="goto-auto" style="height:30px">' + ic(on ? 'play' : 'pause', 12, 2.4) + ' ' + T('Approved merges and phases run by themselves: ') + '<b>' + T(on ? 'on' : 'off') + '</b></button>'
     let html = head(T('Decisions'), sub, state)
     const okAll = cols.go.filter((g) => g.action.gatesPassed === true)
-    const colHead = (title, note) => '<div class="dch"><div class="hi dcn">' + title + '</div><div class="mut sm">' + note + '</div></div>'
     const none = (s) => '<p class="mut sm" style="padding:8px 2px">' + s + '</p>'
-    html += '<div class="dcols"><div class="dcol">' + colHead(T('Needs your answer'), cols.ask.length ? digits(cols.ask.length) + ' ' + T(cols.ask.length === 1 ? 'question' : 'questions') + ' · ' + T('your team is waiting on the answer') : T('no question is open')) + (cols.ask.map((g) => decCard(g, 'ask')).join('') || none(T('Nothing to answer.'))) + '</div>'
-    html += '<div class="dcol">' + colHead(T('Approve to continue'), digits(okAll.length) + ' ' + T('passed their checks') + ' · ' + T(on ? 'these run by themselves once approved' : 'turn the switch on in Settings to let them run by themselves')) +
-      (okAll.length > 1 && canWrite() ? '<div class="rw" style="justify-content:flex-end"><button type="button" class="b sm pri' + armedCls('ap|all|approve') + '" data-ev="appr-all">' + ic('check', 13, 2.6) + ' ' + esc(armedLabel('ap|all|approve', T('Approve all ') + digits(okAll.length))) + '</button></div>' : '') +
-      (cols.go.map((g) => decCard(g, 'go')).join('') || none(T('Nothing to approve.'))) + '</div>'
-    html += '<div class="dcol">' + colHead(T('Always waits for you'), T('builds and releases leave this computer or cannot be taken back')) + (cols.lock.map((g) => decCard(g, 'lock')).join('') || none(T('Nothing to approve.'))) + doneLog() + '</div></div>'
+    // the oldest item is the focus card; the rest wait in a compact queue, in the three groups of 1.1
+    const oldest = wait.length ? wait[wait.length - 1] : null // waiting() is newest first
+    const rest = (list) => list.filter((g) => g !== oldest)
+    const colHead = (title, n, note, extra) => '<div class="dch rw"><b class="hi dcn">' + title + '</b><span class="mut">' + digits(n) + '</span><span class="sp"></span>' + (extra || '') + '</div>' + (note ? '<div class="mut sm dcnote">' + note + '</div>' : '')
+    const qAsk = rest(cols.ask), qGo = rest(cols.go), qLock = rest(cols.lock)
+    html += '<div class="dlay"><div class="dmain">' + (oldest ? decCard(oldest, decCol(oldest), true) : '<div class="card dfocus dnone"><h2>' + T('Nothing is waiting for you.') + '</h2><p class="soft">' + T('Questions, merges, phases, builds and releases arrive here, oldest first.') + '</p></div>') + doneLog() + '</div>'
+    // the narrow layout shows one group of the queue at a time, behind three tabs
+    const tab = ['ask', 'go', 'lock'].includes(st.decTab) ? st.decTab : 'ask'
+    html += '<div class="dtabs seg" role="group" aria-label="' + T('Which decisions') + '">' + [['ask', T('Answer'), cols.ask.length], ['go', T('Approve'), cols.go.length], ['lock', T('Always you'), cols.lock.length]].map(([k, l, c]) => '<button type="button" data-ev="dec-tab" data-arg="' + k + '" aria-pressed="' + (tab === k) + '">' + l + ' ' + digits(c) + '</button>').join('') + '</div>'
+    html += '<div class="dqueue" data-tab="' + tab + '">' + (wait.length > 1 ? '<div class="dqh hi">' + T('Then ') + digits(wait.length - 1) + ' ' + T('more') + '</div>' : '')
+    html += '<div class="dcol" data-col="ask">' + colHead(T('Needs your answer'), qAsk.length, '') + (qAsk.map((g) => decRow(g, 'ask')).join('') || none(T('Nothing else to answer.'))) + '</div>'
+    html += '<div class="dcol" data-col="go">' + colHead(T('Approve to continue'), qGo.length, digits(okAll.length) + ' ' + T('passed their checks') + ' · ' + T(on ? 'these run by themselves once approved' : 'turn the switch on in Settings to let them run by themselves'),
+      okAll.length > 1 && canWrite() ? '<button type="button" class="b sm pri' + armedCls('ap|all|approve') + '" data-ev="appr-all">' + ic('check', 13, 2.6) + ' ' + esc(armedLabel('ap|all|approve', T('Approve all ') + digits(okAll.length))) + '</button>' : '') +
+      (qGo.map((g) => decRow(g, 'go')).join('') || none(T('Nothing else to approve.'))) + '</div>'
+    html += '<div class="dcol" data-col="lock">' + colHead(T('Always waits for you'), qLock.length, T('builds and releases leave this computer or cannot be taken back')) + (qLock.map((g) => decRow(g, 'lock')).join('') || none(T('Nothing else to approve.'))) + '</div></div></div>'
     const done = gates().filter((g) => g.status !== 'waiting').sort((x, y) => String(y.answeredAt || y.expiredAt || '').localeCompare(String(x.answeredAt || x.expiredAt || ''))).slice(0, 10)
     if (done.length) html += '<details class="alately"><summary>' + T('Answered lately') + ' · ' + digits(done.length) + '</summary><div class="card" style="overflow:hidden;margin-top:10px">' + done.map((g) => '<div class="rw" style="padding:12px 16px;border-top:1px solid var(--line);align-items:flex-start">' + face(askerOf(g), 26) + '<div style="flex:1;min-width:0"><div class="soft" dir="auto" style="font-size:13.5px">' + esc(plainQ(g)) + '</div><div class="mut" style="font-size:12.5px;margin-top:2px">' + (g.status === 'answered' ? T('Answer: ') + '<span dir="auto">' + esc(g.answer) + '</span>' : T('Closed without an answer')) + ' · ' + esc(day(g.answeredAt || g.expiredAt)) + (g.history && g.history.some((x) => /^phone:/.test(x.via || '')) ? ' · ' + T('from your phone') : '') + '</div></div></div>').join('') + '</div></details>'
     return html + msgHtml()
@@ -131,6 +149,7 @@
     if (!t) return
     const a = t.dataset.ev, arg = t.dataset.arg || ''
     if (a === 'dec-open') { st.drawer = { type: 'decision', id: arg }; st.dmsg = null; bump(); return }
+    if (a === 'dec-tab') { st.decTab = arg; bump(); return }
     if (a === 'goto-auto') { st.setTab = 'decisions'; location.hash = '#/settings'; return }
     if (a === 'undo') {
       if (!arm('undo|' + arg)) return

@@ -1,7 +1,7 @@
   const { esc, digits, T, errTxt } = h
   const A = everyoneArt()
   const ic = A.ic
-  const MODES = ['live', 'tasks', 'appr', 'team', 'dlv', 'set']
+  const MODES = ['live', 'tasks', 'appr', 'team', 'dlv', 'set', 'market']
   const st = {
     data: {}, at: {}, busy: {}, err: {},
     drawer: null, dv: 0, dmsg: null,
@@ -11,6 +11,8 @@
     test: null, notifSeen: null, lastMode: '',
   }
   try { const v = localStorage.getItem('arsenale-task-view'); if (v === 'list' || v === 'board') st.taskView = v } catch { /* a private window */ }
+  // Live and Team: cards or tiles first (1.2), the table one click away and remembered
+  try { st.liveView = localStorage.getItem('arsenale-live-view') === 'table' ? 'table' : 'cards'; st.teamView = localStorage.getItem('arsenale-team-view') === 'table' ? 'table' : 'tiles' } catch { st.liveView = 'cards'; st.teamView = 'tiles' }
   const co = () => (typeof COMPANY !== 'undefined' && COMPANY && COMPANY.configured ? COMPANY : null)
   const canWrite = () => LIVE && !!ANSWER_TOKEN
   const offices = () => (co() ? co().offices.filter((o) => !o.builtIn && !o.archived) : [])
@@ -308,11 +310,11 @@
     if (g.approvalType === 'hire') {
       b += '<button type="button" class="b pri' + lg + armedCls(k('hire')) + '" data-ev="hire-yes" data-arg="' + esc(g.id) + '">' + ic('check', 16, 2.6) + esc(armedLabel(k('hire'), T('Hire as proposed'))) + '</button>'
       b += '<button type="button" class="b' + lg + '" data-ev="hire-edit" data-arg="' + esc(g.id) + '">' + ic('pencil', 15) + T('Edit and hire') + '</button>'
-      b += '<button type="button" class="b bad' + lg + armedCls(k('decline')) + '" data-ev="hire-no" data-arg="' + esc(g.id) + '">' + ic('x', 15, 2.4) + esc(armedLabel(k('decline'), T('Decline'))) + '</button>'
+      b += '<button type="button" class="b bad' + lg + armedCls(k('decline')) + '" data-ev="hire-no" data-arg="' + esc(g.id) + '">' + ic('x', 15, 2.4) + esc(armedLabel(k('decline'), T('Reject'))) + '</button>'
     } else if (g.kind === 'approval') {
-      const yes = g.approvalType === 'action' ? T(catOf(g)[4]) : T('Yes, go ahead')
+      const yes = g.approvalType === 'action' ? T(catOf(g)[4]) : T('Approve')
       b += '<button type="button" class="b pri' + lg + armedCls(k('approve')) + '" data-ev="ans" data-arg="' + esc(g.id) + '" data-val="approve">' + ic('check', 16, 2.6) + esc(armedLabel(k('approve'), yes)) + '</button>'
-      b += '<button type="button" class="b bad' + lg + armedCls(k('decline')) + '" data-ev="ans" data-arg="' + esc(g.id) + '" data-val="decline">' + ic('x', 15, 2.4) + esc(armedLabel(k('decline'), T('Decline'))) + '</button>'
+      b += '<button type="button" class="b bad' + lg + armedCls(k('decline')) + '" data-ev="ans" data-arg="' + esc(g.id) + '" data-val="decline">' + ic('x', 15, 2.4) + esc(armedLabel(k('decline'), T('Reject'))) + '</button>'
     } else if (Array.isArray(g.choices) && g.choices.length) {
       b += g.choices.map((c, i) => '<button type="button" class="b' + (i ? '' : ' pri') + lg + armedCls(k(c)) + '" data-ev="ans" data-arg="' + esc(g.id) + '" data-val="' + esc(c) + '" dir="auto">' + esc(armedLabel(k(c), c)) + '</button>').join('')
     }

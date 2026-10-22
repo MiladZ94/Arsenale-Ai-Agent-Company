@@ -35,7 +35,18 @@ function worldScripts(opts = {}) {
       ? '<script>(function (exports) {\n' + src + '\n})(window.THREE = {});</script>'
       : '<script>' + src + '</script>')
   }
-  const characters = { default: cached(path.join(CHAR_DIR, 'default.glb'), (b) => b.toString('base64')) || '', byAgent: {} }
+  // `set`: the shipped office characters (person-<name>.glb, tools/characters), picked by seed in the page
+  const characters = { default: cached(path.join(CHAR_DIR, 'default.glb'), (b) => b.toString('base64')) || '', byAgent: {}, set: {} }
+  try {
+    for (const n of fs.readdirSync(CHAR_DIR).sort()) {
+      const m = /^person-([\w-]+)\.glb$/.exec(n)
+      if (!m) continue
+      const file = path.join(CHAR_DIR, n)
+      try { if (fs.statSync(file).size > MAX_GLB) { console.error('character left out, over ' + MAX_GLB + ' bytes: ' + n); continue } } catch { continue }
+      const b64 = cached(file, (b) => b.toString('base64'))
+      if (b64) characters.set[m[1]] = b64
+    }
+  } catch { /* no characters folder: the default character stays */ }
   for (const dir of opts.characterDirs || []) {
     let names = []
     try { names = fs.readdirSync(dir) } catch { continue }

@@ -52,19 +52,57 @@
   }
   const officeNameOfProject = (p) => (p ? String(p) : '')
 
-  function runsTable(rows) {
+  /** One run as a card: who, the task, where it is, one thick bar, the percent and the ETA. */
+  function runCard(r, many) {
+    const pill = statePill(r)
+    const tone = r.state === 'stalled' || r.state === 'dead' ? 'bad' : r.state === 'quiet' ? 'warn' : ''
+    const rep = r.reported, est = r.estimate
+    const has = (v) => v !== null && v !== undefined
+    const shown = has(rep) ? rep : has(est) ? est : null
+    const e = emp(r.agent)
+    const sub = [e && e.name ? titleOf(e) : modelOf(r), r.project].filter(Boolean).join(' · ')
+    const where = [phaseName(r) || r.doing || '', r.lastActivityAt ? T('last report ') + agoShort(r.lastActivityAt) : ''].filter(Boolean).join(' · ')
+    // the estimate is named when it says something the reported percent does not
+    const foot = has(rep) ? (has(est) && Math.abs(est - rep) >= 5 ? T('estimate ') + digits(est) + ' %' : T('reported')) : has(est) ? T('estimate only') : T('nothing reported yet')
+    const act = (r.state === 'stalled' || r.state === 'dead') && canWrite() ? '<div class="rw rca"><button type="button" class="b sm' + armedCls('ra|nudge|' + r.id) + '" data-ev="run-act" data-arg="nudge|' + esc(r.id) + '">' + esc(armedLabel('ra|nudge|' + r.id, T('Nudge'))) + '</button><button type="button" class="b sm bad' + armedCls('ra|stop|' + r.id) + '" data-ev="run-act" data-arg="stop|' + esc(r.id) + '">' + esc(armedLabel('ra|stop|' + r.id, T('Stop'))) + '</button></div>' : ''
+    return '<div class="card rcard' + (tone ? ' ' + tone : '') + '"><div class="rw rch">' + face(r.agent || 'supervisor', 44, true) + '<div style="min-width:0;flex:1 1 130px"><b class="hi rnm" dir="auto" title="' + esc(nameOf(r.agent)) + '" style="display:block">' + esc(nameOf(r.agent)) + (many ? ' <span class="mut">' + T('run ') + digits(many) + '</span>' : '') + '</b><div class="mut rnm" dir="auto" title="' + esc(sub) + '">' + esc(sub) + '</div></div>' + pill + '</div>' +
+      '<div class="hi rct lt" dir="auto" title="' + esc(r.task) + '">' + esc(r.task) + '</div><div class="mut sm ell" dir="auto">' + esc(where) + '</div>' +
+      '<div class="rw rcb"><div class="bar thick' + (tone ? ' ' + tone : '') + (shown !== null && !has(rep) ? ' hatch' : '') + '"><i style="width:' + (shown || 0) + '%"></i>' + (has(rep) && has(est) ? '<b class="tick" style="left:' + est + '%"></b>' : '') + '</div><b class="hi rcp">' + (shown === null ? '—' : digits(shown) + ' %') + '</b></div>' +
+      '<div class="rw rcf"><span class="mut">' + esc(foot) + (r.differ ? ' <span class="df" title="' + esc(T('The reported and the estimated percent are more than 25 points apart')) + '">' + ic('warn', 13) + '</span>' : '') + '</span><span class="sp"></span><span class="soft">' + T('ETA ') + '<b class="hi">' + (has(r.etaMin) ? minsText(r.etaMin) : '—') + '</b></span></div>' + act + '</div>'
+  }
+  /** The dead runs as one card among the runs: how many, and Clean them. */
+  function deadTile(dead) {
+    if (!dead.length) return ''
+    const label = dead.length === 1 ? T('Clean it') : dead.length === 2 ? T('Clean both') : T('Clean all ') + digits(dead.length)
+    return '<div class="card rcard dtile"><b class="hi" style="font-size:18px">' + digits(dead.length) + ' ' + T(dead.length === 1 ? 'dead run to clean' : 'dead runs to clean') + '</b><p class="soft">' + T('Quiet for hours and never reported. Cleaning only hides them here; the log stays in Activity.') + '</p>' +
+      (canWrite() ? '<div><button type="button" class="b sm' + armedCls('ra|clean|all') + '" data-ev="run-act" data-arg="clean|all">' + esc(armedLabel('ra|clean|all', label)) + '</button></div>' : '') + '</div>'
+  }
+  function runsTable(rows, dead) {
     const flagged = !!st.liveFlag
+    const cards = st.liveView !== 'table'
     let list = rows.filter((r) => !flagged || r.state !== 'working' || r.differ)
-    list = list.slice().sort((a, b) => (st.liveGroup ? String(a.project).localeCompare(String(b.project)) : 0) || SEVERITY[a.state] - SEVERITY[b.state] || b.quietMin - a.quietMin)
+    const eta = (r) => (r.etaMin === null || r.etaMin === undefined ? 1e9 : r.etaMin)
+    const plain = (r) => (r.state === 'working' && !r.differ ? 1 : 0)
+    // cards: the flagged first, then the nearest to done; the table keeps the quietest last within each state
+    list = list.slice().sort((a, b) => (st.liveGroup ? String(a.project).localeCompare(String(b.project)) : 0) ||
+      (cards ? plain(a) - plain(b) || SEVERITY[b.state] - SEVERITY[a.state] || eta(a) - eta(b) : SEVERITY[a.state] - SEVERITY[b.state] || b.quietMin - a.quietMin))
     const count = {}
     for (const r of rows) count[r.agent] = (count[r.agent] || 0) + 1
     const seen = {}
-    const body = list.map((r) => { seen[r.agent] = (seen[r.agent] || 0) + 1; return runRow(r, count[r.agent] > 1 ? seen[r.agent] : 0) }).join('')
-    const tools = '<span class="sp"></span><button type="button" class="b sm" data-ev="live-opt" data-arg="group" aria-pressed="' + !!st.liveGroup + '">' + T('Group by project') + '</button><button type="button" class="b sm" data-ev="live-opt" data-arg="flag" aria-pressed="' + flagged + '">' + T('Show only flagged') + '</button>'
+    const nth = (r) => { seen[r.agent] = (seen[r.agent] || 0) + 1; return count[r.agent] > 1 ? seen[r.agent] : 0 }
+    const tools = '<span class="sp"></span><span class="seg" role="group" aria-label="' + T('Show the runs as') + '"><button type="button" data-ev="live-view" data-arg="cards" aria-pressed="' + cards + '">' + T('Cards') + '</button><button type="button" data-ev="live-view" data-arg="table" aria-pressed="' + !cards + '">' + T('Table') + '</button></span>' +
+      '<button type="button" class="b sm" data-ev="live-opt" data-arg="group" aria-pressed="' + !!st.liveGroup + '">' + T('Group by project') + '</button><button type="button" class="b sm" data-ev="live-opt" data-arg="flag" aria-pressed="' + flagged + '">' + T('Show only flagged') + '</button>'
+    const note = T('Quiet means no step reported for ') + digits(LIVE_QUIET_MIN) + T(' minutes; stalled at ') + digits(st.data.live.limits.stallMinutes) + T(' minutes (') + '<button type="button" class="lnk" data-ev="goto-limits">' + T('Settings, Decisions') + '</button>' + T('). A stalled run is never stopped by Arsenale.')
+    if (cards) {
+      const html = '<div class="lrun"><div class="rw lth2"><b class="hi">' + T('Running now') + '</b><span class="mut">' + T('flagged first, then by ETA') + '</span>' + tools + '</div>'
+      if (!list.length && !dead.length) return html + '<p class="empty">' + (rows.length ? T('Nothing is flagged.') : T('No agent is running.')) + '</p></div>'
+      return html + '<div class="rgrid">' + list.map((r) => runCard(r, nth(r))).join('') + deadTile(dead) + '</div><p class="mut sm" style="margin-top:12px">' + note + '</p></div>'
+    }
+    const body = list.map((r) => runRow(r, nth(r))).join('')
     let html = '<div class="card ltab"><div class="lth rw"><b class="hi">' + T('Running now') + '</b><span class="mut">' + T('quietest last within each state') + '</span>' + tools + '</div>'
     if (!list.length) return html + '<p class="empty" style="padding:18px">' + (rows.length ? T('Nothing is flagged.') : T('No agent is running.')) + '</p></div>'
     html += '<div class="lscroll"><table class="lt2"><colgroup><col style="width:150px"><col><col style="width:130px"><col style="width:170px"><col style="width:52px"><col style="width:110px"><col style="width:90px"><col style="width:80px"></colgroup><thead><tr><th>' + T('Agent') + '</th><th>' + T('Task') + '</th><th>' + T('Phase') + '</th><th>' + T('Progress') + '</th><th class="num">' + T('Files') + '</th><th>' + T('Last activity') + '</th><th>' + T('ETA') + '</th><th></th></tr></thead><tbody>' + body + '</tbody></table></div>'
-    return html + '<p class="mut sm" style="padding:12px 18px">' + T('Quiet means no step reported for ') + digits(LIVE_QUIET_MIN) + T(' minutes; stalled at ') + digits(st.data.live.limits.stallMinutes) + T(' minutes (') + '<button type="button" class="lnk" data-ev="goto-limits">' + T('Settings, Decisions') + '</button>' + T('). A stalled run is never stopped by Arsenale.') + '</p></div>'
+    return html + '<p class="mut sm" style="padding:12px 18px">' + note + '</p></div>'
   }
 
   /** One version run: the overall percent, one segment per phase. */
@@ -79,12 +117,15 @@
     const el = isNaN(startMs) ? null : Date.now() - startMs
     const eta = pctNow !== null && pctNow !== undefined && pctNow >= 10 && pctNow < 100 && el !== null && el >= 120000 ? Math.round(el * (100 - pctNow) / pctNow / 60000) : null
     const cls = (s) => (/merged|done/i.test(s) ? 'ok' : /block|fail/i.test(s) ? 'bad' : /gate|wait/i.test(s) ? 'warn' : /build|run/i.test(s) ? 'run' : '')
-    let html = '<div class="card lvr"><div class="lvh rw"><b class="hi" style="font-size:16px" dir="auto">' + T('Version run') + ' · ' + esc(v.app || v.id) + (v.version ? ' ' + esc(v.version) : '') + '</b>' + (v.status ? '<span class="chip ' + (cls(v.status) === 'ok' ? 'ok' : cls(v.status) === 'bad' ? 'bad' : cls(v.status) === 'warn' ? 'warn' : '') + '">' + esc(v.status) + '</span>' : '') +
-      '<span class="mut sm ell" dir="auto">' + esc([m.integrationBranch, !isNaN(startMs) ? T('started ') + hm(m.startedAt) : '', used && m.budget ? tokens(used) + T(' of ') + tokens(m.budget) + ' ' + T('tokens') : used ? tokens(used) + ' ' + T('tokens') : ''].filter(Boolean).join(' · ')) + '</span><span class="sp"></span>' +
-      (eta !== null ? '<span class="soft sm">' + T('about ') + '<b class="hi">' + minsText(eta) + '</b>' + T(' to go · done about ') + clockIn(eta) + '</span>' : '') + '<a class="lnk" href="#/rundetail">' + T('All phases and requests') + '</a></div>'
-    html += '<div class="lvb"><div class="lvbig"><div class="rw" style="gap:8px;align-items:baseline"><b class="pc">' + (pctNow === null || pctNow === undefined ? '—' : digits(pctNow) + ' %') + '</b><span class="mut sm">' + T('overall') + '</span></div>'
-    html += '<div class="vseg" role="img" aria-label="' + esc(T('Progress of each phase')) + '">' + phases.map((x) => { const w = (x.c && x.c.weight) || 1; return '<span style="flex:' + w + ' 1 0"><i style="width:' + (x.c ? Math.round(x.c.percent) : 0) + '%"></i></span>' }).join('') + '</div></div>'
-    html += '<div class="vph" style="grid-template-columns:repeat(' + Math.max(1, Math.min(4, phases.length)) + ',minmax(0,1fr))">' + phases.map((x) => '<div><div class="rw" style="gap:6px;flex-wrap:wrap"><b class="hi sm">' + esc(x.p.id) + ' ' + esc(x.p.name || '') + '</b>' + (x.p.status ? '<span class="chip sm ' + cls(x.p.status) + '">' + esc(x.p.status) + '</span>' : '') + '</div><div class="mut sm">' + (x.c ? digits(Math.round(x.c.percent)) + ' %' : '—') + (tok(x.p.id) ? ' · ' + tok(x.p.id) : '') + '</div></div>').join('') + '</div></div></div>'
+    // one block: the overall percent in display size, then a thick track per phase in its state's colour
+    let html = '<div class="card lvr"><div class="lvh rw"><span class="lbl">' + T('Version run') + '</span><b class="hi vtt" dir="auto">' + esc(v.app || v.id) + (v.version ? ' ' + esc(v.version) : '') + '</b>' + (v.status ? '<span class="chip ' + (cls(v.status) === 'ok' ? 'ok' : cls(v.status) === 'bad' ? 'bad' : cls(v.status) === 'warn' ? 'warn' : '') + '">' + esc(v.status) + '</span>' : '') +
+      '<span class="mut ell" dir="auto">' + esc([m.integrationBranch, !isNaN(startMs) ? T('started ') + hm(m.startedAt) : '', used && m.budget ? tokens(used) + T(' of ') + tokens(m.budget) + ' ' + T('tokens') : used ? tokens(used) + ' ' + T('tokens') : ''].filter(Boolean).join(' · ')) + '</span><span class="sp"></span>' +
+      (eta !== null ? '<span class="soft vgo">' + T('about ') + '<b class="hi">' + minsText(eta) + '</b>' + T(' to go · done about ') + '<b class="hi">' + clockIn(eta) + '</b></span>' : '') + '<a class="lnk" href="#/rundetail">' + T('All phases and requests') + '</a></div>'
+    // the narrow layout keeps the tracks and says in one line which phase is on now
+    const now = phases.find((x) => !/merged|done/i.test(String(x.p.status || '')) && !(x.c && x.c.percent >= 100))
+    const nowLine = now ? '<div class="vnow">' + T('Now: ') + '<b class="hi" dir="auto">' + esc(now.p.id) + ' ' + esc(now.p.name || '') + '</b>' + (now.p.status ? ' · <span class="vst ' + cls(now.p.status) + '">' + esc(now.p.status) + '</span>' : '') + '</div>' : ''
+    html += '<div class="lvb"><div class="lvbig"><b class="pc">' + (pctNow === null || pctNow === undefined ? '—' : digits(pctNow) + '<small> %</small>') + '</b><span class="mut">' + T('overall') + '</span></div>'
+    html += '<div class="vph" role="img" aria-label="' + esc(T('Progress of each phase')) + '">' + phases.map((x) => { const w = (x.c && x.c.weight) || 1, pc = x.c ? Math.round(x.c.percent) : 0, c = cls(x.p.status || ''); return '<div class="vp" style="flex:' + w + ' 1 0"><span class="trk ' + c + '"><i style="width:' + pc + '%"></i></span><div class="rw vph2" style="gap:6px"><b class="hi vpn" dir="auto" title="' + esc(x.p.id + ' ' + (x.p.name || '')) + '">' + esc(x.p.id) + ' ' + esc(x.p.name || '') + '</b><span class="sp"></span><span class="soft vpc">' + (x.c ? digits(pc) + ' %' : '—') + '</span></div><div class="vst ' + c + '">' + esc(x.p.status || '') + (tok(x.p.id) ? '<span class="mut"> · ' + tok(x.p.id) + '</span>' : '') + '</div></div>' }).join('') + '</div>' + nowLine + '</div></div>'
     return html
   }
 
@@ -124,7 +165,7 @@
     const open = alerts.slice(0, 3)
     return open.map((a) => {
       const r = rows.find((x) => x.id === a.run) || {}
-      return '<div class="banner stb" role="alert"><span style="color:var(--bad);line-height:0">' + ic('warn', 22) + '</span><div style="min-width:0"><b class="hi">' + esc(a.agent || T('A run')) + '</b> <span class="soft">' + T('has been quiet for ') + minsText(a.quietMin) + '.</span><div class="mut sm ell" dir="auto">' + esc(r.task || '') + '</div></div><span class="sp"></span>' +
+      return '<div class="banner stb" role="alert"><span style="color:var(--bad);line-height:0">' + ic('warn', 22) + '</span><div style="min-width:0"><b class="hi">' + esc(a.agent ? nameOf(a.agent) : T('A run')) + '</b> <span class="soft">' + T('has been quiet for ') + minsText(a.quietMin) + '.</span><div class="mut sm ell" dir="auto">' + esc(r.task || '') + '</div></div><span class="sp"></span>' +
         (canWrite() ? '<button type="button" class="b sm' + armedCls('ra|nudge|' + a.run) + '" data-ev="run-act" data-arg="nudge|' + esc(a.run) + '">' + esc(armedLabel('ra|nudge|' + a.run, T('Nudge'))) + '</button><button type="button" class="b sm bad' + armedCls('ra|stop|' + a.run) + '" data-ev="run-act" data-arg="stop|' + esc(a.run) + '">' + esc(armedLabel('ra|stop|' + a.run, T('Stop'))) + '</button><button type="button" class="b sm ghost" data-ev="alert-dismiss" data-arg="' + esc(a.run) + '">' + T('Dismiss') + '</button>' : '') + '</div>'
     }).join('') + (alerts.length > 3 ? '<p class="mut sm" style="margin:-14px 0 14px">+' + digits(alerts.length - 3) + ' ' + T('more stalled runs') + '</p>' : '')
   }
@@ -142,17 +183,24 @@
     const q = d.queue || { holder: null, waiting: [] }
     const queued = (q.holder ? 1 : 0) + (q.waiting || []).filter((x) => !x.gone).length
     const waitingN = (q.waiting || []).filter((x) => !x.gone).length
-    const tile = (num, label, cls) => '<div class="tile' + (cls ? ' ' + cls : '') + '"><b>' + num + '</b><span>' + label + '</span></div>'
-    const sub = T('It is ') + hm(new Date().toISOString()) + ' · ' + T('refreshed ') + (secAgo(d.at) === null ? '—' : digits(secAgo(d.at)) + T(' s ago')) + ' · ' + digits(rows.length) + ' ' + T(rows.length === 1 ? 'run open' : 'runs open')
+    // the counts in one line: a number turns amber or red only when it is above 0, and no card is filled red
+    // a count of zero is not shown (owner rule), so the line holds only what is there
+    const cnt = (num, label, tone, tip) => String(num) === digits(0) ? '' : '<span class="lsn"' + (tip ? ' title="' + esc(tip) + '"' : '') + '><b class="' + (tone || '') + '">' + num + '</b> ' + label + '</span>'
+    const sum = '<div class="lsum">' + cnt(digits(rows.length - n('stalled') - n('dead')), T('running')) + cnt(digits(n('quiet')), T('quiet'), n('quiet') ? 'warn' : '', T('quiet for ') + digits(LIVE_QUIET_MIN) + T(' min or more')) + cnt(digits(n('stalled')), T('stalled'), n('stalled') ? 'bad' : '', T('stalled: quiet ') + digits(d.limits.stallMinutes) + T(' min or more')) + cnt(digits(dead.length), T('dead runs to clean'), dead.length ? 'bad' : '') +
+      cnt(digits(q.holder ? 1 : 0) + (waitingN ? ' + ' + digits(waitingN) : ''), T('in the test queue') + (waitingN ? ' ' + T('(waiting)') : '')) + '</div>'
+    const sub = hm(new Date().toISOString()) + ' · ' + T('refreshed ') + (secAgo(d.at) === null ? '—' : digits(secAgo(d.at)) + T(' s ago')) + ' · ' + digits(rows.length) + ' ' + T(rows.length === 1 ? 'run open' : 'runs open')
     const legend = '<span class="lgd"><i class="g1"></i>' + T('reported by the agent') + '</span><span class="lgd"><i class="g2"></i>' + T('estimated by Arsenale') + '</span><span class="lgd"><i class="g3"></i>' + T('estimate only: nothing reported yet') + '</span>'
-    let html = head(T('Live'), sub, '<div class="lgbar">' + legend + '</div>')
+    let html = '<div class="lhead">' + head(T('Live'), sub, sum + '<div class="lgbar">' + legend + '</div>') + '</div>'
     if (st.err.live) html += '<p class="msg err" role="status">' + esc(errTxt(st.err.live)) + '</p>'
     html += stallBanners((d.alerts || []), rows)
-    html += '<div class="tiles">' + tile(digits(rows.length - n('stalled') - n('dead')), T('running')) + tile(digits(n('quiet')), T('quiet for ') + digits(LIVE_QUIET_MIN) + T(' min or more'), n('quiet') ? 'warn' : '') + tile(digits(n('stalled')), T('stalled: quiet ') + digits(d.limits.stallMinutes) + T(' min or more'), n('stalled') ? 'bad' : '') + tile(digits(dead.length), T('dead runs to clean'), dead.length ? 'bad' : '') +
-      tile(digits(q.holder ? 1 : 0) + (waitingN ? ' <small>+ ' + digits(waitingN) + ' ' + T('waiting') + '</small>' : ''), T('in the test queue')) + '</div>'
     const vrs = (d.versionRuns || []).filter((v) => !/done|finished|complete|stopped|cancel/i.test(String(v.status || '')))
     html += vrs.map(vrCard).join('')
-    html += '<div class="lgrid"><div style="min-width:0;display:flex;flex-direction:column;gap:18px">' + runsTable(rows) + resumeCard(d.resume) + '</div><div style="display:flex;flex-direction:column;gap:18px;min-width:0">' + queueCard(q) + deadCard(dead) + '</div></div>'
+    if (st.liveView !== 'table') {
+      // cards: the dead runs are a card among the runs; the test queue shows only while someone is in it
+      html += runsTable(rows, dead) + '<div class="lbelow">' + resumeCard(d.resume) + (q.holder || waitingN ? queueCard(q) : '') + '</div>'
+      return html + msgHtml()
+    }
+    html += '<div class="lgrid"><div style="min-width:0;display:flex;flex-direction:column;gap:18px">' + runsTable(rows, []) + resumeCard(d.resume) + '</div><div style="display:flex;flex-direction:column;gap:18px;min-width:0">' + queueCard(q) + deadCard(dead) + '</div></div>'
     return html + msgHtml()
   }
 
@@ -161,6 +209,7 @@
     if (!t) return
     const a = t.dataset.ev, arg = t.dataset.arg || ''
     if (a === 'live-opt') { st[arg === 'group' ? 'liveGroup' : 'liveFlag'] = !st[arg === 'group' ? 'liveGroup' : 'liveFlag']; h.redraw(); return }
+    if (a === 'live-view') { st.liveView = arg === 'table' ? 'table' : 'cards'; try { localStorage.setItem('arsenale-live-view', st.liveView) } catch { /* a private window */ } h.redraw(); return }
     if (a === 'goto-limits') { st.setTab = 'decisions'; location.hash = '#/settings'; return }
     if (a === 'run-act') {
       const [op, run] = arg.split('|')

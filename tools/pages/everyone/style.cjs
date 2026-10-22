@@ -110,7 +110,7 @@ button.chip{cursor:pointer}
 .ev .colw{background:rgba(217,140,30,.05);border:1px dashed rgba(217,140,30,.35);border-radius:12px;padding:10px;margin:-10px}
 .ev .tk{padding:14px 16px;text-align:start;cursor:pointer;font:inherit;color:inherit;display:block;width:100%}
 .ev .tk:hover{border-color:var(--line-strong)}
-.ev .tk.wtk{border-color:rgba(217,140,30,.65);background:linear-gradient(0deg,var(--warn-bg),var(--warn-bg)),var(--panel);box-shadow:inset 4px 0 0 var(--warn)}
+.ev .tk.wtk{border-color:rgba(217,140,30,.65);background:linear-gradient(0deg,var(--warn-bg),var(--warn-bg)),var(--panel)}
 .ev .tk.dn{opacity:.85}
 .ev .tk .tt{color:var(--ink-hi);font-weight:700;font-size:14.5px;line-height:1.35;overflow-wrap:anywhere}
 .ev .tk .q{color:var(--ink-soft);font-size:13px;margin-top:6px;padding:6px 10px;border:1px solid var(--line);background:rgba(30,40,50,.1);border-radius:6px}
@@ -126,7 +126,7 @@ button.chip{cursor:pointer}
 .ev .tl time{font:13px var(--font-ui);color:var(--ink-dim);width:46px;flex:none;direction:ltr}
 .ev .cm{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
 .ev .cm .cb{flex:1;background:var(--panel-raised);border:1px solid var(--line);border-radius:10px;padding:10px 14px;min-width:0}
-.ev .wbox{border-color:rgba(217,140,30,.6);background:linear-gradient(0deg,var(--warn-bg),var(--warn-bg)),var(--panel);box-shadow:inset 4px 0 0 var(--warn)}
+.ev .wbox{border-color:rgba(217,140,30,.6);background:linear-gradient(0deg,var(--warn-bg),var(--warn-bg)),var(--panel)}
 /* approvals */
 .ev .appr{display:grid;grid-template-columns:400px 1fr;gap:24px;align-items:start}
 .ev .apv{display:flex;gap:12px;padding:14px 16px;border:0;border-bottom:1px solid var(--line);align-items:flex-start;background:none;width:100%;text-align:start;cursor:pointer;font:inherit;color:inherit}
@@ -278,8 +278,8 @@ button.chip{cursor:pointer}
 .ev table.lt2 td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
 .ev table.lt2 tbody tr:last-child td{border-bottom:0}
 .ev table.lt2 .num{text-align:end;white-space:nowrap}
-.ev table.lt2 tr.rqt td:first-child{box-shadow:inset 4px 0 0 var(--warn)}
-.ev table.lt2 tr.rst{background:rgba(217,140,30,.1)}.ev table.lt2 tr.rst td:first-child{box-shadow:inset 4px 0 0 var(--bad)}
+.ev table.lt2 tr.rqt{background:rgba(217,140,30,.06)}
+.ev table.lt2 tr.rst{background:rgba(217,140,30,.1)}
 .ev table.lt2 tr.rdd{background:#F1F3F5;color:var(--ink-dim)}
 .ev .lt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;line-height:1.35}
 .ev .lt2 .la{display:flex;flex-direction:column;gap:6px;align-items:stretch}

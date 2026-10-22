@@ -72,7 +72,12 @@
     // waits at the supervisor in its idle pose
     walk: [/walk/i, /run/i, /stroll/i],
     stand: [/^stand/i, /standing/i, /wait/i],
+    // the seated pose itself: on a sofa, and at a desk while the person thinks
+    sit: [/^sit$/i, /seated/i],
   }
+  // The shipped set (tools/characters) has exactly six clips, and each state
+  // finds its own: working = Typing, walking = Walk, sitting = Sit, idle = Idle,
+  // waiting at the supervisor = Stand, done = Celebrate.
   const SEATED_RX = /sit|seated/i
   const loader = new X.GLTFLoader()
   const parse = (buf) => new Promise((res, rej) => loader.parse(buf, '', res, rej))
@@ -80,7 +85,7 @@
   const templates = new Map() // agent ('' = the default) -> { gltf, name, bytes, source, seated, isDefault }
   function clipFor(clips, state, seated) {
     const pick = (rxs) => { for (const rx of rxs) { const c = clips.find((x) => rx.test(x.name)); if (c) return c } return null }
-    if (seated && state === 'idle') { const c = clips.find((x) => SEATED_RX.test(x.name) && /idle/i.test(x.name)); if (c) return c }
+    if (seated && state === 'idle') { const c = clips.find((x) => SEATED_RX.test(x.name) && /idle/i.test(x.name)) || clips.find((x) => /^sit$/i.test(x.name)); if (c) return c }
     // a seated file's own idle stands in for its missing standing pose only when it is not a seated idle
     return pick(CLIP_RX[state]) || (state !== 'idle' ? clipFor(clips, 'idle', seated && state !== 'walk' && state !== 'stand') : (clips[0] || null))
   }
@@ -88,9 +93,26 @@
     const gltf = await parse(buf)
     const ex = (gltf.scene && gltf.scene.userData && gltf.scene.userData.arsenale) || {}
     const clips = gltf.animations || []
-    const tpl = { gltf, name, bytes: buf.byteLength, source, isDefault: !!ex.default, seated: !!ex.seated || clips.some((c) => SEATED_RX.test(c.name)) }
+    const tpl = { gltf, name, bytes: buf.byteLength, source, isDefault: !!ex.default, office: !!ex.office, seated: !!ex.seated || clips.some((c) => SEATED_RX.test(c.name)) }
     templates.set(agent, tpl)
     return tpl
+  }
+  // Whose model: the person's own file, else one of the shipped set picked by
+  // the person's seed (the same pick the campus and the lists make, OFFICE_LOOK),
+  // else the default character.
+  let booted = false // set when every shipped character is parsed; nobody is drawn before, so nobody is swapped for another model
+  function tplFor(src) {
+    if (!booted) return null
+    const own = templates.get(src.agent)
+    if (own) return own
+    if (typeof OFFICE_LOOK === 'object') { const t = templates.get('~set:' + OFFICE_LOOK.variant(src.seed || src.agent)); if (t) return t }
+    return templates.get('')
+  }
+  // The office's colour on the shirt of a shipped character: one material for each colour, shared
+  const shirtMats = new Map()
+  function shirtMat(hex) {
+    if (!shirtMats.has(hex)) shirtMats.set(hex, new T3.MeshStandardMaterial({ name: 'Shirt', vertexColors: true, color: hex, roughness: 0.8, metalness: 0 }))
+    return shirtMats.get(hex)
   }
   // the person's own colours on the default character: skin, hair and the
   // shirt in their role colour. A file of someone's own keeps its colours.
@@ -149,6 +171,7 @@
     model.position.y -= box.min.y // the feet on the floor
     if (Math.hypot(c.x, c.z) > 0.25 * TARGET_H) { model.position.x -= c.x; model.position.z -= c.z } // a badly placed origin
     bake(model, tpl.isDefault ? { skin: p.skin, hair: p.hair, shirt: p.shirt } : null)
+    if (tpl.office) { const tone = p.tone || p.shirt || '#6F7B88'; model.traverse((o) => { if (o.isMesh && o.material && o.material.name === 'Shirt') o.material = shirtMat(tone) }) }
     const clips = tpl.gltf.animations || []
     const mixer = new T3.AnimationMixer(model), map = {}
     for (const k of Object.keys(CLIP_RX)) { const cl = clipFor(clips, k, tpl.seated); map[k] = cl ? cl.name : null }
@@ -298,7 +321,7 @@
       addDiamond(p)
       byId.set(src.id, p)
     }
-    room(decor, r, model.title)
+    room(decor, r, model.title, model.color)
     const lg = lounge(decor, r, Math.max(1, desks), aisleXs)
     const merged = mergeStatic(decor)
     group.add(merged, decor, dyn)
@@ -325,11 +348,11 @@
     tgt.addScaledVector(new T3.Vector3(-Math.sin(VIEW0.azim), 0, -Math.cos(VIEW0.azim)), shift / Math.sin(VIEW0.elev))
     overview = { tx: tgt.x, ty: tgt.y, tz: tgt.z, azim: VIEW0.azim, elev: VIEW0.elev, zoom: oz }
   }
-  function charSigOf(src) { const t = templates.get(src.agent) || templates.get(''); return (t ? t.name + t.bytes : '-') + '|' + src.shirt + src.hair + src.skin }
+  function charSigOf(src) { const t = tplFor(src); return (t ? t.name + t.bytes : '-') + '|' + src.shirt + src.hair + src.skin + '|' + (src.tone || '') }
   function placeCharacter(p, reuse) {
     const src = p.src
     if (p.kind === 'tray' || !p.sit) return
-    const tpl = templates.get(src.agent) || templates.get('')
+    const tpl = tplFor(src)
     if (p.ch) { O.dyn.remove(p.ch.holder); p.ch.mixer.stopAllAction(); p.ch.model.traverse((o) => { if (o.isSkinnedMesh) o.geometry.dispose() }); p.ch = null }
     if (!tpl || !src.present) return
     p.charSig = charSigOf(src)

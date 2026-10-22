@@ -1,8 +1,8 @@
-# Arsenale reference
+# <img src="brand/arsenale-mark.svg" width="36" height="36" alt=""> Arsenale reference
 
 The full manual. The short version is the [README](../README.md).
 
-**Run a company of AI agents you can watch at work.**
+**Hire agents. Watch them work. Stay in charge.**
 
 Arsenale is a local dashboard and a small run log for AI assistants. Your
 assistant (Claude Desktop, Claude Code, Cursor, VS Code, Codex, Gemini CLI,
@@ -22,7 +22,7 @@ It is named after the Arsenal of Venice, where specialist departments under
 one management built ships in parallel, each at its own station, with the whole
 yard visible from one place.
 
-![Arsenale walkthrough: campus, build mode, office, version run, org chart, office packs](media/arsenale-walkthrough.gif)
+![Arsenale walkthrough: campus, build mode, office, version run, org chart, Marketplace](media/arsenale-walkthrough.gif)
 
 ## Your AI team at a glance
 
@@ -176,7 +176,7 @@ The screens below are from `arsenale demo`: an invented company, so nothing of y
 | ![Tasks](screenshots/tasks-en.png) **Tasks**: a board of what you asked for (To do, Working on it, Waiting for you, Done this week), or a list. A question your team asks shows on its task. **New task** is a page of its own: what you need, who should do it, when, and whether you want to check it first. Writing a task starts nothing: your assistant picks it up the next time you talk to it. | ![Task](screenshots/task-detail-en.png) **A task**: the question waiting for you with its buttons, what happened (newest first), comments, the finished work, and the time spent; the task number and tokens only under Details. |
 | ![Decisions](screenshots/approvals-en.png) **A decision** (**Details** on the Decisions page): one letter at a time, who asks, the question in plain words, what would happen, why it matters, what happens if you say no, and whether it leaves your computer. Two clicks to answer; or ask for a change. | ![Finished work](screenshots/deliverables-en.png) **Finished work**: documents, images, spreadsheets and links your team handed in, searchable by name or person, with previews from Arsenale's own copies. |
 | ![Team](screenshots/team-profile-en.png) **Team**: a table of everyone, grouped by office, with status, current task, runs and tokens; the offices are chips above it, and a row opens the profile at the side (right now, this month, good at, asks you first before). | ![New desk](screenshots/team-hire-en.png) **New desk**: hire in plain words (name, job title, what they should do, good at, a look, what they ask first), then check the file before it is written; edits keep a backup. |
-| ![Settings](screenshots/settings-safety-en.png) **Settings**: Assistants (connect in three steps), Notifications, Decisions, Safety rules in plain words, Office packs, Privacy. | ![Wizard](screenshots/wizard-offices-en.png) **First start**: four steps (welcome, offices, connect, review) while your campus builds itself on the left; nothing is saved before the last one. |
+| ![Settings](screenshots/settings-safety-en.png) **Settings**: Assistants (connect in three steps), Notifications, Decisions, Safety rules in plain words, Marketplace, Privacy. | ![Wizard](screenshots/wizard-offices-en.png) **First start**: four steps (welcome, offices, connect, review) while your campus builds itself on the left; nothing is saved before the last one. |
 
 
 The screens from before 1.0:
@@ -212,7 +212,33 @@ The 1.1 screens:
   profile.
 - **Settings**: Notifications (desktop, ntfy, Telegram, Pushover) and Decisions
   (the auto-run switch, the stall and dead limits) next to Assistants, Safety
-  rules, Office packs and Privacy.
+  rules, Marketplace and Privacy. The Marketplace entry shows the bundled
+  gallery and links to the Marketplace page.
+
+The 1.2 look ("Stage"; the screenshots above are from 1.1 and are re-made
+later):
+
+- **One light theme, stronger**: a tinted ground, white cards with two soft
+  shadows, bolder office colours, and a larger type scale. Nothing you must
+  read is smaller than 13 px. Arial only.
+- **The top bar** shows the logo, five screens (Campus, Office, Live,
+  Decisions, Team) and **More** (Tasks, Finished work, Activity, Org chart,
+  Gate history, Details: tools & usage, Marketplace, Settings), one status
+  group, and **?**. Legends and help notes are hidden behind **?** until you
+  show them.
+- **Waiting for you** is a small card over the campus and the office with the
+  oldest three items in plain words (Merge, Next phase, Release, Hire,
+  Question, and how long each waits). It opens the full list, where the
+  "Gates per project" strip names each gate in words (Questions, Design pick,
+  Commit) instead of letters. Reject still stores `decline`.
+- **Team** opens as tiles of people (or the table, remembered), with the
+  rendered portraits; a row or a tile opens the profile. The packs you have
+  not added are one link: "N more offices in the Marketplace".
+- **Marketplace** (`#/marketplace`, under More): the packs that ship with
+  Arsenale, and a pack from a folder or a `.zip` (see
+  [Office packs](#office-packs)).
+- **A narrow layout** at 360 to 480 px wide, one column per screen, for 9:16
+  recordings. The dashboard still serves only this computer.
 
 Also: **Gate history** (`#/decisions`, under More: a timeline of who decided
 what), an **archive** of every run. The interface is English only.
@@ -227,9 +253,9 @@ A floor has 18 desks; more agents than that take a guest desk while they work.
 ### The campus and the 3D office
 
 **The campus** is a board of lots on a grid (6 by 4 to begin with), one building per
-office, drawn as light isometric buildings on plain white ground with a card for
-each office above its building (its name, who is working and who waits, the month's
-spend and budget, **Enter office**). Only the lots in use are on show; the first
+office, drawn as isometric buildings in the office's colour on a tinted ground, with a
+card for each office above its building (its name, who is working and who waits; the
+month's spend, the budget and **Enter office** on hover or focus). Only the lots in use are on show; the first
 offices of an older company start as a block three lots wide. The office profile
 selects one of 12 building types (engineering, verification, security, release,
 docs, design, data, planning, legal, business, archive hall, domain lab). The
@@ -244,7 +270,9 @@ mode, with every lot of the grid outlined: a hotbar of the 12 types (keys 1 to
 9), a tool column (select, move, rotate, archive), a ghost building that follows
 the pointer (blue on a free lot; red with "Lot taken: <office>" on a used one),
 **R** to turn (a turned building is drawn from the other side), **Delete** to
-archive (twice, so a stray key does nothing), **Done building** to leave. Move is
+archive (twice, so a stray key does nothing), **Done building** to leave. **New
+office** (next to **Build**, and **Add an office** on Team) opens the form described
+in [Offices you make](#offices-you-make). Move is
 two clicks: the building, then its new lot. Placing a building creates its office;
 archiving one archives the office and keeps its history. The layout is
 `company/campus.json` (see `tools/campus.cjs`); without the file it is derived from
@@ -256,10 +284,15 @@ change the campus.
 **The office floor** is a bright 3D room: a work station for each person round the
 supervisor's station, a lounge where idle people rest, a reception, windows and
 the project screens. People walk between them as their state changes (lounge,
-supervisor, desk, supervisor, lounge). One small pill above each head shows the
-first name and the state (working, waiting, quiet, stalled, dead, idle, done,
-failed); pills that would touch are moved apart, and the details open in the side
-panel. A **Needs a look** box lists the floor's stalled runs (**Nudge** asks the
+supervisor, desk, supervisor, lounge). A small one-line pill beside the head (a
+dot in the colour of the state, and the name; the state word is its tooltip) shows
+only for people who are working, waiting, quiet, stalled, dead or failed; a free
+or finished person shows the name only on hover, focus or selection. No pill
+covers a head. Pills of one state that sit close together fold into one counter
+chip ("3 working") that opens on hover; the supervisor's tray shows the number of
+reports handed in as a small badge, and nothing while it is 0. In the demo's
+showcase at most four pills show (stalled, then waiting, then working). The
+details open in the side panel. A **Needs a look** box lists the floor's stalled runs (**Nudge** asks the
 supervisor, through its inbox, to check on the run) and the dead runs Arsenale
 closed (**Clean** hides one from the office and Live; its log stays in Activity).
 The side panel of such a run has the same button. A run is a person: two runs of one agent are two
@@ -272,10 +305,25 @@ stays the flat isometric one.
 - **three.js r184**, pinned and served from the page itself, never a CDN:
   `tools/vendor/three/` (MIT, see `three-LICENSE.txt` and the `README.md`
   there).
-- **The default character** is `tools/characters/default.glb`: a low-poly person
-  (seated at rest, with walking and standing clips) made from three.js primitives
-  by `tools/characters/make-default-character.cjs`, our own work, released as
-  **CC0 1.0** (`tools/characters/LICENSE.txt`). No model was downloaded.
+- **The people** are the KayKit characters by Kay Lousberg (Adventurers 2.0 and
+  Character Animations 1.1), both **CC0 1.0**: `tools/characters/person-1.glb` to
+  `person-5.glb`, and `person-plain.glb` (the mannequin) as the plain one. The
+  build script (`build-characters.cjs`) left out the costume props, recoloured the
+  outfit to a neutral shirt that the page tints in the office colour, and kept six
+  clips: Idle, Walk, Sit, Typing (made from the seated idle), Stand and Celebrate.
+  A person keeps the same character everywhere: the `look` number in
+  `employees.json`, else a hash of the id, picks it.
+- **The licence record** is `tools/characters/manifest.json`: the source page,
+  the download date, the original file and its SHA-256, the shipped SHA-256 and
+  what was changed, for every file; `LICENCES.md` says the same, to read. A test
+  fails when a shipped file does not match its entry.
+- **Sprites and portraits** for the campus, the flat office and the lists (Team,
+  Live, Tasks, the panels) are rendered from the same models by
+  `node tools/characters/build-sprites.cjs` (headless, one picture per character
+  and office colour, in `tools/characters/sprites/`). Run it again after a change
+  to the office colours. Without the sprite files the pixel people come back.
+- **The fallback character** is `tools/characters/default.glb`, made from three.js
+  primitives by `tools/characters/make-default-character.cjs` (our own work, CC0).
 - **Your own characters**, one per person: drop a `.glb` on their desk (kept in
   that browser), use **Load .glb…** in the details panel, or put
   `<agent-name>.glb` in `ARSENALE_HOME/characters/`. See
@@ -291,13 +339,75 @@ draft for a qualified person, not legal, tax or employment advice.
 Instructions are written for any assistant, with no tool or vendor names. The
 pack texts have not yet been reviewed by an HR or finance professional.
 
-Install and remove packs in **Settings → Office packs** (or pick them in the
-wizard). Files go into Arsenale's own folder, `~/.arsenale/agents`; a member
+Install and remove packs in the **Marketplace** (`#/marketplace`; the
+Marketplace entry in Settings shows the same gallery and links to it), or pick them in the
+wizard. Files go into Arsenale's own folder, `~/.arsenale/agents`; a member
 whose name you already have is never overwritten (keep yours, or install a
 copy); removing a pack deletes only the files you did not change and archives
-the office, with all history kept. Only bundled packs install: a pack is
-instructions a model follows, so packs from elsewhere are refused until packs
-can be signed. The format is in [packs/README.md](packs/README.md).
+the office, with all history kept. The format is in
+[packs/README.md](packs/README.md).
+
+### A pack from a folder or a .zip
+
+A pack someone gave you installs from **Marketplace → Install from a folder or
+.zip…**. A pack is instructions your assistant will follow, so it can carry
+prompt injection; Arsenale checks that it is only text, shows you all of it,
+and gives its members read-only tools unless you keep theirs. It marks the
+pack "From a folder: not checked by Arsenale". There is no online catalogue,
+and no command-line or MCP way to install one.
+
+**The format** is the bundled one (`pack.json`, `labels.json`, `README.md`,
+`agents/<member>.md`), with these limits:
+
+| Rule | Limit |
+|---|---|
+| Files | only `pack.json`, `labels.json`, `README.md` and `agents/<member>.md`; every path must match `^(pack\.json\|labels\.json\|README\.md\|agents/[a-z][a-z0-9-]{1,59}\.md)$`. A `.zip` may wrap them in one top folder. Anything else is refused: scripts, `.js`, `.exe`, `.txt`, hidden files, other folders |
+| Text | UTF-8, no NUL byte; a member file must not start with a byte-order mark |
+| Sizes | each file 64 KB, the whole pack 1 MB, at most 200 entries, 1 to 24 members, a member file for every member and none other |
+| Paths | no `..`, no absolute path, no drive letter, no backslash, no name Windows reserves (`con`, `nul` …) |
+| `.zip` | read by Arsenale's own reader (no other program runs): one disk, no ZIP64, no encryption, stored or deflated only; links and special files refused; sizes checked from the directory before inflating and again while inflating (a zip bomb stops at the limit); no overlapping or duplicate entries; checksums must match |
+| `pack.json` | the bundled checks (`formatVersion` 1, ids, zones, stricter-only policy), plus: no `__proto__`, `constructor` or `prototype` key anywhere (also in `labels.json`); not the id of a bundled pack; no `core` or `ref` members; its office id is not an office your company already has |
+| Member files | a frontmatter of single `key: value` lines between `---`, only the keys `name`, `description`, `model`, `effort`, `tools`, `color`, `zone`, each once; `name` is the member id |
+
+Any failure refuses the whole pack and lists every reason.
+
+**The install steps.**
+
+1. **Stage.** The page uploads the files themselves (base64), never a path;
+   the server writes them to `<data>/packs/staging/<random>/` and checks only
+   that copy. A review left open is removed after an hour, and at the next
+   start of the dashboard.
+2. **Review.** You see the pack id and version, the office it adds, each
+   member with its title, zone, model, its declared `tools:` line, what
+   read-only would drop, and its full text; the stricter safety rules; the
+   sample tasks; the README as plain text; every file and its size. Flags
+   point at tools beyond reading, a missing `tools:` line, a `model:` line,
+   web and e-mail addresses, words that try to override the rules, and
+   instructions to send, post, pay, delete or upload. Flags are hints, not a
+   guarantee.
+3. **Install,** on your click only, through the owner-only write path (the
+   page's Origin, its token, `Sec-Fetch-Site`, a 2 MB body cap). The staged
+   copy is checked again and must match the reviewed hash. Each member is
+   written with `tools: Read, Grep, Glob` unless you ticked **Keep the pack's
+   tools** for it: in Claude Code a member file with no `tools:` line gets
+   every tool, so a missing line is added, not left out. The `tools:` line
+   protects only where the assistant honours it, and that is Claude Code
+   subagents. Other assistants read the file as plain instructions and may
+   ignore the line; there, the only protection is the text you reviewed. The pack's copy moves
+   to `<data>/packs/local/<id>/<version>/`.
+
+**Remove** deletes exactly the files the install wrote (by their SHA-256 in
+`installed.json`), the pack's copy under `packs/local/`, archives its office
+and retires its members (history stays; the stricter rules and the desk
+labels stay, as for a bundled pack). If you changed one of its files, it asks
+first, and keeps that file. **Update** takes the same id with a higher
+version, through stage and review again; unedited files are replaced, and the
+new text of a file you edited goes to `<data>/pack-updates/`.
+
+`installed.json` marks such a pack with `source: "local"`, `localDir`,
+`reviewedAt` and `toolsKept`; an entry without `source` is a bundled pack.
+Arsenale 1.1 ignores these fields: it does not list a local pack, but its
+members keep working and its writes keep the entry as it is.
 
 ## Safety rules
 
@@ -320,7 +430,7 @@ question, a task waiting for you, or a budget alert (Settings → Notifications;
 on once you allow it in the browser).
 
 **On your phone (experimental):** ntfy and Telegram can carry Approve /
-Decline buttons, Pushover only notifies. They are off until you set them up and
+Reject buttons, Pushover only notifies. They are off until you set them up and
 a test arrived. By default a phone message says only "Arsenale: 1 question
 waiting"; the question text and buttons need "details mode", which names the
 service that will see the text. Each button carries an HMAC-signed, single-use
@@ -439,6 +549,55 @@ arsenale log --company-init --seed company.example/seed.json
   that follows the rules asks you before starting the agent. Arsenale itself
   cannot stop a running agent.
 
+### Offices you make
+
+**New office** (on the campus, next to **Build**, or **Add an office** on Team)
+opens a form: a name (1 to 40 characters, not the name of another open office),
+a colour (one of the nine named office colours), a building (one of the 12
+types), the kinds of work it does, and an optional lot (else the first free
+one). Nothing is written until **Create office**; Cancel writes nothing. Create
+writes the office to `offices.json` and its building to `campus.json` under one
+lock; if the building cannot be written, the office stays archived, so there is
+never an office without a building. **Edit office** (on Team, with that office
+picked) changes the name, colour, building type and kinds; a new type re-draws
+the building on its lot. Archiving works as before: nothing is deleted, history
+stays, and the office gives up its kinds.
+
+Only you can create, edit or archive an office: an agent or the supervisor is
+refused ("Only the owner can do this") in the library, so on every door. The
+supervisor keeps its right to place a building in an autonomous run
+(`arsenale campus`), which sets no kinds. MCP has no tool that changes an
+office; `get_office` only reads. On the command line: `arsenale log --office`
+(see `arsenale log --help`).
+
+### Kinds of work, and where a run goes
+
+A **kind of work** is one of a fixed list: Building software (`build`), Code
+review (`review`), Testing (`verify`), Security (`security`), Writing docs
+(`docs`), Design (`design`), Data (`data`), Planning (`plan`), Releases
+(`ship`), Operations (`ops`), Legal (`legal`), Research (`research`), Marketing
+and content (`content`), Customer support (`support`), Finance (`finance`) and
+People and HR (`people`). The list is in `tools/kinds.cjs`. A kind belongs to
+at most one open office ("Testing is done by Verification. Remove it there
+first."). A pack may name kinds for its office (`office.kinds`); a kind that
+another office holds is skipped, and the install says so.
+
+A run's kind is the first of: `kind` on `arsenale start` (or MCP `start_job`;
+an unknown kind is ignored there), the kind of its task, the member's `kind` in
+`employees.json` (or its pack's), the member's desk zone (`build`, `review`,
+`verify`, `docs`, `design`, `data`, `plan`, `ship`, `ops`, `legal`), or none.
+
+A run's office is decided once, at `arsenale start`: an `officeId` named at
+the start, else the office that holds the run's kind, else the project's
+office, else the member's home office, else Unassigned work. It is written
+into the run record (`officeId`, and `officeBy`: `explicit`, `kind`,
+`project`, `home` or `unassigned`), so changing the kinds later moves no past
+run and no past budget. A run recorded before 1.2 has no stamp and is placed
+as in 1.1, and with no kinds on any office routing is exactly as in 1.1. A
+task saved with a kind and no office gets the office a run of that kind would
+get. `arsenale log --office` with `{"agent":"tester"}` says where that
+member's next run goes, and why.
+
 ## Commands
 
 `arsenale --help` lists everything. In short:
@@ -447,7 +606,7 @@ arsenale log --company-init --seed company.example/seed.json
 |---|---|
 | `arsenale serve [--port N] [--no-open]` | the dashboard (default port 4310) |
 | `arsenale open [--port N] [--no-open]` | open the running dashboard with your key; `--no-open` only prints the address |
-| `arsenale demo [--port N] [--no-open] [--shop]` | the dashboard on invented data (default port 4311); `--shop`: a small shop with office packs |
+| `arsenale demo [--port N] [--no-open] [--shop] [--showcase]` | the dashboard on invented data (default port 4311); `--shop`: a small shop with office packs; `--showcase`: for recordings, hides the Waiting for you card, the legends and the help notes (also **?** → Showcase, or `?showcase=1` / `0` on a demo page). `arsenale serve` refuses `--showcase`, and the real app never shows it |
 | `arsenale start / progress / finish / gate / decision --stdin` | log a run, a step, a result, a question, a decision |
 | `arsenale answers` / `arsenale inbox` | what you answered or changed on the page |
 | `arsenale mcp` | the MCP server on stdin/stdout, for an assistant to start |
@@ -539,7 +698,7 @@ instructions, not here: the bundled rules say "the user's language".
   Other accounts on the same machine can reach the port but not the key.
 - Writes from the page also need the page's Origin and a token derived from
   the key; another web site can neither read the token nor send it. Bodies are
-  capped at 8 KB (32 KB for tasks and the hire form) and validated.
+  capped at 8 KB (32 KB for tasks and the hire form, 2 MB for a pack upload) and validated.
 - MCP over HTTP is off unless `ARSENALE_MCP_TOKEN` is set; then it needs that
   bearer token, refuses foreign Origins, is rate-limited and caps bodies.
 - The hire form writes only into `<data>/agents` (another tool's file only

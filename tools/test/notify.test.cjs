@@ -499,7 +499,7 @@ test('ntfy on a public server without a token: a typed topic under 20 characters
   await N.configure({ op: 'test', channel: 'ntfy' }, board(L))
   await N.configure({ op: 'enable', channel: 'ntfy' }, board(L))
   sent = await ask('g-token')
-  assert.deepEqual(sent.actions.map((a) => a.label), ['Approve', 'Decline'])
+  assert.deepEqual(sent.actions.map((a) => a.label), ['Approve', 'Reject'])
   // the generated topic (topic: null asks for a new one) without a token: buttons again
   await N.configure({ op: 'setup', channel: 'ntfy', topic: 'bakery-alerts-invented-long', token: null }, board(L))
   st = await N.configure({ op: 'setup', channel: 'ntfy', topic: null }, board(L))

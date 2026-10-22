@@ -65,7 +65,7 @@ function create(answers, actor) {
   if (a.budget && (a.budget.monthlyUsd !== undefined && a.budget.monthlyUsd !== '' && a.budget.monthlyUsd !== null)) {
     budget = C.validateBudget({ monthlyUsd: a.budget.monthlyUsd, softAlertPct: a.budget.softAlertPct === undefined || a.budget.softAlertPct === '' ? 80 : Number(a.budget.softAlertPct), hardStop: !!a.budget.hardStop })
   }
-  if (status().hasCompany) throw fail(409, 'A company exists already: add offices from Settings → Office packs')
+  if (status().hasCompany) throw fail(409, 'A company exists already: add offices from Settings → Marketplace')
   const Pk = require('./packs.cjs')
   const packs = withCore(packIds, a).map((id) => Pk.bundledPack(id))
   // packs must not bring the same office twice

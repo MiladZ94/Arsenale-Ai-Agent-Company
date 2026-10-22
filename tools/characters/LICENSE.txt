@@ -10,3 +10,13 @@ under CC0 1.0 Universal:
 https://creativecommons.org/publicdomain/zero/1.0/
 
 Use it, change it, ship it, with or without credit.
+
+person-1.glb ... person-5.glb, person-plain.glb and sprites/ - the office characters
+
+Made by tools/characters/build-characters.cjs and build-sprites.cjs from the
+KayKit packs by Kay Lousberg (www.kaylousberg.com), both CC0 1.0 Universal:
+  - KayKit Character Pack: Adventurers 2.0 (Free)  https://kaylousberg.itch.io/kaykit-adventurers
+  - KayKit Character Animations 1.1                https://kaylousberg.itch.io/kaykit-character-animations
+Credit is not required; it is kept here on purpose. The sources, what was
+changed and the SHA-256 of every file are in LICENCES.md and manifest.json, and
+the licence texts that came with the packs are in licences/.

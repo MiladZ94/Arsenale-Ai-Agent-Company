@@ -157,7 +157,7 @@ h1.co{white-space:nowrap;font-size:17px}
 .org .ocols{gap:16px;margin-top:0}
 .org .ocol{padding-top:30px}
 .org .ocol:before{top:0;height:30px;width:2px;background:#CBD3DB}
-.org .ocolh{font:700 15px var(--font-ui);color:#F3F5F7;border-radius:10px 10px 0 0;padding:11px 16px;align-items:center;flex-wrap:nowrap}
+.org .ocolh{font:700 15px var(--font-ui);color:#F3F5F7;border-radius:10px 10px 0 0;padding:11px 16px;align-items:center;flex-wrap:wrap}
 /* a name keeps a fixed width and ends in an ellipsis; the numbers give way first */
 .org .ocolh b{color:#F3F5F7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto;min-width:100px}
 .org .ocolh .ocnt{font:700 11px var(--font-ui);background:rgba(30,40,50,.12);color:#F3F5F7;border-radius:9px;padding:1px 8px;flex:none}
@@ -174,7 +174,9 @@ h1.co{white-space:nowrap;font-size:17px}
 .ost .ostl{display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .ost .num{font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ost .cbar{width:90px}
-.org .ocolh .ocsp{font:400 12px var(--font-ui);color:#F3F5F7;opacity:.9;margin-inline-start:auto;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+/* the budget line never gets cut: it takes a line of its own under the name and the count */
+.org .ocolh .ocsp{order:3;flex:1 0 100%;font:400 13px var(--font-ui);color:#F3F5F7;opacity:.95;margin:2px 0 0;white-space:nowrap;font-variant-numeric:tabular-nums}
+.org .ocolh .ocnt{margin-inline-start:auto}
 .oav{position:relative;border-radius:8px;padding:5px 7px 0;line-height:0;flex:none}
 .oav i{position:absolute;inset-inline-end:-3px;bottom:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--panel)}
 .otx{min-width:0}
@@ -204,7 +206,7 @@ h1.co{white-space:nowrap;font-size:17px}
 function companyViews(h) {
   const { esc, digits, hhmm, ms, T, k, usd, errTxt, portrait, sprite, post, redraw, go, refresh } = h
   const QUIET_MS = 10 * 60000
-  const st = { armed: '', armT: 0, retired: false, dlg: null, busy: false, mmsg: '' }
+  const st = { armed: '', armT: 0, retired: false, dlg: null, busy: false, mmsg: '', side: false }
   // the campus is drawn, zoomed and panned by the shared art (office-world.cjs); this file says what is on it
   const CA = campusArt({ esc, digits, go, post, refresh, redraw })
   window.__campus = CA
@@ -225,6 +227,8 @@ function companyViews(h) {
     if (m) return T('project ') + m[1] + T(' names an unknown office ') + '«' + m[2] + '»'
     return p
   }
+  // a count of zero is shown as a dash (owner rule); a measurement such as a percent keeps its zero
+  const nz = (n) => (n ? digits(n) : '—')
   const pctTxt = (p) => (p === null || p === undefined ? '—' : digits(Math.min(999, Math.round(p))) + T('%'))
 
   /** Spend as "1.24M tok · $3.20". USD that needs a missing price is "USD
@@ -367,10 +371,12 @@ function companyViews(h) {
       return {
         id: o.id, name: oname(o), color: o.color || '#8A97A6', small, kind: small ? 'shed' : '', wins: small ? [] : windowsOf(S, o.id),
         label: oname(o) + T(', ') + digits(c.working) + ' ' + T('working'),
-        sign: '<h3 title="' + esc(oname(o)) + '">' + esc(oname(o)) + '</h3>' +
-          '<div class="n"><span class="a" title="' + T('working') + '">▸ ' + digits(c.working) + '</span><span class="b" title="' + T('waiting for you') + '">! ' + digits(c.waiting) + '</span>' + (small ? '' : '<span class="c">' + money(sd.spend) + '</span>') + '</div>' +
-          (small ? '' : bar(sd.budget)) +
-          '<button type="button" class="cbtn go" data-goto="office:' + esc(o.id) + '">' + T('Enter office →') + '</button>',
+        // the card: the name, who works and what waits; tokens, the budget and the way in open on hover or focus
+        sign: '<h3 title="' + esc(oname(o)) + '"><i class="sw" aria-hidden="true"></i>' + esc(oname(o)) + '</h3>' +
+          '<div class="n">' + (c.working ? '<span class="a"><i class="sdot ok" aria-hidden="true"></i><b>' + digits(c.working) + '</b> ' + T('working') + '</span>' : '') + (c.waiting ? '<span class="b"><i class="sdot warn" aria-hidden="true"></i><b>' + digits(c.waiting) + '</b> ' + T('waiting') + '</span>' : '') + (!c.working && !c.waiting ? '<span class="z">' + T('Nobody at work') + '</span>' : '') + '</div>' +
+          '<div class="more">' + (small ? '' : '<div class="c">' + money(sd.spend) + T(' this month') + (sd.budget && sd.budget.on ? ' · ' + pctTxt(sd.budget.pct) + T(' of budget') : '') + '</div>' + bar(sd.budget)) +
+          (c.quiet ? '<div class="c">' + digits(c.quiet) + ' ' + T('quiet') + '</div>' : '') +
+          '<button type="button" class="cbtn go" data-goto="office:' + esc(o.id) + '">' + T('Enter office →') + '</button></div>',
       }
     }
     const cells = cp.buildings.map((b) => officeById(b.officeId)).filter(Boolean).map((o) => cardOf(o, false))
@@ -387,7 +393,13 @@ function companyViews(h) {
     }
     const legend = '<div class="cleg"><span>' + T('Windows on the top floors: one per employee') + '</span><span><i style="background:' + ST_COL.working + '"></i>' + T('working') + '</span><span><i style="background:' + ST_COL.waiting + '"></i>' + T('waiting') + '</span><span><i style="background:' + ST_COL.paused + '"></i>' + T('paused') + '</span><span><i style="background:' + ST_COL.idle + '"></i>' + T('idle') + '</span></div>'
     const tip = '<div class="ctip">' + T('Lavender kiosk = ') + '<b>' + T('Supervisor desk') + '</b>. ' + T('Click a building to enter.') + '</div>'
-    return CA.draw({ campus: cp, cells, canEdit: canEdit() && !!cp.types.length, hq: { id: hqId(), lit: !ceoAway(), label: T('Supervisor desk') }, visitors, legend, tip, side: side(S) })
+    // the company's name over the campus; the month's numbers in one chip, which opens the company panel
+    const co = C(), sd = co.standing
+    const people = co.employees.filter((e) => e.kind === 'employee' && e.status !== 'retired').length
+    const atWork = new Set(S.active.map((a) => a.agent)).size
+    const title = '<div class="ctitle"><h2>' + esc(co.company.name || T('Your company')) + '</h2><p>' + digits(officeList().filter((o) => !o.builtIn).length) + ' ' + T('offices') + ' · ' + digits(people) + ' ' + T('people') + ' · <b>' + digits(atWork) + ' ' + T('at work now') + '</b></p></div>'
+    const month = '<button type="button" class="cmonth" data-cside="1" aria-expanded="' + st.side + '"><b>' + T('This month') + '</b> · ' + k(sd.spend.tokens) + (sd.budget.on && sd.budget.tokens ? T(' tokens of ') + k(sd.budget.tokens.limit) : ' ' + T('tokens')) + (sd.spend.usdStatus === 'none' || sd.spend.usdStatus === 'na' ? ' · ' + T('USD n/a') : ' · ' + usd(sd.spend.usd)) + '<span class="cm-act">' + T(st.side ? 'Hide details' : 'Details') + '</span></button>'
+    return CA.draw({ campus: cp, cells, canEdit: canEdit() && !!cp.types.length, hq: { id: hqId(), lit: !ceoAway(), label: T('Supervisor desk') }, visitors, legend, tip, side: side(S), title, month, sideOpen: st.side })
   }
   const hqId = () => { const o = officeList().find((x) => x.leadEmployeeId === 'supervisor') || officeList()[0]; return o ? o.id : 'unassigned' }
   const ceoAway = () => { const hb = C().heartbeat; return !hb || !hb.lastSeenAt || Date.now() - ms(hb.lastSeenAt) > 30 * 60000 }
@@ -402,8 +414,8 @@ function companyViews(h) {
     else if (!LIVE) html += '<p class="cbanner">' + T('Open from the live server to edit.') + '</p>'
     for (const p of co.problems || []) html += '<p class="cbanner">' + esc(problemTxt(p)) + '</p>'
     html += '<div class="ch">' + T('Company this month') + ' <span class="dim">' + esc(periodTxt(co.periodKey)) + '</span></div>'
-    html += '<div class="ckpis"><div class="ckpi cw"><b>' + digits(waitingAll) + '</b><span>' + T('waiting for you') + '</span></div>' +
-      '<div class="ckpi cg"><b>' + digits(working) + '</b><span>' + T('working now') + '</span></div>' +
+    html += '<div class="ckpis"><div class="ckpi cw"><b>' + nz(waitingAll) + '</b><span>' + T('waiting for you') + '</span></div>' +
+      '<div class="ckpi cg"><b>' + nz(working) + '</b><span>' + T('working now') + '</span></div>' +
       '<div class="ckpi"><b dir="ltr">' + k(sd.spend.tokens).replace(/(\s?[^\d.\s]+)$/, '<small>$1</small>') + '</b><span>' + (sd.budget.on && sd.budget.tokens ? T('tokens of ') + k(sd.budget.tokens.limit) : T('tokens this month')) + '</span></div></div>'
     html += '<p class="cnote">' + money(sd.spend) + (sd.spend.unmeasured ? ' · ' + digits(sd.spend.unmeasured) + T(' runs unmeasured') : '') + (sd.budget.on ? ' · ' + T('company budget ') + pctTxt(sd.budget.pct) : '') + '</p>'
     if (sd.budget.on) html += bar(sd.budget) + '<p></p>'
@@ -446,7 +458,7 @@ function companyViews(h) {
     const sd = o.standing || {}
     const b = sd.budget
     return '<div class="crumb"><button type="button" data-goto="campus">' + T('Campus') + '</button><span class="dim">/</span><span class="sq" style="background:' + esc(o.color) + '"></span><b>' + esc(oname(o)) + '</b>' + '</div>' +
-      '<div class="ostats"><div class="a"><b>' + digits(c.working) + '</b>' + T('working') + '</div><div class="b"><b>' + digits(c.waiting) + '</b>' + T('waiting for you') + '</div><div><b>' + digits(idle) + '</b>' + T('idle') + '</div>' +
+      '<div class="ostats"><div class="a"><b>' + nz(c.working) + '</b>' + T('working') + '</div><div class="b"><b>' + nz(c.waiting) + '</b>' + T('waiting for you') + '</div><div><b>' + nz(idle) + '</b>' + T('idle') + '</div>' +
       '<div><b dir="ltr">' + (sd.spend ? k(sd.spend.tokens) : '—') + '</b>' + T('tokens this month') + '</div>' +
       '<div><b dir="ltr">' + (!sd.spend || sd.spend.usdStatus === 'na' || sd.spend.usdStatus === 'none' ? T('n/a') : usd(sd.spend.usd)) + '</b>' + T('USD') + '</div>' +
       (b && b.on ? '<div class="' + (b.level === 'stop' || b.level === 'over' ? 'r' : b.level === 'soft' ? 'b' : '') + '"><b>' + pctTxt(b.pct) + '</b>' + T('monthly budget') + '</div>' : '<div><b>—</b>' + budgetWord(b) + '</div>') +
@@ -508,7 +520,7 @@ function companyViews(h) {
     if (cons.length) html += '<div class="ocont"><div class="ch">' + T('Contractors') + ' <span class="dim" style="text-transform:none;letter-spacing:0">' + T('agent names with no definition in the agent folders, this month') + '</span></div><div class="chips">' + cons.map((e) => '<span class="ochip" dir="ltr">' + esc(e.id) + ' ×' + digits(e.runsThisPeriod) + (e.standing && e.standing.spend && e.standing.spend.tokens ? ' · ' + k(e.standing.spend.tokens) + ' ' + T('tok') : '') + '</span>').join('') + '</div></div>'
     html += '<div class="oft"><span><i style="background:#0C8A62"></i>' + T('working') + '</span><span><i style="background:#B8720F"></i>' + T('waiting for you') + '</span><span><i style="background:#C8372D"></i>' + T('paused or stopped by budget') + '</span>' +
       (co.company.budgetsEnabled ? '<span><span class="t"></span>' + T('tick on the bar = alert threshold') + '</span><span style="margin-inline-start:auto">' + T('Bar = this month’s spend against the budget') + '</span>' : '<span style="margin-inline-start:auto">' + T('Budgets are off: tokens this month only') + '</span>') + '</div>'
-    if (LIVE && !(st.packsLeft && !st.packsLeft.length)) html += '<div class="oready"><span class="ic">' + ART.ic('box', 18) + '</span><b>' + T('Ready to add') + '</b>' + (st.packsLeft && st.packsLeft.length ? st.packsLeft.map((x) => '<span class="opk" dir="auto">' + esc(x) + '</span>').join('') : '<span class="dim">' + T('Office packs in Settings') + '</span>') + '<button type="button" class="cbtn" data-ev="goto-packs">' + T('Add an office') + '</button></div>'
+    if (LIVE && !(st.packsLeft && !st.packsLeft.length)) html += '<div class="oready"><span class="ic">' + ART.ic('box', 18) + '</span><b>' + T('Ready to add') + '</b>' + (st.packsLeft && st.packsLeft.length ? st.packsLeft.map((x) => '<span class="opk" dir="auto">' + esc(x) + '</span>').join('') : '<span class="dim">' + T('More offices in the Marketplace') + '</span>') + '<button type="button" class="cbtn" data-ev="goto-packs">' + T('Add an office') + '</button></div>'
     return html + '</div>'
   }
 
@@ -565,12 +577,13 @@ function companyViews(h) {
     saveBudget({ enabled: f.elements.enabled.checked, monthlyTokens: v('monthlyTokens') || null, monthlyUsd: v('monthlyUsd') || null, softAlertPct: v('softAlertPct') || 80, hardStop: f.elements.hardStop.checked })
   })
   document.addEventListener('click', async (e) => {
-    const t = e.target.closest('[data-budget],[data-bcancel],[data-bclear],[data-bmaster],[data-retired]')
+    const t = e.target.closest('[data-budget],[data-bcancel],[data-bclear],[data-bmaster],[data-retired],[data-cside]')
     if (!t) { if (e.target.id === 'cdlg') closeBudget(); return }
     if (t.dataset.budget) { openBudget(t.dataset.budget); return }
     if (t.dataset.bcancel) { closeBudget(); return }
     if (t.dataset.bclear) { saveBudget(null); return }
     if (t.dataset.retired) { st.retired = !st.retired; redraw(); return }
+    if (t.dataset.cside) { st.side = !st.side; redraw(); return }
     if (t.dataset.bmaster) {
       // switching every budget off or on takes two clicks
       if (st.armed !== 'master') { st.armed = 'master'; clearTimeout(st.armT); st.armT = setTimeout(() => { st.armed = ''; redraw() }, 6000); redraw(); return }

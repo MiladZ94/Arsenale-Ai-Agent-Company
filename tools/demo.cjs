@@ -138,7 +138,7 @@ function makeDemoHome() {
     { id: 'P3', name: 'Settings page', requests: ['R6'], status: 'building' },
     { id: 'P4', name: 'Release notes', requests: ['R7'], status: 'waiting' }] })
   const gates = [
-    ['C', 'ledger', 'Push the pagination fix and tag 2.3.1?', 'push + tag', ['Approve', 'Decline'], 25],
+    ['C', 'ledger', 'Push the pagination fix and tag 2.3.1?', 'push + tag', ['Approve', 'Reject'], 25],
     ['A', 'atlas', 'Offline queue: keep at most 500 changes, or no limit?', 'queue limit', ['500', 'no limit'], 50],
     ['B', 'atlas', 'Pick a direction for the sync status bar', 'mockup', ['A: quiet', 'B: banner', 'C: icon only'], 140],
   ]

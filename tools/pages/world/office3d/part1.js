@@ -194,9 +194,9 @@
   const screenMat = new T3.MeshBasicMaterial({ map: screenAtlas })
   // the ground: the campus's light grid, one tile a metre, in two close tones
   const groundTex = canvasTex(128, 128, (g) => {
-    g.fillStyle = '#ECEFF2'; g.fillRect(0, 0, 128, 128)
-    g.fillStyle = '#E7EAEE'; g.fillRect(0, 0, 64, 64); g.fillRect(64, 64, 64, 64)
-    g.strokeStyle = '#DCE1E6'; g.lineWidth = 2; g.strokeRect(1, 1, 126, 126); g.beginPath(); g.moveTo(64, 0); g.lineTo(64, 128); g.moveTo(0, 64); g.lineTo(128, 64); g.stroke()
+    g.fillStyle = '#DCE6DD'; g.fillRect(0, 0, 128, 128)
+    g.fillStyle = '#D8E3D9'; g.fillRect(0, 0, 64, 64); g.fillRect(64, 64, 64, 64)
+    g.strokeStyle = '#CFDCD0'; g.lineWidth = 2; g.strokeRect(1, 1, 126, 126); g.beginPath(); g.moveTo(64, 0); g.lineTo(64, 128); g.moveTo(0, 64); g.lineTo(128, 64); g.stroke()
   })
   groundTex.wrapS = groundTex.wrapT = T3.RepeatWrapping
   // words written on the floor or on a sign: Arial on a transparent canvas
@@ -416,10 +416,25 @@
     t.position.set(x, 0.012, z); t.rotation.y = ry || 0; t.userData.noMerge = true; parent.add(t)
     return t
   }
-  function room(parent, r, title) {
+  function room(parent, r, title, color) {
     const W = r.X1 - r.X0, D = r.Z1 - r.Z0
     const slab = (x0, x1, z0, z1, col, y) => mesh(G.plane(), mat(col, { roughness: 0.95 }), (x0 + x1) / 2, y, (z0 + z1) / 2, parent).scale.set(x1 - x0, 1, z1 - z0)
     slab(r.X0, r.X1, r.Z0, r.Z1, ZONE.room, 0.002)
+    if (color) {
+      // the office's colour: a border round the floor, along the two open sides, and a low kerb under it
+      const dark = '#' + new T3.Color(color).multiplyScalar(0.66).getHexString()
+      const B = 0.5
+      slab(r.X0, r.X1, r.Z1 - B, r.Z1, color, 0.0025); slab(r.X1 - B, r.X1, r.Z0, r.Z1, color, 0.0025)
+      mesh(G.box(W + 0.02, 0.16, 0.08), mat(dark), r.X0 + W / 2, 0.08, r.Z1 + 0.04, parent)
+      mesh(G.box(0.08, 0.16, D + 0.1), mat(dark), r.X1 + 0.04, 0.08, r.Z0 + D / 2 + 0.02, parent)
+      // the sign on the back wall: the name in white on the dark shade, for contrast
+      if (title) {
+        const sw = Math.min(5.2, Math.max(2.8, title.length * 0.34 + 1))
+        const sign = new T3.Mesh(geo('wallSign' + sw.toFixed(2), () => new T3.PlaneGeometry(sw, 0.4)), new T3.MeshBasicMaterial({ map: textTex([{ text: title, size: 72, color: '#FFFFFF', y: 52 }], { w: Math.round(1024 * sw / 4.2), h: 99, bg: dark, align: 'left', pad: 28 }), toneMapped: false }))
+        // above the window heads (2.28 m), under the wall's cap
+        sign.position.set(r.X1 - sw / 2 - 0.6, 2.49, r.Z0 + 0.012); sign.userData.noMerge = true; parent.add(sign)
+      }
+    }
     slab(r.xa + 0.15, r.xb - 0.15, r.za + 0.15, r.zb - 0.15, ZONE.work, 0.003)
     slab(r.X0 + 0.15, r.X1 - 0.15, r.Z0 + 0.15, r.za - 0.4, ZONE.lounge, 0.003)
     slab(r.X0 + 0.15, r.X0 + 5.2, r.zb + 0.45, r.Z1 - 0.15, ZONE.reception, 0.003)

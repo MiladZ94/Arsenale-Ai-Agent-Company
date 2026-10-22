@@ -81,6 +81,16 @@ const companyFields = (input, from) => {
   return out
 }
 
+// The office a run works for is decided once, here at its start (spec 1.2
+// rule 23), and stamped: a later change of kinds or of a project's office
+// moves no past run and no past budget. The stamp is an explicit officeId to
+// every reader, 1.1 included; officeBy and kind are only read by 1.2. A run
+// with no company, or one recorded before 1.2, has no stamp and keeps the
+// read rule of resolver().office.
+const routeFields = (budget) => (budget && budget.officeBy ? Object.assign({ officeId: budget.officeId, officeBy: budget.officeBy }, budget.kind ? { kind: budget.kind } : {}) : {})
+// the stamp of the active record, kept on the finished one whatever the finish says
+const keptRoute = (from) => (from && from.officeBy && from.officeId ? Object.assign({ officeId: String(from.officeId), officeBy: String(from.officeBy) }, from.kind ? { kind: String(from.kind) } : {}) : {})
+
 // The autonomous-mode tags (spec autonomous-mode, rule 46): which version run a
 // job belongs to and which phase of it. Optional; a record without them reads
 // exactly as before, and an older reader ignores them.
@@ -225,7 +235,7 @@ function startRunLocked(input, actor) {
     doing: input.doing || '',            // the latest line
     steps: input.doing ? [{ at: input.startedAt || now.toISOString(), text: String(input.doing) }] : [],
     startedAt: input.startedAt || now.toISOString(),
-  }, pidFields(input), pidFields(input).pid ? pidStartFields(pidFields(input).pid) : {}, work, TASK_TIERS.includes(input.tier) ? { tier: input.tier } : {}, companyFields(input), versionFields(input), sourceFields(actor), budget && budget.level !== 'ok' ? { budgetWarned: true, budgetLevel: budget.level } : {})
+  }, pidFields(input), pidFields(input).pid ? pidStartFields(pidFields(input).pid) : {}, work, TASK_TIERS.includes(input.tier) ? { tier: input.tier } : {}, companyFields(input), versionFields(input), sourceFields(actor), budget && budget.level !== 'ok' ? { budgetWarned: true, budgetLevel: budget.level } : {}, routeFields(budget))
   writeAtomic(path.join(ACTIVE, id + '.json'), JSON.stringify(record, null, 2))
   // a job started for a task links to it and moves it from "to do" to "in
   // progress" (never backwards); a missing or unreadable task never stops the log
@@ -395,7 +405,7 @@ function finishLocked(input, actor, activeFile, opts) {
   }
   if (usage) record.usage = usage
   if (transcript) record.transcript = transcript
-  Object.assign(record, companyFields(input, fromActive), versionFields(input, fromActive))
+  Object.assign(record, companyFields(input, fromActive), versionFields(input, fromActive), keptRoute(fromActive))
   if (fromActive && fromActive.budgetWarned) { record.budgetWarned = true; record.budgetLevel = fromActive.budgetLevel || 'warn' }
   // where the work happened: a later run in the same worktree settles a resume
   if (fromActive) for (const k of ['worktree', 'branch']) if (fromActive[k]) record[k] = fromActive[k]
@@ -585,9 +595,11 @@ function updateEmployee(input, actor) { return company().updateEmployee(asBoard(
 
 /** Campus changes (place, move, rotate, remove): campus.cjs decides who may. */
 function campus(input, actor) { return require('./campus.cjs').apply(input, actor, actor.door) }
+/** New office, edit, archive (spec 1.2): the owner only, campus.cjs refuses the rest. */
+function office(input, actor) { return require('./campus.cjs').office(input, actor, actor.door) }
 
 module.exports = {
-  campus, OWNER_ONLY, fail, actorFor, cliActor, boardProven, actorLabel, requireBoard, clipCp,
+  campus, office, OWNER_ONLY, fail, actorFor, cliActor, boardProven, actorLabel, requireBoard, clipCp,
   startRun, heavyActive, pidAlive, pidStartMs, progress, touch, closeDead, finishRun, activeFileFor, versionRun, versionLedger, noteIncidents, budgetCheck, readActive,
   gate, decision, answer, dismiss, setBudget, setBudgetsEnabled, updateEmployee,
 }

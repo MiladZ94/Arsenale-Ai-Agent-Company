@@ -207,7 +207,8 @@ test('AT6 old and new: the committed code reads and updates a record with the ne
   assert.equal(rec.plan.length, 2)
   const c = spawnSync(process.execPath, ['-e', 'const s=require(' + JSON.stringify(path.join(old, 'build-agent-dashboard.cjs')) + ').collect();console.log(JSON.stringify(s.active.map(a=>[a.id,a.doing,a.pct])))'], { encoding: 'utf8', env: sb.env })
   assert.equal(c.status, 0, c.stderr)
-  assert.deepEqual(JSON.parse(c.stdout.trim().split('\n').pop()), [[id, 'old line', 70]])
+  // since 1.1 the committed code knows plans too: 70 % of step 1 of the two-step plan is 35 % overall (AT1)
+  assert.deepEqual(JSON.parse(c.stdout.trim().split('\n').pop()), [[id, 'old line', 35]])
   const fin = oldCli('--finish', JSON.stringify({ id, agent: 'tester', task: 'invented' }))
   assert.equal(fin.status, 0, fin.stderr)
   // an old record (no plan, pid, worktree or brief) in the new Live view: missing parts are null

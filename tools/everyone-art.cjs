@@ -47,12 +47,28 @@ function everyoneArt() {
     return out
   }
   const svgOf = (inner, w) => '<svg width="' + w + '" height="' + Math.round(w * 14 / 12) + '" viewBox="0 0 12 14" shape-rendering="crispEdges" aria-hidden="true">' + inner + '</svg>'
+  // The rendered characters (tools/characters, OFFICE_LOOK in the page): a portrait or
+  // the sprite strip for this seed and office colour, or null when the page has none
+  // (a built file, or the sprite files are missing) and the pixel people are drawn.
+  const picture = (kind, seed, color) => (typeof OFFICE_LOOK === 'object' && OFFICE_LOOK.url ? OFFICE_LOOK.url(kind, seed, color) : null)
   /** A person: `seed` picks the face, `color` is the office (the shirt). */
-  const person = (seed, color, size, back) => '<span class="av' + (back ? ' bk' : '') + '"' + (back ? ' style="background:' + shade(color, 0.42) + '"' : '') + '>' + svgOf(cells(seed, color), size || 32) + '</span>'
+  const person = (seed, color, size, back) => {
+    const pic = picture('p', seed, color), w = size || 32
+    return '<span class="av' + (back ? ' bk' : '') + '"' + (back ? ' style="background:' + shade(color, 0.42) + '"' : '') + '>' +
+      (pic ? '<img src="' + pic + '" width="' + w + '" height="' + w + '" alt="" draggable="false">' : svgOf(cells(seed, color), w)) + '</span>'
+  }
   const owner = (size) => '<span class="av">' + svgOf(cells('owner-of-the-company', '#3BE8B0'), size || 32) + '</span>'
   const robot = (size) => '<span class="av">' + svgOf(robotCells(), size || 32) + '</span>'
   /** The same person as an SVG group, for the iso scenes. */
-  const personG = (seed, color, x, y, scale) => '<g transform="translate(' + x + ',' + y + ') scale(' + scale + ')" shape-rendering="crispEdges">' + cells(seed, color) + '</g>'
+  const personG = (seed, color, x, y, scale, stand) => {
+    const pic = picture(stand ? 's' : 'p', seed, color)
+    if (pic && stand) { // standing (the campus): the first frame of the strip, bottom on the old figure's feet
+      const S = 16 * scale
+      return '<svg x="' + (x + 6 * scale - S / 2) + '" y="' + (y + 14 * scale - S) + '" width="' + S + '" height="' + S + '" viewBox="0 0 64 64"><image href="' + pic + '" width="320" height="64"/></svg>'
+    }
+    if (pic) { const S = 13 * scale; return '<image href="' + pic + '" x="' + (x + 6 * scale - S / 2) + '" y="' + (y + 14 * scale - S) + '" width="' + S + '" height="' + S + '"/>' } // seated at a desk: head and shoulders
+    return '<g transform="translate(' + x + ',' + y + ') scale(' + scale + ')" shape-rendering="crispEdges">' + cells(seed, color) + '</g>'
+  }
 
   const IC = {
     check: 'M5 12l5 5 9-10', x: 'M6 6l12 12M18 6L6 18', plus: 'M12 5v14M5 12h14', chev: 'M9 6l6 6-6 6', back: 'M15 6l-6 6 6 6',
@@ -143,7 +159,7 @@ function everyoneArt() {
       const p = placed[a.plot]
       if (!p) continue
       const q = P(p.x + 0.35 + (a.n || 0) * 0.75, p.y + 2.45)
-      s += '<ellipse cx="' + q[0].toFixed(1) + '" cy="' + (q[1] + 2).toFixed(1) + '" rx="14" ry="6" fill="rgba(0,0,0,.4)"/>' + personG(a.seed, a.color, q[0] - 18, q[1] - 40, 3)
+      s += '<ellipse cx="' + q[0].toFixed(1) + '" cy="' + (q[1] + 2).toFixed(1) + '" rx="14" ry="6" fill="rgba(0,0,0,.4)"/>' + personG(a.seed, a.color, q[0] - 18, q[1] - 40, 3, true)
     }
     return s + labels.join('')
   }

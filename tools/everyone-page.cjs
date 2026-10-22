@@ -25,9 +25,15 @@
  * A file path is never opened: it is shown as text with "Copy path". Web
  * links open in a new browser tab.
  *
- * The code is in pages/everyone/ (style, views); this file keeps the require path.
+ * The code is in pages/everyone/ (style, views, and the office form's own small
+ * style block); this file keeps the require path.
  */
-const { EVERYONE_STYLE } = require('./pages/everyone/style.cjs')
+const { EVERYONE_STYLE: BASE_STYLE } = require('./pages/everyone/style.cjs')
+const { OFFICE_FORM_STYLE } = require('./pages/everyone/office-form-style.cjs')
+// the Marketplace's few rules are kept in their own file (spec 1.2)
+const { MARKET_STYLE } = require('./pages/everyone/market-style.cjs')
 const { everyoneViews } = require('./pages/everyone/views.cjs')
+
+const EVERYONE_STYLE = BASE_STYLE + OFFICE_FORM_STYLE + MARKET_STYLE
 
 module.exports = { EVERYONE_STYLE, everyoneViews }

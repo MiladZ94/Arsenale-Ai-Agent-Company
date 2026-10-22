@@ -62,15 +62,27 @@ test('the campus shows one building per office on a lot, with an office card eac
   assert.equal(got.build, 'Build')
 })
 
-test('no shadows on the campus, and every type has a drawing of its own', { skip: SKIP || false }, async () => {
+// 1.2 rule 42: the cards take depth, but only from the two Stage shadows (--sh1, --sh2), and the
+// drawing itself carries no blur filter (the 1.1 rule was "no shadows at all")
+test('campus shadows are only the Stage tokens, and every type has a drawing of its own', { skip: SKIP || false }, async () => {
   const { page } = await world()
-  const c = await page.eval(`({
-    blur: document.querySelectorAll('#cmap feGaussianBlur, #cmap filter, #cmap [filter]').length,
-    shadowCss: [...document.querySelectorAll('#cmap .sign')].filter((e) => getComputedStyle(e).boxShadow !== 'none').length,
-    plots: document.querySelectorAll('#cmap .bld .pl').length,
-  })`)
-  assert.equal(c.blur, 0)
-  assert.equal(c.shadowCss, 0)
+  const c = await page.eval(`(() => {
+    const probe = (v) => { const d = document.createElement('div'); d.style.boxShadow = v; document.body.appendChild(d); const s = getComputedStyle(d).boxShadow; d.remove(); return s }
+    const ok = ['none', probe('var(--sh1)'), probe('var(--sh2)')]
+    const signs = [...document.querySelectorAll('#cmap .sign')]
+    return {
+      blur: document.querySelectorAll('#cmap feGaussianBlur, #cmap filter, #cmap [filter]').length,
+      tokens: ok.slice(1).filter((s) => s !== 'none').length,
+      signs: signs.length,
+      shadowed: signs.filter((e) => getComputedStyle(e).boxShadow !== 'none').length,
+      other: signs.map((e) => getComputedStyle(e).boxShadow).filter((s) => !ok.includes(s)),
+      plots: document.querySelectorAll('#cmap .bld .pl').length,
+    }
+  })()`)
+  assert.equal(c.blur, 0, 'no SVG blur filter on the campus drawing')
+  assert.equal(c.tokens, 2, 'the page defines --sh1 and --sh2')
+  assert.ok(c.signs >= 3 && c.shadowed === c.signs, 'every office card has depth: ' + c.shadowed + ' of ' + c.signs)
+  assert.deepEqual(c.other, [], 'a card shadow that is not a Stage token')
   assert.ok(c.plots >= 3)
   await page.eval(`document.querySelector('[data-c3=build]').click(); 1`)
   await page.waitFor("document.querySelectorAll('.c3h').length === 12", 5000)

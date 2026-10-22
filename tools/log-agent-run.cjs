@@ -40,7 +40,7 @@ JSON input, for every mode that takes it:
 
 Runs
   --start <json>      {"agent","task", optional "model","effort","project","parent",
-                      "projectId","officeId","session","issue","doing",
+                      "projectId","officeId","kind" (a kind of work, see --office),"session","issue","doing",
                       "versionRun","phase" (autonomous mode: version run id and phase),
                       "pid" (the agent's own long-lived process, never the shell that runs
                       this command, so a resume can tell a dead run from a live one; its
@@ -110,6 +110,16 @@ Campus
                       "id" or "officeId" (move, rotate, remove), "reason", "by"}. The supervisor may
                       change the campus in an autonomous run only; each change is also a
                       decision. Removing a building archives its office
+
+Offices
+  --office <json>     read: {} every open office; {"id"} one office; {"agent", optional "project",
+                      "kind"} that member's home office and where its next run goes, and why
+                      (--json for the data).
+                      The owner only ("by":"board" with the board token): {"op":"create","name",
+                      "type" (a building type),"theme","kinds":[...], optional "x","y"},
+                      {"op":"edit","id", any of "name","theme","type","kinds"}, {"op":"archive","id"}.
+                      Kinds of work: ${require('./kinds.cjs').KINDS.slice(0, 9).map((k) => k.id).join(', ')},
+                      ${require('./kinds.cjs').KINDS.slice(9).map((k) => k.id).join(', ')}
 
 Tasks, deliverables and the safety rules
   --task <json>       create: {"title", optional "description","assignee","officeId",
@@ -348,7 +358,7 @@ if (args[0] === '--company-status') {
   process.exit(0)
 }
 
-const MODES = ['--start', '--progress', '--budget-check', '--budget', '--employee', '--decision', '--gate', '--task', '--comment', '--deliverable', '--check-action', '--version-run', '--version-ledger', '--campus']
+const MODES = ['--start', '--progress', '--budget-check', '--budget', '--employee', '--decision', '--gate', '--task', '--comment', '--deliverable', '--check-action', '--version-run', '--version-ledger', '--campus', '--office']
 // no mode: the JSON (inline, --stdin, --file or @file) is a finish. "--finish"
 // says so outright; older run logs took it (as any unknown mode) for a finish,
 // and supervisors' notes still use it.
@@ -402,6 +412,19 @@ if (mode === '--campus') {
       console.log(JSON.stringify({ grid: v.grid, buildings: v.buildings, types: v.types.map((t) => t.id) }, null, 2))
     } else console.log(L.campus(input, actor).summary)
     if (input.op !== 'list') refresh()
+  } catch (e) { die(e) }
+  process.exit(0)
+}
+
+if (mode === '--office') {
+  try {
+    if (!input.op || input.op === 'show') {
+      const v = company().officeView(require('./build-agent-dashboard.cjs').collect(), input)
+      console.log(args.includes('--json') ? JSON.stringify(v.data, null, 2) : v.lines.join('\n'))
+    } else {
+      console.log(L.office(input, actor).summary)
+      refresh()
+    }
   } catch (e) { die(e) }
   process.exit(0)
 }

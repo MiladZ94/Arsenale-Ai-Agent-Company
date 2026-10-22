@@ -29,10 +29,11 @@ Commands
                                  (--no-open only prints the address)
   demo  [--port N] [--no-open]   the dashboard on an invented company, in a temporary
                                  folder that is deleted when it stops (default port 4311);
-                                 --shop: a small shop with office packs and no developers
+                                 --shop: a small shop with office packs and no developers;
+                                 --showcase: hide the dock, legends and notes, for recordings
   log <mode> [json] [flags]      record agent activity; "arsenale log --help" lists the modes
   start | progress | finish | gate | decision | answers | inbox | dismiss | budget-check
-                                 | version-run | version-ledger | campus | alerts
+                                 | version-run | version-ledger | campus | office | alerts
                                  short for "log --start", "log --progress", "log <json>" …
   progress <run id> "<step>" [<pct>]   a progress line for fixed text, without JSON
   testq run --run <id> [--repo <path>] -- <command ...>  |  testq status | leave
@@ -73,7 +74,7 @@ const ALIASES = {
   dismiss: '--dismiss', 'budget-check': '--budget-check', budget: '--budget', budgets: '--budgets', employee: '--employee',
   heartbeat: '--heartbeat', 'company-init': '--company-init', 'company-status': '--company-status',
   task: '--task', comment: '--comment', deliverable: '--deliverable', 'check-action': '--check-action',
-  campus: '--campus', 'version-run': '--version-run', 'version-ledger': '--version-ledger',
+  campus: '--campus', office: '--office', 'version-run': '--version-run', 'version-ledger': '--version-ledger',
   testq: '--testq', 'resume-scan': '--resume-scan', alerts: '--alerts',
 }
 
@@ -86,7 +87,8 @@ function flags(args) {
     else if (/^--port=/.test(a)) out.port = Number(a.slice(7))
     else out.rest.push(a)
   }
-  if (out.port && (!Number.isInteger(out.port) || out.port < 1 || out.port > 65535)) fail('--port needs a number from 1 to 65535')
+  // 0 means "not given"; NaN ("--port abc") is falsy too, so it is tested apart, or serve would fall back to 4310
+  if (out.port !== 0 && (!Number.isInteger(out.port) || out.port < 1 || out.port > 65535)) fail('--port needs a number from 1 to 65535')
   return out
 }
 
@@ -139,7 +141,7 @@ async function serve(opts, label) {
   ownerOnlyNotifyFolder()
   const { start } = require(path.join(TOOLS, 'agent-dashboard-server.cjs'))
   let s
-  try { s = await start({ port: opts.port || 4310 }) } catch (e) { fail(e.message) }
+  try { s = await start({ port: opts.port || 4310, demo: !!opts.demo, showcase: !!opts.showcase }) } catch (e) { fail(e.message) }
   console.log((label || 'Arsenale dashboard') + ': ' + s.keyUrl + '   (Ctrl+C to stop)')
   console.log('Data folder: ' + require(path.join(TOOLS, 'paths.cjs')).HOME)
   if (opts.open) openBrowser(s.keyUrl)
@@ -161,6 +163,7 @@ async function demo(opts) {
   // before anything reads paths.cjs: the demo must never see the user's data
   // --shop: a small shop with no developers, as the first-start wizard sets it up
   const shop = opts.rest.includes('--shop')
+  const showcase = opts.rest.includes('--showcase')
   const { makeDemoHome, makeShopHome } = require(path.join(TOOLS, 'demo.cjs'))
   const home = shop ? makeShopHome() : makeDemoHome()
   process.env.ARSENALE_HOME = home
@@ -171,7 +174,7 @@ async function demo(opts) {
   // browser: a script reading the output gets the key URL at once. The seed
   // runs in one synchronous stretch, so a request that arrives meanwhile
   // waits for it and never sees half the invented company.
-  const s = await serve({ port: opts.port || 4311, open: false }, 'Arsenale demo (invented data)')
+  const s = await serve({ port: opts.port || 4311, open: false, demo: true, showcase }, 'Arsenale demo (invented data)')
   let stop = () => {}
   if (shop) seedShop(home)
   else {
@@ -201,7 +204,9 @@ const [cmd, ...args] = process.argv.slice(2)
 if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') { console.log(HELP); process.exit(cmd ? 0 : 1) }
 if (cmd === '--version' || cmd === '-v' || cmd === 'version') { console.log(VERSION); process.exit(0) }
 
-if (cmd === 'serve') serve(flags(args))
+// the showcase look is for recordings of the invented company only
+if (cmd === 'serve' && args.includes('--showcase')) fail('--showcase works with "arsenale demo" only.')
+else if (cmd === 'serve') serve(flags(args))
 else if (cmd === 'open') openDashboard(flags(args))
 else if (cmd === 'demo') demo(flags(args))
 else if (cmd === 'log') log(args)

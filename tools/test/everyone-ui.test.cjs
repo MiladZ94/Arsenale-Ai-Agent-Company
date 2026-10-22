@@ -137,8 +137,8 @@ test('T-5.1 through the page: the hire form writes the member after the review; 
   await w.waitFor(exists('[data-ev=hire-new]'))
   await w.click('[data-ev=hire-new]')
   await w.waitFor(exists('form[data-evform=hire] input[name=name]'))
-  // the Team page is a directory table (no office room any more), filtered to the office the hire is for
-  assert.equal(await w.page.eval("!!document.querySelector('.ev-main table.dir') && document.querySelector('[data-ev=team-office][data-arg=studio]').getAttribute('aria-pressed')"), 'true')
+  // the Team page is portrait tiles by office (no office room any more), filtered to the office the hire is for
+  assert.equal(await w.page.eval("!!document.querySelector('.ev-main .tgrid') && document.querySelector('[data-ev=team-office][data-arg=studio]').getAttribute('aria-pressed')"), 'true')
   // no job title: the form says why and writes nothing
   await w.set('form[data-evform=hire] input[name=name]', 'Nora')
   await w.set('form[data-evform=hire] textarea[name=instructions]', 'Draft the weekly newsletter. Never send it.')

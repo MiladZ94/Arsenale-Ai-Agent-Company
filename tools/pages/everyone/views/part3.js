@@ -150,7 +150,12 @@
     const d0 = new Date(); d0.setHours(0, 0, 0, 0)
     const dls = ((st.data.dlv && st.data.dlv.deliverables) || []).filter((d) => Date.parse(d.createdAt) >= d0.getTime()).length
     if (LIVE) load('dlv', 'api/deliverables', false, 30000)
-    return '<div class="today" role="status"><b>' + T('Today') + '</b><span>' + T('your team finished ') + digits(done.length) + ' ' + T(done.length === 1 ? 'job' : 'jobs') + (ms ? ' ' + T('in') + ' ' + dur(ms) : '') + '</span>·<button type="button" data-ev="goto" data-arg="dlv">' + digits(dls) + ' ' + T('finished work') + '</button>·<button type="button" data-ev="goto" data-arg="appr">' + digits(wait) + ' ' + T(wait === 1 ? 'question waiting' : 'questions waiting') + '</button></div>'
+    // a count of zero is left out (owner rule); the strip says so in one phrase when nothing is there yet
+    const parts = []
+    if (done.length) parts.push('<span>' + T('your team finished ') + digits(done.length) + ' ' + T(done.length === 1 ? 'job' : 'jobs') + (ms ? ' ' + T('in') + ' ' + dur(ms) : '') + '</span>')
+    if (dls) parts.push('<button type="button" data-ev="goto" data-arg="dlv">' + digits(dls) + ' ' + T('finished work') + '</button>')
+    if (wait) parts.push('<button type="button" data-ev="goto" data-arg="appr">' + digits(wait) + ' ' + T(wait === 1 ? 'question waiting' : 'questions waiting') + '</button>')
+    return '<div class="today" role="status"><b>' + T('Today') + '</b>' + (parts.length ? parts.join('·') : '<span>' + T('nothing finished yet') + '</span>') + '</div>'
   }
 
   // ---------- drawing
@@ -160,6 +165,7 @@
     if (mode === 'live') return liveMain()
     if (mode === 'team') return teamMain()
     if (mode === 'dlv') return dlvMain()
+    if (mode === 'market') return marketMain()
     return setMain()
   }
   function drawerHtml() {
@@ -169,6 +175,7 @@
     if (d.type === 'hire') return hireForm()
     if (d.type === 'dlv') return dlvPreview()
     if (d.type === 'decision') return decisionDetail()
+    if (d.type === 'office') return officeForm()
     return ''
   }
   /** Redraws a container, keeping what was typed into its fields. */
@@ -187,7 +194,7 @@
     if (act) { const i = [...el.querySelectorAll('[name]')].find((x) => (x.form && x.form.dataset.evform || '') + '|' + x.name === act.n); if (i) { i.focus(); try { i.setSelectionRange(act.a, act.b) } catch { /* not a text field */ } } }
   }
   function render(mode, root) {
-    if (st.lastMode !== mode) { st.lastMode = mode; if (st.drawer && !(mode === 'team' && (st.drawer.type === 'hire' || st.drawer.type === 'member'))) st.drawer = null; st.dmsg = null; if (mode !== 'tasks') { st.page = null; st.editTask = false } }
+    if (st.lastMode !== mode) { st.lastMode = mode; if (st.drawer && !(mode === 'team' && (st.drawer.type === 'hire' || st.drawer.type === 'member' || st.drawer.type === 'office'))) st.drawer = null; st.dmsg = null; if (mode !== 'tasks') { st.page = null; st.editTask = false } }
     if (!root.querySelector('.ev-main')) root.innerHTML = '<section class="ev-main"></section><aside class="ev-drawer" aria-live="polite"></aside>'
     const main = root.querySelector('.ev-main')
     paint(main, mainHtml(mode))
@@ -251,7 +258,7 @@
     if (a === 'stab') { st.setTab = arg; st.dmsg = null; h.redraw(); return }
     if (a === 'goto') { location.hash = '#/' + ({ dlv: 'deliverables', appr: 'approvals', tasks: 'tasks' }[arg] || arg); return }
     if (a === 'goto-connect') { st.setTab = 'assistants'; location.hash = '#/settings'; return }
-    if (a === 'goto-packs') { st.setTab = 'packs'; location.hash = '#/settings'; return }
+    if (a === 'goto-packs') { location.hash = '#/marketplace'; return }
     if (a === 'goto-appr') { st.apprSel = arg; location.hash = '#/approvals'; return }
     if (a === 'appr-sel') { st.apprSel = arg; st.note = ''; h.redraw(); return }
     if (a === 'appr-note') { st.note = arg; bump(); return }
@@ -267,6 +274,7 @@
     if (a === 'copy') { copy(arg); return }
     if (a === 'copy-hello') { copy(T('Say hello to Arsenale')); return }
     if (a === 'team-office') { st.teamOffice = arg; st.drawer = null; bump(); return }
+    if (a === 'team-view') { st.teamView = arg === 'table' ? 'table' : 'tiles'; try { localStorage.setItem('arsenale-team-view', st.teamView) } catch { /* a private window */ } bump(); return }
     // from the org chart: the profile opens on the Team screen, in the member's office
     if (a === 'member-open' && t.dataset.toTeam) { const e = emp(arg); if (e && e.homeOfficeId) st.teamOffice = e.homeOfficeId; location.hash = '#/team' }
     if (a === 'member-open') { st.drawer = { type: 'member', id: arg }; st.profOpen = ''; st.dmsg = null; st.data.member = null; load('policy', 'api/policy', false, 30000); bump(); return }

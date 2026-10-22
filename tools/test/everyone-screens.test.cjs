@@ -156,7 +156,7 @@ test('the approvals letter: the plain question, what would happen, why it matter
   assert.match(letter, /This is what would be posted[\s\S]*Where: the bakery page on Instagram/)
   assert.match(letter, /Why it matters[\s\S]*People see the post straight away/)
   assert.match(letter, /If you say no[\s\S]*Nothing is posted\. Tester is told/)
-  assert.match(letter, /Approve and post[\s\S]*Decline[\s\S]*Ask Tester to change something/)
+  assert.match(letter, /Approve and post[\s\S]*Reject[\s\S]*Ask Tester to change something/)
   await page.eval("document.querySelector('[data-ev=appr-note]').click(); 1")
   await page.waitFor(exists('.ev-drawer .letter form[data-evform=ans] input[name=a]'))
   await page.eval("const f = document.querySelector('.ev-drawer .letter form[data-evform=ans]'); f.elements.a.value = 'use the morning photo'; f.requestSubmit(); 1")
@@ -199,7 +199,7 @@ test('settings: each sub-page draws its own part, and a safety rule is written i
   await tab('notifications', ['Notifications', 'Desktop notifications', 'Tell me when', 'Sign out all phones'])
   await tab('decisions', ['Let approved actions run by themselves', 'Merge into the integration branch', 'Releases', 'Stalled after (minutes)'])
   await tab('safety', ['Safety rules', 'Paying or spending money', 'Always ask me', 'Computer only'])
-  await tab('packs', ['Office packs', 'Customer support', 'members'])
+  await tab('packs', ['Marketplace', 'Customer support', 'members'])
   await tab('privacy', ['Everything stays on this computer', 'only with your own key'])
   await tab('safety', ['Safety rules'])
   await page.eval("document.querySelector('[data-ev=pol][data-arg=\"|payment|never\"]').click(); 1")
@@ -211,12 +211,17 @@ test('settings: each sub-page draws its own part, and a safety rule is written i
   await page.waitFor("/Let Arsenale add itself[\\s\\S]*Restart Claude Code[\\s\\S]*Say hello/.test(" + text('.setw') + ")")
 })
 
-test('the Team screen: a directory table grouped by office, with filters and search, and the profile at its side', { skip: SKIP || false }, async (t) => {
+test('the Team screen: portrait tiles grouped by office, and the directory table with filters and search, and the profile at its side', { skip: SKIP || false }, async (t) => {
   const sb = makeSandbox({ packs: true })
   const { L, sup } = company(sb)
   sb.mod('agent-company.cjs').updateEmployee({ id: 'implementer', name: 'Ines', skills: ['Small fixes'], by: 'board' }, 'cli')
   L.startRun({ agent: 'implementer', task: 'Fix the menu page', officeId: 'studio' }, sup)
   const page = await open(t, sb, '#/team')
+  // 1.2: the tiles first, one group per office, each tile opens the profile; the table is one click away
+  await page.waitFor(exists('.ev-main .tgrp .ttile[data-ev=member-open]'))
+  assert.ok(await page.eval("document.querySelectorAll('.ev-main .tgrp').length >= 2"), 'one group of tiles per office')
+  assert.match(await page.eval("[...document.querySelectorAll('.ev-main .ttile')].find((r) => /Ines/.test(r.textContent)).textContent"), /Working[\s\S]*Fix the menu page/, 'the tile shows the current task')
+  await page.eval("document.querySelector('[data-ev=team-view][data-arg=table]').click(); 1")
   await page.waitFor(exists('.ev-main table.dir tr.trow'))
   // grouped by office: a header row per office
   assert.ok(await page.eval("document.querySelectorAll('.ev-main table.dir tr.grp').length >= 2"), 'one group row per office')

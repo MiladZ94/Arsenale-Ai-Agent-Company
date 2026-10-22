@@ -11,15 +11,22 @@
 <p class="note">Arsenale only watches. It never starts or stops your assistants.</p>
 </section>
 
+<section id="around">
+<h2>Finding your way</h2>
+<p>The top bar has five screens: <b>Campus</b>, <b>Office</b>, <b>Live</b>, <b>Decisions</b> and <b>Team</b>. Everything else is under <b>More</b>: Tasks, Finished work, Activity, Org chart, Gate history, Details: tools &amp; usage, Marketplace and Settings.</p>
+<p>On the right, one group counts who is working, who is quiet and what was handed in today. The <b>?</b> button opens the user guide and shows the legends and notes of the screen you are on. They stay hidden until you ask for them.</p>
+<p><b>Waiting for you</b> is the small card at the bottom left of the campus and the office. It shows the three oldest questions in plain words, and how long each has waited. Click it for the full list.</p>
+</section>
+
 <section id="campus">
 <h2>Campus</h2>
-<p>One building per office. Click a building to go in. <b>Build</b> lets you place, move, rotate and archive buildings.</p>
+<p>One building per office, in the office's colour. Each card says who is working and who waits; hover it for the tokens and the budget. Click a building to go in. <b>Build</b> lets you place, move, rotate and archive buildings. <b>New office</b> adds an office of your own (see Offices).</p>
 <img src="@img/media/campus.png" alt="The campus">
 </section>
 
 <section id="office">
 <h2>Office</h2>
-<p>People sit at their desks and show what they are doing. A small pill marks a person who is quiet, stalled or dead. The <b>Needs a look</b> box lists them. <b>Nudge</b> asks your supervisor to check the run. <b>Clean</b> hides a closed run; its log stays.</p>
+<p>People sit at their desks and type, walk to the supervisor when they wait for you, and rest in the lounge when they are free. A small pill marks a person who is working, waiting, quiet, stalled or dead. The <b>Needs a look</b> box lists them. <b>Nudge</b> asks your supervisor to check the run. <b>Clean</b> hides a closed run; its log stays.</p>
 <img src="@img/media/office.png" alt="An office with a Needs a look box">
 </section>
 
@@ -37,14 +44,14 @@
 <ul><li><b>Needs your answer.</b> Questions from your team.</li>
 <li><b>Approve to continue.</b> A merge or a next phase. <b>Approve all</b> answers them together.</li>
 <li><b>Always waits for you.</b> Builds and releases.</li></ul>
-<p><b>Details</b> shows the evidence. Under the columns, <b>Done without you</b> lists what ran by itself in the last hour. <b>Undo</b> works once, for 10 minutes.</p>
+<p>Each card names what is asked in plain words: Question, Merge, Next phase, Build, Release. The buttons are <b>Approve</b> and <b>Reject</b> everywhere, on the page and on your phone. <b>Details</b> shows the evidence. Under the columns, <b>Done without you</b> lists what ran by itself in the last hour. <b>Undo</b> works once, for 10 minutes.</p>
 <p>The switch at the top right, <b>Approved merges and phases run by themselves</b>, is off by default. Set it in Settings, Decisions.</p>
 <img src="@img/screenshots/inbox-en.png" alt="Decisions">
 </section>
 
 <section id="team">
 <h2>Team</h2>
-<p>Everyone, grouped by office: status, current task, runs today, last active. Search, or filter by office or status. A row opens the profile. <b>New desk</b> hires someone in plain words.</p>
+<p>Everyone, grouped by office, as tiles of people or as a table: status, current task, runs, last active. Search, or filter by office, status or model. A tile or a row opens the profile. <b>Hire an employee</b> hires someone in plain words. <b>Add an office</b> opens the New office form. The packs you have not added are one link, "more offices in the Marketplace".</p>
 <img src="@img/screenshots/team-profile-en.png" alt="Team">
 </section>
 
@@ -77,13 +84,36 @@
 <p>Under <b>More</b>. A timeline of who decided what.</p>
 </section>
 
+<section id="offices">
+<h2>Offices</h2>
+<p><b>New office</b> (on the campus, next to Build, or <b>Add an office</b> on Team) asks for:</p>
+<ul><li><b>Name.</b> Up to 40 characters, not the name of another office.</li>
+<li><b>Colour.</b> One of nine office colours.</li>
+<li><b>Building.</b> One of the 12 building types.</li>
+<li><b>Kinds of work.</b> For example Testing, Code review or Writing docs. Each kind belongs to one office only.</li></ul>
+<p>Nothing is saved until you press <b>Create office</b>. <b>Edit office</b> on Team changes it later. Archiving an office keeps its history.</p>
+<p><b>Where work goes.</b> When a run starts, it goes to the office named for it, else to the office that does its kind of work, else to its project's office, else to the person's home office. That choice is kept with the run, so changing the kinds later never moves past work or past budgets.</p>
+<p class="note">Only you can create, edit or archive an office. Your assistant and its agents cannot.</p>
+<img src="@img/media/new-office.png" alt="The New office form">
+</section>
+
+<section id="marketplace">
+<h2>Marketplace</h2>
+<p>Under <b>More</b>. Ready-made offices with their teams.</p>
+<ul><li><b>Bundled with Arsenale.</b> Press <b>Add</b>, then <b>Add this office</b>. Removing a pack keeps the files you changed.</li>
+<li><b>From a folder or a .zip.</b> A pack someone gave you. Arsenale checks that it holds only text, then shows you all of it: every member, its tools, its full instructions and warnings for anything risky. Nothing is written until you press <b>Install</b>.</li></ul>
+<p>Members of such a pack get read-only tools unless you tick <b>Keep the pack's tools</b> for them. The pack is marked "From a folder: not checked by Arsenale".</p>
+<p class="note">A pack is instructions your assistant will follow. The read-only tools line is honoured by Claude Code subagents; other assistants may ignore it. Install only packs you have read.</p>
+<img src="@img/media/marketplace.png" alt="The Marketplace">
+</section>
+
 <section id="settings">
 <h2>Settings</h2>
 <ul><li><b>Assistants.</b> Connect a tool in three steps, with a Test button.</li>
 <li><b>Notifications.</b> Desktop and phone. See the next section.</li>
 <li><b>Decisions.</b> The auto-run switch, one switch each for merges and next phases, and the limits for a quiet, stalled and dead run.</li>
 <li><b>Safety rules.</b> See Safety.</li>
-<li><b>Office packs.</b> Add a ready-made office, or remove one. Your own files are kept.</li>
+<li><b>Marketplace.</b> The ready-made offices (packs) of the Marketplace page, with a link to it. Add a ready-made office, or remove one. Your own files are kept.</li>
 <li><b>Privacy.</b> Everything stays on this computer. No account, no tracking.</li></ul>
 <img src="@img/screenshots/settings-decisions-en.png" alt="Settings, Decisions">
 </section>
@@ -119,4 +149,11 @@
 <p>Run <code>arsenale resume-scan</code> at the start of a session. It finds runs that ended without finishing and left changes behind. Live lists them under unfinished work.</p>
 <ul><li><b>Resume</b> sends the stored brief to your supervisor's inbox. It starts nothing.</li>
 <li><b>Dismiss</b> hides the item. Nothing in the worktree is deleted.</li></ul>
+</section>
+
+<section id="recording">
+<h2>Recording a video</h2>
+<p>Record from the demo, never from your real data:</p>
+<pre>node bin/arsenale.cjs demo --showcase</pre>
+<p>Showcase hides the Waiting for you card, the legends and the notes. You can also switch it under <b>?</b> in the demo. In a window 360 to 480 pixels wide each screen has a one-column layout, made for 9:16 video.</p>
 </section>

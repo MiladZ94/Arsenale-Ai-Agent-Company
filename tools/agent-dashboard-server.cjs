@@ -28,10 +28,12 @@
  * The 1.0 screens write through the same library as the CLI and the MCP
  * server (runlog.cjs and the modules next to it), always as the board: tasks
  * (api/task, api/task-comment), the team (api/team-member, api/hire-decision),
- * the safety rules (api/policy), office packs (api/pack), the first-start
+ * the safety rules (api/policy), office packs (api/pack, and api/pack-local
+ * for a pack from a folder or a .zip), the first-start
  * wizard (api/onboard), "Connect your assistant" (api/connect-*), and phone
- * notifications (api/notify), and the 1.1 data: api/live (read), api/automation,
- * api/limits, api/resume, api/alerts. GET /deliverables/<id> serves a stored copy of a
+ * notifications (api/notify), the owner's offices (api/office, 1.2), and the
+ * 1.1 data: api/live (read), api/automation, api/limits, api/resume,
+ * api/alerts. GET /deliverables/<id> serves a stored copy of a
  * deliverable, only from Arsenale's own store, under a sandbox CSP.
  *
  * /mcp is the MCP server over HTTP, for clients that take only a URL. It is
@@ -86,8 +88,13 @@ const KEY_HELP = 'This dashboard opens only with its key. Run `arsenale open`, o
 // the page makes itself (GLTFLoader), as images and by fetch.
 const csp = (nonce, port) => "default-src 'none'; script-src 'nonce-" + nonce + "'; style-src 'unsafe-inline'; img-src data: blob: http://localhost:" + port + "/deliverables/ http://127.0.0.1:" + port + "/deliverables/; connect-src 'self' blob:; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'"
 
+/** ?showcase=1 or 0 on a demo page; with neither, what the demo was started with. */
+const showcaseAsked = (full, dflt) => { const q = new URLSearchParams(String(full).split('?')[1] || ''); return q.has('showcase') ? q.get('showcase') === '1' : dflt }
+
 function start(opts = {}) {
   const port = Number(opts.port) || 4310
+  // arsenale demo only: the showcase look for recordings (hides the dock, legends and notes); the real app never has it
+  const DEMO = !!opts.demo, SHOWCASE = DEMO && !!opts.showcase
   const LK = require('./launch-key.cjs')
   const { key: KEY } = LK.ensure()
   const TOKEN = LK.pageToken(KEY)
@@ -188,13 +195,19 @@ function start(opts = {}) {
     }), 32768],
     '/api/hire-decision': [(b) => S.withLockAsync(companyFiles('employees'), () => require('./team.cjs').decideProposal(String(b.gate || ''), b.decision === 'decline' ? 'decline' : 'hire', b.edits, BOARD)), 32768],
     '/api/policy': [(b) => require('./policy.cjs').setPolicy(b, BOARD)],
-    '/api/pack': [(b) => { const Pk = require('./packs.cjs'); return b.op === 'remove' ? Pk.uninstallPack(String(b.id || ''), BOARD) : b.op === 'update' ? Pk.updatePack(String(b.id || ''), BOARD) : Pk.installPack(String(b.id || ''), BOARD, { onConflict: b.onConflict }) }],
+    '/api/pack': [(b) => { const Pk = require('./packs.cjs'); return b.op === 'remove' ? Pk.uninstallPack(String(b.id || ''), BOARD, { keepEdited: b.keepEdited === true }) : b.op === 'update' ? Pk.updatePack(String(b.id || ''), BOARD) : Pk.installPack(String(b.id || ''), BOARD, { onConflict: b.onConflict }) }],
+    // spec 1.2: a pack from a folder or a .zip, uploaded as its bytes (base64),
+    // staged and checked, then installed on the owner's click (pack-local.cjs);
+    // 1 MB of pack is about 1.4 MB of base64
+    '/api/pack-local': [(b) => require('./pack-local.cjs').handle(b, BOARD), 2 * 1024 * 1024],
     '/api/onboard': [(b) => (b.op === 'preview' ? require('./onboard.cjs').preview(b) : require('./onboard.cjs').create(b, BOARD))],
     '/api/connect-preview': [(b) => require('./connect.cjs').preview(String(b.client || ''))],
     '/api/connect-apply': [(b) => require('./connect.cjs').apply(String(b.client || ''), String(b.hash || ''), BOARD)],
     '/api/mcp-forget': [(b) => require('./mcp-server.cjs').forgetClient(String(b.id || ''), BOARD)],
     '/api/notify': [(b) => require('./notify.cjs').configure(b, BOARD)],
     '/api/campus': [(b) => require('./campus.cjs').apply(b, BOARD, 'dashboard')],
+    // spec 1.2: New office, Edit office, Archive (campus.cjs office, the owner only)
+    '/api/office': [(b) => require('./campus.cjs').office(b, BOARD, 'dashboard')],
     // spec 1.1: the auto-run switch, the run limits, Resume / Dismiss of
     // unfinished work, and hiding a stalled run's alert
     '/api/automation': [(b) => require('./automation.cjs').set(b, BOARD)],
@@ -221,7 +234,7 @@ function start(opts = {}) {
     },
     '/api/member': (q) => require('./team.cjs').member(q.get('id')),
     '/api/policy': () => { const pol = require('./policy.cjs'); return { policy: pol.readPolicy(), categories: pol.CATEGORIES } },
-    '/api/packs': () => ({ packs: require('./packs.cjs').listPacks() }),
+    '/api/packs': () => ({ packs: require('./packs.cjs').listPacks(), local: require('./packs.cjs').listLocal() }),
     '/api/deliverables': () => ({ deliverables: require('./deliverables.cjs').listDeliverables(), store: require('./deliverables.cjs').storeSize() }),
     '/api/connect': () => {
       const C = require('./connect.cjs')
@@ -335,7 +348,7 @@ function start(opts = {}) {
         const nonce = crypto.randomBytes(16).toString('base64')
         const html = url === '/archive'
           ? renderArchive(s.state, { live: true, lang })
-          : renderPage(s.state, { live: true, token: TOKEN, lang, company: s.company() })
+          : renderPage(s.state, { live: true, token: TOKEN, lang, company: s.company(), demo: DEMO, showcase: DEMO && showcaseAsked(full, SHOWCASE) })
         res.writeHead(200, Object.assign({
           'Content-Type': 'text/html; charset=utf-8',
           'Cache-Control': 'no-store',
@@ -383,6 +396,8 @@ function start(opts = {}) {
       try { require('./policy.cjs').ensureDefaults('dashboard') } catch { /* read-only folder: every category reads as ask anyway */ }
       // a writer killed between its temp file and the rename left the temp behind
       try { const Pt = require('./paths.cjs'); require('./store.cjs').cleanStray([Pt.RUNS, Pt.ACTIVE, Pt.GATES, Pt.DECISIONS, Pt.VERSION_RUNS, Pt.COMPANY, require('path').join(Pt.HOME, 'alerts'), require('path').join(Pt.HOME, 'test-queue'), require('path').join(Pt.HOME, 'test-queue', 'waiting'), require('path').join(Pt.HOME, 'resume'), require('path').join(Pt.HOME, 'settings'), require('path').join(Pt.COMPANY, 'issues')]) } catch { /* nothing to clean */ }
+      // a pack review closed without Install, or cut off by a restart
+      try { require('./pack-local.cjs').cleanStaging() } catch { /* nothing staged */ }
       const url = 'http://localhost:' + port + '/'
       resolve({ server, port, url, keyUrl: url + '?k=' + KEY })
     })

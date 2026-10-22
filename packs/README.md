@@ -1,8 +1,10 @@
 # Office packs
 
 An office pack is a ready-made team for one office: a lead and a few members,
-each an agent definition your assistant can follow. Arsenale installs packs
-from this folder only (Settings → Office packs, or the first-start wizard).
+each an agent definition your assistant can follow. Arsenale installs the
+packs in this folder (the Marketplace, or the first-start wizard), and a pack
+from a folder or a .zip after you reviewed it (docs/reference.md, "A pack
+from a folder or a .zip").
 
 | Pack | Office | Members |
 |---|---|---|
@@ -86,10 +88,13 @@ and that no e-mail address other than `@example.*` appears.
   new text to `<data>/pack-updates/<id>.md` for you to compare (not into the
   agent folder, where every `.md` file is a team member).
 
-## Why only bundled packs
+## Packs from elsewhere
 
 A pack is instructions a model will follow, so a pack from a stranger is a way
-to plant instructions in your assistant. Until packs can be signed and
-reviewed, Arsenale installs only the packs that ship with it. Contributions of
+to plant instructions in your assistant. A pack from a folder or a .zip may
+hold only text, is shown to you in full before it installs, and its members
+get read-only tools unless you keep theirs; it is marked "not checked by
+Arsenale". There is no online catalogue until packs can be signed and
+reviewed. Contributions of
 new packs are welcome as pull requests (see CONTRIBUTING.md); HR and Finance
 texts need a review by someone qualified.

@@ -86,6 +86,7 @@
       const sc = scene(S, desks, current)
       overlays = sc.overlays; loungeAt = sc.loungeAt
       $('stage-in').innerHTML = sc.svg + overlays.map((o) => overlayHtml(o, current)).join('')
+      crowdPills($('stage-in'), [...$('stage-in').querySelectorAll('.w3card')].filter((e) => !e.classList.contains('tone-idle')), () => renderAll())
     }
     $('insp').innerHTML = inspector(S, current)
     $('needs').innerHTML = needsLook(S)
@@ -147,6 +148,11 @@
       if (i) { i.focus(); try { i.setSelectionRange(keep.a, keep.b) } catch { /* ignore */ } }
     }
     $('minirail').innerHTML = CR.mini(S)
+    // the dock: the oldest three waiting, floating over the campus and the office (the other screens carry the count on the Decisions tab)
+    const dk = $('dock'), dkHtml = mode === 'campus' || mode === 'office' ? CR.dock(S) : ''
+    dk.hidden = !dkHtml
+    if (dk.innerHTML !== dkHtml) dk.innerHTML = dkHtml
+    board.dataset.screen = mode
     if (mode === 'dec') {
       const tb = $('dtbl'), top = tb ? tb.scrollTop : 0
       $('v-dec').innerHTML = CR.decisions(S)
@@ -200,6 +206,27 @@
       if (row) row.scrollIntoView({ block: 'nearest' })
     }
   })
+  // the ? in the top bar: the guide, and the legends and notes, which stay hidden until shown
+  let legendsOn = false
+  try { legendsOn = localStorage.getItem('arsenale-legends') === '1' } catch { /* storage blocked */ }
+  const helpUi = () => {
+    board.classList.toggle('legends', legendsOn)
+    const b = document.querySelector('[data-legends]')
+    if (b) b.setAttribute('aria-pressed', String(legendsOn))
+    const sc = document.querySelector('[data-showcase]')
+    if (sc) sc.setAttribute('aria-pressed', String(board.classList.contains('showcase')))
+  }
+  helpUi()
+  document.addEventListener('click', (e) => {
+    const pop = $('helpop'), btn = $('helpb')
+    const t = e.target.closest('[data-help],[data-legends],[data-showcase]')
+    if (!t) { if (pop && !pop.hidden && !e.target.closest('#helpop')) { pop.hidden = true; btn.setAttribute('aria-expanded', 'false') } return }
+    if (t.dataset.help) { pop.hidden = !pop.hidden; btn.setAttribute('aria-expanded', String(!pop.hidden)); return }
+    if (t.dataset.legends) { legendsOn = !legendsOn; try { localStorage.setItem('arsenale-legends', legendsOn ? '1' : '0') } catch { /* ignore */ } }
+    // the showcase look exists in the demo only (DEMO is false on every real page)
+    if (t.dataset.showcase && DEMO) board.classList.toggle('showcase')
+    helpUi()
+  })
   document.addEventListener('submit', (e) => {
     const f = e.target.closest('[data-ansform]')
     if (!f) return
@@ -239,6 +266,7 @@
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && w3on() && !omenuOpen && !railOpen && !drawerOpen && !(CO && CO.dialogOpen())) { W3.fit(); return }
     if (e.key === 'Escape' && omenuOpen) { omenuOpen = ''; renderAll(); return }
+    if (e.key === 'Escape' && !$('helpop').hidden) { $('helpop').hidden = true; $('helpb').setAttribute('aria-expanded', 'false'); $('helpb').focus(); return }
     if (e.key === 'Escape' && railOpen) { railOpen = false; renderAll(); return }
     if (e.key === 'Escape' && drawerOpen) { drawerOpen = false; remember(); renderAll() }
     // Enter on a runs-table row opens that run in the office

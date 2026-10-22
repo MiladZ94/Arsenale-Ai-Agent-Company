@@ -3,11 +3,15 @@
  *  officeClient calls it once with its helpers and gets the renderers back. */
 function controlRoom(h) {
   const { esc, digits, hhmm, ms, span, cleanTask, isHeavy, T, k, usd, errTxt } = h
+  const ic = h.ic || (() => '')
   const LATE_MS = 2 * 3600000 // a gate waiting longer than this turns red
   const STALE_MS = 24 * 3600000 // older than this, "dismiss all" offers to close it
   const TOOLS = ['Read', 'Grep', 'Glob', 'Edit', 'Write', 'Bash', 'PowerShell', 'Agent']
   const TOOL_SHORT = { PowerShell: 'PS' }
   const KIND = { A: 'A', B: 'B', C: 'C', approval: T('OK') }
+  // the project strip in the full rail names each gate in words, never the letter (spec 1.2 rule 41);
+  // A, B and C are the workflow's three owner gates (agents/WORKFLOW.md)
+  const STEP = { A: T('Questions'), B: T('Design pick'), C: T('Commit') }
   const WHO = { user: 'u', supervisor: 's', agent: 'a' }
   const WHO_LABEL = { u: T('You'), s: T('Supervisor'), a: T('Agents'), o: T('Waiting for you') }
 
@@ -15,7 +19,8 @@ function controlRoom(h) {
   const hm = (v) => { const m = Math.max(0, Math.round(v / 60000)); return Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0') }
   const clip = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s }
   const id4 = (id) => String(id || '').slice(-4)
-  const APPROVAL_LABEL = { approve: T('Approve'), decline: T('Decline') }
+  // the stored answer stays 'decline'; the button and the history say Reject, as on Decisions
+  const APPROVAL_LABEL = { approve: T('Approve'), decline: T('Reject') }
   const said = (g, a) => (g && g.kind === 'approval' && APPROVAL_LABEL[a] ? APPROVAL_LABEL[a] : a)
   const gatesOf = () => (Array.isArray(DATA.gates) ? DATA.gates : [])
   const decsOf = () => (Array.isArray(DATA.decisions) ? DATA.decisions : [])
@@ -48,7 +53,7 @@ function controlRoom(h) {
     let html = '<div class="ansbox">'
     // a hire proposal is read in full before it is decided: on the Approvals screen
     if (g.approvalType === 'hire') return html + '<a class="yes" href="#/approvals" style="text-decoration:none;padding:3px 8px">' + T('Review the hire proposal') + '</a>' + note + '</div>'
-    if (g.kind === 'approval') html += btn('approve', T('Approve'), 'yes') + btn('decline', T('Decline'), 'no')
+    if (g.kind === 'approval') html += btn('approve', T('Approve'), 'yes') + btn('decline', T('Reject'), 'no')
     else if (Array.isArray(g.choices) && g.choices.length) html += g.choices.map((c) => btn(c, c)).join('')
     else html += '<form data-ansform="' + esc(g.id) + '"><input name="a" maxlength="300" autocomplete="off" placeholder="' + T('Short answer…') + '" aria-label="' + T('Answer to: ') + esc(clip(g.question, 60)) + '" data-keep="' + esc(g.id) + '"' + busy + '><button type="submit"' + busy + '>' + T('Send') + '</button></form>'
     // closes the question without an answer: for one that was settled in the chat
@@ -63,9 +68,10 @@ function controlRoom(h) {
     const r = g.run ? S.byId.get(g.run) : null
     return '<div class="wait' + (late ? ' late' : '') + (st.hl === g.id ? ' hl' : '') + '" id="gate-' + esc(g.id) + '">' +
       '<button type="button" class="wait-go" data-gate-go="' + esc(g.id) + '" title="' + T('Show in the Decisions view') + '">' +
-      '<span class="wh"><span class="gl">' + esc(KIND[g.kind] || g.kind) + '</span>' + esc(clip(g.label || g.question, 34)) +
-      '<span class="age">' + (late ? '⚠ ' : '') + hm(age) + '</span></span>' +
-      '<span class="wq">' + esc((g.project ? g.project + ': ' : '') + g.question) + '</span>' +
+      // plain words, as in the dock and on Decisions: the kind and the project, how long, the question
+      '<span class="wh"><span class="wk">' + esc(T(plainKind(g)[0]) + (g.project ? ' · ' + g.project : '')) + '</span>' +
+      '<span class="age">' + (late ? '⚠ ' : '') + waitWords(age) + '</span></span>' +
+      '<span class="wq">' + esc(g.question) + '</span>' +
       '<span class="wf"><span>' + (g.askedBy === 'agent' ? T('agent') : T('supervisor')) + ' · <span dir="ltr">' + hhmm(ms(g.askedAt)) + '</span></span>' +
       (r ? '<span class="mono" dir="ltr">' + esc(r.agent + ' ' + id4(r.id)) + '</span>' : '') + '</span></button>' +
       answerBox(g) + '</div>'
@@ -97,9 +103,9 @@ function controlRoom(h) {
         const cls = g.status === 'answered' ? 'done' : g.status === 'waiting' ? (late ? 'lt' : 'wt') : 'ex'
         const mark = g.status === 'answered' ? ' ✓' : g.status === 'waiting' ? (late ? ' ⚠' : ' ⏳') : ''
         const tip = g.question + (g.answer ? ' — «' + said(g, g.answer) + '»' : '')
-        return '<li class="' + cls + '" title="' + esc(tip) + '"><b>' + esc(KIND[g.kind] || g.kind) + '</b>' + esc(clip(g.label || g.question, 12)) + mark + '</li>'
+        return '<li class="' + cls + '" title="' + esc(tip) + '"><b>' + esc(g.kind === 'approval' ? T(plainKind(g)[0]) : STEP[g.kind] || g.kind) + '</b>' + esc(clip(g.label || g.question, 12)) + mark + '</li>'
       })
-      for (const kd of ['A', 'B', 'C']) if (!seen.has(kd)) steps.push('<li><b>' + kd + '</b>—</li>')
+      for (const kd of ['A', 'B', 'C']) if (!seen.has(kd)) steps.push('<li><b>' + STEP[kd] + '</b>—</li>')
       return '<div class="pipe"><div class="pipe-h">' + esc(proj) + (round ? ' <span>' + esc(round) + '</span>' : '') + '</div><ol class="gsteps">' + steps.join('') + '</ol></div>'
     }).join('')
   }
@@ -156,6 +162,32 @@ function controlRoom(h) {
     }).join('')
     if (!w.length) html += '<span class="mr zero" aria-hidden="true"><b>—</b></span>'
     return html
+  }
+
+  // ---------- the dock: the oldest three, in plain words (kind, project, the question, how long it waits)
+  const DOCK_KIND = { merge: ['Merge', 'merge'], 'next-phase': ['Next phase', 'skip'], build: ['Build', 'build'], publish: ['Release', 'lock'] }
+  function plainKind(g) {
+    const t = g.action && g.action.type
+    if (DOCK_KIND[t]) return DOCK_KIND[t]
+    if (g.approvalType === 'hire') return ['Hire', 'plus']
+    if (g.kind === 'approval' || g.approvalType === 'action') return ['Approval', 'check']
+    return ['Question', 'comment']
+  }
+  function waitWords(v) {
+    const m = Math.max(0, Math.round(v / 60000))
+    if (m < 1) return T('under a minute')
+    return m < 60 ? digits(m) + T(' min') : digits(Math.floor(m / 60)) + T(' h') + (m % 60 ? ' ' + digits(m % 60) + T(' min') : '')
+  }
+  function dock(S, many) {
+    const w = shown()
+    if (!w.length) return ''
+    const rows = w.slice(0, 3).map((g) => {
+      const [kind, icon] = plainKind(g), late = ageOf(g, S.now) > LATE_MS
+      return '<button type="button" class="drow' + (late ? ' late' : '') + '" data-railopen="' + esc(g.id) + '" title="' + T('Answer it here') + '">' + ic(icon, 20, 2) +
+        '<span class="dk">' + esc(T(kind) + (g.project ? ' · ' + g.project : '')) + '</span><span class="dq" dir="auto">' + esc(g.question || g.label || '') + '</span><span class="da">' + waitWords(ageOf(g, S.now)) + '</span></button>'
+    }).join('')
+    return '<div class="dh"><button type="button" class="dtl" data-railopen="1">' + T('Waiting for you') + ' <b class="cnt">' + digits(w.length) + '</b></button>' + (many || '') + '<span class="sp"></span><button type="button" class="dlink" data-view="appr">' + T('Open Decisions →') + '</button></div>' + rows +
+      (w.length > 3 ? '<button type="button" class="dmore" data-railopen="1">' + digits(w.length - 3) + T(' more, oldest first') + '</button>' : '')
   }
 
   // ---------- decisions and gates
@@ -323,11 +355,11 @@ function controlRoom(h) {
       : '<dd>' + (costKnown.length ? usd(cost) : '—') + (costKnown.length < runs.length ? '<small>' + digits(runs.length - costKnown.length) + T(' no data') + '</small>' : '') + '</dd>'
     let html = '<dl class="kpis">' +
       '<div class="kpi m"><dt>' + T('Tokens today') + '</dt><dd>' + k(tot) + '<small>' + T('excludes cache reads') + '</small></dd></div>' +
-      '<div class="kpi"><dt>' + T('Heavy-model share') + '</dt><dd>' + (tot ? digits(Math.round(opT / tot * 100)) + T('%') : '—') + '<small>' + digits(opRuns.length) + T(' of ') + digits(runs.length) + T(' runs') + '</small></dd></div>' +
-      '<div class="kpi m"><dt>' + T('Tool calls') + '</dt><dd>' + digits(tools) + '</dd></div>' +
+      '<div class="kpi"><dt>' + T('Heavy-model share') + '</dt><dd>' + (tot ? digits(Math.round(opT / tot * 100)) + T('%') : '—') + (opRuns.length ? '<small>' + digits(opRuns.length) + T(' of ') + digits(runs.length) + T(' runs') + '</small>' : '') + '</dd></div>' +
+      '<div class="kpi m"><dt>' + T('Tool calls') + '</dt><dd>' + (tools ? digits(tools) : '—') + '</dd></div>' +
       '<div class="kpi"><dt>' + T('Agent work time') + '</dt><dd>' + hm(time) + '<small>' + T('hours') + '</small></dd></div>' +
       '<div class="kpi"><dt>' + T('Cost (USD)') + '</dt>' + costDd + '</div>' +
-      '<div class="kpi"><dt>' + T('No data') + '</dt><dd style="color:var(--ink-dim)">' + digits(nodata) + '<small>' + T('runs without a transcript') + '</small></dd></div></dl>'
+      '<div class="kpi"><dt>' + T('No data') + '</dt><dd style="color:var(--ink-dim)">' + (nodata ? digits(nodata) + '<small>' + T('runs without a transcript') + '</small>' : '—') + '</dd></div></dl>'
     html += '<div class="grid2">' + byAgent(runs) + matrix(runs) + '</div>'
     html += runsTable(S, runs)
     return html
@@ -378,16 +410,16 @@ function controlRoom(h) {
         const ok = al === null || al === 'all' || al.has(tool)
         if (c) return '<td><span class="mc u' + (c >= 40 ? ' hi' : '') + (ok ? '' : ' bad') + '" title="' + esc(tool) + (ok ? '' : T(' — not allowed in the definition')) + '">' + digits(c) + '</span></td>'
         if (!ok) return '<td><span class="mc n" title="' + esc(tool) + T(' not allowed in the definition') + '">·</span></td>'
-        return '<td><span class="mc z">' + digits(0) + '</span></td>'
+        return '<td><span class="mc z" title="' + esc(tool) + '">—</span></td>'
       })
       const other = Object.entries(a.counts).filter(([n]) => !TOOLS.includes(n))
       const oc = other.reduce((s, [, c]) => s + c, 0)
-      cells.push('<td>' + (oc ? '<span class="mc u" title="' + esc(other.map(([n, c]) => n + ' ' + c).join(T(', '))) + '">' + digits(oc) + '</span>' : '<span class="mc z">' + digits(0) + '</span>') + '</td>')
+      cells.push('<td>' + (oc ? '<span class="mc u" title="' + esc(other.map(([n, c]) => n + ' ' + c).join(T(', '))) + '">' + digits(oc) + '</span>' : '<span class="mc z">—</span>') + '</td>')
       return '<tr><th scope="row" title="' + esc(a.name) + (al === null ? T(' — built-in agent, its allowed tools are not known here') : '') + '">' + esc(clip(a.name, 17)) + '</th>' + cells.join('') + '</tr>'
     }).join('')
     return '<section class="box" aria-labelledby="h-mx"><h3 id="h-mx">' + T('Tools: allowed vs used') + ' <span>' + T('number = calls today') + '</span></h3>' +
       (rows ? '<table class="mx"><thead><tr><th scope="col"></th>' + TOOLS.map((t) => '<th scope="col">' + (TOOL_SHORT[t] || t) + '</th>').join('') + '<th scope="col">' + T('Other') + '</th></tr></thead><tbody>' + rows + '</tbody></table>' : '<p class="empty">' + T('No runs today.') + '</p>') +
-      '<div class="lg"><span><i style="background:rgba(86,182,194,.3);border:1px solid rgba(86,182,194,.5)"></i>' + T('used') + '</span><span><i style="border:1px dashed #3A4757"></i>' + T('allowed, 0 calls') + '</span><span><i style="background:repeating-linear-gradient(135deg,#3A4757 0 3px,transparent 3px 6px)"></i>' + T('not allowed in the definition') + '</span></div></section>'
+      '<div class="lg"><span><i style="background:rgba(86,182,194,.3);border:1px solid rgba(86,182,194,.5)"></i>' + T('used') + '</span><span><i style="border:1px dashed #3A4757"></i>' + T('allowed, not used') + '</span><span><i style="background:repeating-linear-gradient(135deg,#3A4757 0 3px,transparent 3px 6px)"></i>' + T('not allowed in the definition') + '</span></div></section>'
   }
 
   function runsTable(S, runs) {
@@ -409,8 +441,8 @@ function controlRoom(h) {
         (r.tokSrc ? '<td class="n m">' + k(r.tokTotal) + (r.tokSrc === 'reported' ? '≈' : '') + '</td>' : nr) +
         (typeof r.costUsd === 'number' ? '<td class="n">' + usd(r.costUsd) + '</td>' : '<td class="n nrec">' + (t && !(DATA.prices && DATA.prices.set) ? T('no price') : '—') + '</td>') +
         (r.toolTotal ? '<td class="n m">' + digits(r.toolTotal) + '</td>' : nr) +
-        '<td class="n">' + (changed === null ? '—' : digits(changed)) + '</td>' +
-        '<td class="n">' + digits(ds.length) + (open ? ' <span style="color:var(--gate)">+' + digits(open) + T(' open') + '</span>' : '') + '</td></tr>'
+        '<td class="n">' + (changed ? digits(changed) : '—') + '</td>' +
+        '<td class="n">' + (ds.length ? digits(ds.length) : open ? '' : '—') + (open ? ' <span style="color:var(--gate)">+' + digits(open) + T(' open') + '</span>' : '') + '</td></tr>'
     }).join('')
     return '<section class="box runs-box" style="flex:1;min-height:0;padding-bottom:0" aria-labelledby="h-runs"><h3 id="h-runs">' + T('Runs today') + ' <span>' + T('newest first · files changed = Edit/Write in the transcript · ≈ = reported number, not counted') + '</span></h3>' +
       (body ? '<table class="rt"><thead><tr><th scope="col">' + T('End') + '</th><th scope="col">' + T('Agent') + '</th><th scope="col">' + T('Task') + '</th><th scope="col">' + T('Model') + '</th><th scope="col">' + T('Duration') + '</th><th scope="col">' + T('Tokens') + '</th><th scope="col">' + T('Cost') + '</th><th scope="col">' + T('Tools') + '</th><th scope="col">' + T('Files changed') + '</th><th scope="col">' + T('Decision') + '</th></tr></thead><tbody>' + body + '</tbody></table>'
@@ -431,11 +463,11 @@ function controlRoom(h) {
     const used = Object.entries(t.toolCounts || {}).sort((a, b) => b[1] - a[1])
     const zero = al && al !== 'all' ? [...al].filter((n) => !t.toolCounts[n]) : []
     html += '<div class="toolline">' + used.map(([n, c]) => '<span' + (al && al !== 'all' && !al.has(n) ? ' class="bad" title="' + T('not allowed in the definition') + '"' : '') + '>' + esc(n) + ' <b>' + digits(c) + '</b></span>').join(' · ') +
-      (zero.length ? ' · ' + zero.map((n) => '<s>' + esc(n) + ' ' + digits(0) + '</s>').join(' · ') : '') + '</div>'
+      (zero.length ? ' · ' + zero.map((n) => '<s>' + esc(n) + '</s>').join(' · ') : '') + '</div>'
     if (t.tokens && t.tokens.cacheRead) html += '<p class="muted" style="margin:2px 0 0">' + T('Cache reads: ') + '<span dir="ltr" class="mono">' + k(t.tokens.cacheRead) + '</span></p>'
     const changed = t.files.filter((f) => f.edit + f.write > 0)
     const read = t.files.filter((f) => !(f.edit + f.write))
-    html += '<h3 class="sect">' + T('Files') + ' <span class="dim">· ' + digits(changed.length) + T(' changed, ') + digits(read.length) + T(' read') + (t.hiddenFiles ? T(', ') + digits(t.hiddenFiles) + T(' hidden') : '') + '</span></h3>'
+    html += '<h3 class="sect">' + T('Files') + (changed.length || read.length || t.hiddenFiles ? ' <span class="dim">· ' + [changed.length ? digits(changed.length) + T(' changed') : '', read.length ? digits(read.length) + T(' read') : '', t.hiddenFiles ? digits(t.hiddenFiles) + T(' hidden') : ''].filter(Boolean).join(T(', ')) + '</span>' : '') + '</h3>'
     const name = (f) => { const p = f.path.split(/[\\/]/); return p.slice(-2).join('/') }
     if (changed.length) html += '<div class="files">' + changed.map((f) => '<span class="file w" title="' + esc(f.path + ' — ' + (f.write ? 'Write ' + f.write : '') + (f.edit ? ' Edit ' + f.edit : '')) + '">' + esc(name(f)) + '</span>').join('') + '</div>'
     else html += '<p class="muted" style="margin:2px 0">' + T('No file changed.') + '</p>'
@@ -507,7 +539,7 @@ function controlRoom(h) {
     redraw()
   }
 
-  return { st, rail, mini, decisions, usage, inspectorExtra, answer, dismiss, waiting, shown, canAnswer, post, answerBox }
+  return { st, rail, mini, dock, decisions, usage, inspectorExtra, answer, dismiss, waiting, shown, canAnswer, post, answerBox }
 }
 
 module.exports = { controlRoom }

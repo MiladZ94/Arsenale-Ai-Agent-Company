@@ -6,7 +6,7 @@
  *
  * Phone channels, each off until the owner turns it on in Settings, each
  * outbound only (no port is opened, nothing listens):
- *   ntfy      notify; in details mode, Approve/Decline buttons that publish a
+ *   ntfy      notify; in details mode, Approve/Reject buttons that publish a
  *             signed token to a second, random reply topic, which the
  *             dashboard server polls
  *   Telegram  notify; in details mode, inline buttons whose callback is a
@@ -317,7 +317,7 @@ function accept(token, channel, opts) {
   try { require('./agent-company.cjs').activity({ actor: 'board', action: 'phone.decision', entityType: 'gate', entityId: g.id, summary: answer + ' from the phone (' + channel + '): ' + clipCp(g.label || g.question, 120), via: 'phone:' + channel }) } catch { /* no company */ }
   // only a time stamp: a settings file that cannot be written does not undo the answer
   try { updateConfig((x) => { if (x[channel]) x[channel].lastDecisionAt = new Date().toISOString() }) } catch { /* newer or locked settings */ }
-  return { ok: true, gate: saved, message: (answer === 'approve' ? 'Approved' : answer === 'decline' ? 'Declined' : 'Answered "' + answer + '"') + ': ' + clipCp(g.label || g.question, 120) }
+  return { ok: true, gate: saved, message: (answer === 'approve' ? 'Approved' : answer === 'decline' ? 'Rejected' : 'Answered "' + answer + '"') + ': ' + clipCp(g.label || g.question, 120) }
 }
 
 function noteInvalid(channel, reason) {
@@ -375,7 +375,7 @@ function message(g, channel, cfg) {
   let buttons = []
   if (el.buttons) {
     buttons = g.kind === 'approval'
-      ? [{ label: 'Approve', decision: 'approve' }, { label: 'Decline', decision: 'decline' }]
+      ? [{ label: 'Approve', decision: 'approve' }, { label: 'Reject', decision: 'decline' }]
       : g.choices.map((ch, i) => ({ label: clipCp(ch, 30), decision: String(i) }))
   }
   return { title: 'Arsenale question', text: lines.join('\n'), buttons }

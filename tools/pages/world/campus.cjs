@@ -20,14 +20,14 @@ function campusArt(h) {
   const { esc, digits, post, refresh } = h
   // the window colours: an idle person's window is "lights off", darker than
   // the plain glass of a window nobody has
-  const ST_COL = { working: '#3BE8B0', quiet: '#E5A33D', waiting: '#E5A33D', paused: '#FF5F5F', idle: '#6B7A8A', away: '#8E9BA8' }
+  const ST_COL = { working: '#36D08F', quiet: '#F2A93B', waiting: '#F2A93B', paused: '#E5534B', idle: '#2E3A48', away: '#8E9BA8' }
   const cv = { z: 1, x: 0, y: 0, W: 1060, H: 848, SW: 0, SH: 0, kbd: false }
   // the plinth stops E tiles in from the edge of its plot
   const TW = 56, TH = 28, PLOT = 8, E = 0.5, CW = 448, CH = 448, MX = 56, MY = 44
-  const WALL = ['#EEF1F4', '#FBFCFD', '#D5DBE1'] // roof rim, street face, side face
-  const ROOF = '#DCE1E6'
-  const GLASS = ['#C3D1DD', '#AEBDCB']
-  const PLINTH = ['#F7F8FA', '#DEE3E8', '#CBD2D9']
+  // the ground of the campus: a lot on a path, on the tinted ground (the page sets the ground itself)
+  const PLINTH = ['#EEF3EC', '#D9E3D8', '#C9D6C6']
+  const PATH = '#F7F5EE'
+  const TREE = ['#3E8F5A', '#5DAF73', '#7A5C3E']
   // The 12 office types. A building's shape comes from how many desks the office has
   // (a tower, a glass block or a long bar, see building()); the type picks which of the two
   // a size has (v 0 or 1), what stands on the roof, and one storey more (up).
@@ -66,6 +66,7 @@ function campusArt(h) {
     const onR = (X, y0, y1, z0, z1, f) => poly([P(X, y0, z0), P(X, y1, z0), P(X, y1, z1), P(X, y0, z1)], f)
     return { P, pts, poly, flat, box, onL, onR }
   }
+  const mix = (a, b, t) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(a.substr(i, 2), 16) * (1 - t) + parseInt(b.substr(i, 2), 16) * t).toString(16).padStart(2, '0')).join('')
   const shade = (hex, f) => '#' + [1, 3, 5].map((i) => Math.max(0, Math.min(255, Math.round(parseInt(hex.substr(i, 2), 16) * f))).toString(16).padStart(2, '0')).join('')
 
   /** One building on its plot, drawn from the office's size:
@@ -78,6 +79,10 @@ function campusArt(h) {
    *  doors. Returns the svg, its highest point (the card hangs there) and the door
    *  (visitors stand there). */
   function building(I, art, c, wins) {
+    // the office's own colour on the walls and the roof: base on the street face, dark on the side, light on the rim and roof
+    const WALL = [mix(c, '#FFFFFF', 0.55), c, shade(c, 0.72)] // roof rim, street face, side face
+    const ROOF = mix(c, '#FFFFFF', 0.72)
+    const GLASS = [mix(c, '#FFFFFF', 0.62), mix(c, '#FFFFFF', 0.4)] // a pane nobody has; an idle person's pane is darker
     const up = art.up || 0
     const { P, poly, box, onL, onR } = I
     const FH = 26
@@ -140,7 +145,7 @@ function campusArt(h) {
     const v = art.v || 0
     let door
     if (art.k === 'shed') {
-      const b = { x: 1.4, y: 1.5, w: 2.6, d: 2.1, base: 28, floors: 0, roof: '#D3D9DF' }
+      const b = { x: 1.4, y: 1.5, w: 2.6, d: 2.1, base: 28, floors: 0, roof: ROOF }
       block(b)
       s += onL(b.y + b.d, b.x + 0.5, b.x + 1.9, 0, 17, '#C5CDD5')
       for (let z = 3; z < 17; z += 3) s += onL(b.y + b.d, b.x + 0.5, b.x + 1.9, z, z + 0.8, '#B2BCC6')
@@ -210,7 +215,7 @@ function campusArt(h) {
       const ax = v ? 4.2 : 1.4
       crown(b.x + (v ? 0.8 : 4.2), b.y + 1.0, rz)
       unit(b.x + (v ? 4.6 : 0.5), b.y + 0.5, rz, 0.8, 0.8, 7, true)
-      const at = { x: ax, y: b.y + b.d, w: 2.0, d: 1.3, base: 0, floors: 2, fh: 22, roof: '#D3D9DF' }
+      const at = { x: ax, y: b.y + b.d, w: 2.0, d: 1.3, base: 0, floors: 2, fh: 22, roof: ROOF }
       block(at)
       lobbyL(at.y + at.d, at.x + 0.15, at.x + at.w - 0.15, 3, 40)
       lobbyR(at.x + at.w, at.y + 0.15, at.y + at.d - 0.15, 3, 40)
@@ -238,7 +243,8 @@ function campusArt(h) {
     const y0 = y1 - L
     const post = ['#B8C1CA', '#AAB4BE', '#97A2AD']
     let s = box(X - 0.1, y0 + 0.3, 0.06, 0.06, 0, 5, post) + box(X - 0.1, y1 - 0.36, 0.06, 0.06, 0, 5, post)
-    s += box(X - 0.14, y0, 0.14, L, 5, 22, [shade(c, 1.15), shade(c, 0.72), c])
+    // the name is on the dark face, so white text keeps AA contrast on every office colour
+    s += box(X - 0.14, y0, 0.14, L, 5, 22, [shade(c, 1.15), c, shade(c, 0.66)])
     // the text runs up the face, from its near end (y1) to its far end (y0)
     const [px, py] = P(X, y1, 5)
     const room = L * TW / 2 - 14
@@ -263,6 +269,15 @@ function campusArt(h) {
       for (let y = y0; y <= y1 && !shed; y++) for (let x = x0; x <= x1 && !shed; x++) if (!taken.has(x + ',' + y)) shed = { x, y }
       if (!shed && x1 + 1 < g.cols) { x1++; shed = { x: x1, y: y0 } }
     }
+    // the narrow layout (a window 480 px wide or less, as in a 9:16 recording): two buildings a row, in campus
+    // order; only the drawing moves, campus.json and build mode keep the real lots
+    lastNarrow = !build && window.innerWidth <= 480
+    if (lastNarrow) {
+      const order = bs.slice().sort((a, b) => a.y - b.y || a.x - b.x)
+      const pos = new Map(order.map((b, i) => [b.id, { x: i % 2, y: Math.floor(i / 2) }]))
+      const n = order.length + (unassigned ? 1 : 0), rows = Math.max(1, Math.ceil(n / 2))
+      return { x0: 0, y0: 0, x1: 1, y1: rows - 1, cols: 2, rows, build, shed: unassigned ? { x: order.length % 2, y: Math.floor(order.length / 2) } : null, unassigned, my: MY, pos }
+    }
     // build mode leaves room above the first row for the cards, under the page's own strip
     return { x0, y0, x1, y1, cols: x1 - x0 + 1, rows: y1 - y0 + 1, build, shed, unassigned, my: build ? MY + 80 : MY }
   }
@@ -273,6 +288,12 @@ function campusArt(h) {
     // the plot's corner sits on a corner of the ground grid, so the grid runs on under the plinth
     if ((Math.round(ox / (TW / 2)) + Math.round(oy / (TH / 2))) % 2 === 0) oy += TH / 2
     return [ox, oy]
+  }
+  /** A small round tree standing on the plot at (x, y). */
+  function tree(I, x, y) {
+    const [px, py] = I.P(x, y, 3)
+    return '<g class="tree"><rect x="' + (px - 1.5).toFixed(1) + '" y="' + (py - 11).toFixed(1) + '" width="3" height="11" fill="' + TREE[2] + '"/>' +
+      '<circle cx="' + px.toFixed(1) + '" cy="' + (py - 20).toFixed(1) + '" r="11" fill="' + TREE[0] + '"/><circle cx="' + (px - 3).toFixed(1) + '" cy="' + (py - 23).toFixed(1) + '" r="6" fill="' + TREE[1] + '"/></g>'
   }
   const mirrored = (g, ox) => '<g transform="translate(' + ox * 2 + ',0) scale(-1,1)">' + g + '</g>'
 
@@ -289,7 +310,7 @@ function campusArt(h) {
     const W = MX * 2 + L.cols * CW, H = L.my + MY + L.rows * CH
     cv.W = W; cv.H = H
     let s = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true">' +
-      '<defs><pattern id="cmap-grid" width="' + TW + '" height="' + TH + '" patternUnits="userSpaceOnUse"><path d="M0 ' + TH / 2 + 'L' + TW / 2 + ' 0L' + TW + ' ' + TH / 2 + 'L' + TW / 2 + ' ' + TH + 'Z" fill="none" stroke="#E2E6EA" stroke-width="1"/></pattern></defs>' +
+      '<defs><pattern id="cmap-grid" width="' + TW + '" height="' + TH + '" patternUnits="userSpaceOnUse"><path d="M0 ' + TH / 2 + 'L' + TW / 2 + ' 0L' + TW + ' ' + TH / 2 + 'L' + TW / 2 + ' ' + TH + 'Z" fill="none" stroke="rgba(15,27,36,.05)" stroke-width="1"/></pattern></defs>' +
       // the grid runs well past the campus, so zooming out never shows its edge
       '<rect x="' + -2 * W + '" y="' + -2 * H + '" width="' + 5 * W + '" height="' + 5 * H + '" fill="url(#cmap-grid)"/>'
     const used = byLot()
@@ -301,7 +322,7 @@ function campusArt(h) {
         s += '<polygon class="lot" points="' + pts([P(E, E, 0), P(PLOT - E, E, 0), P(PLOT - E, PLOT - E, 0), P(E, PLOT - E, 0)]) + '" fill="none" stroke="#AEB8C4" stroke-width="1.5" stroke-dasharray="7 5"/>'
       }
     }
-    const items = c.buildings.map((b) => ({ b, x: b.x, y: b.y, cell: cellOf(b.officeId), shed: false }))
+    const items = c.buildings.map((b) => ({ b, x: L.pos ? L.pos.get(b.id).x : b.x, y: L.pos ? L.pos.get(b.id).y : b.y, cell: cellOf(b.officeId), shed: false }))
     if (L.shed) items.push({ b: null, x: L.shed.x, y: L.shed.y, cell: L.unassigned, shed: true })
     // back to front: the lots further up the screen first
     items.sort((p, q) => p.y - q.y || p.x - q.x)
@@ -312,13 +333,20 @@ function campusArt(h) {
       const I = iso(ox, oy)
       const { P, poly, flat, box } = I
       const col = cell.color || '#8A97A6'
-      // the plot is paved flush with the ground, behind a kerb a few centimetres high: no island, no shadow
-      let g = box(E, E, PL - 2 * E, PL - 2 * E, 0, 3, PLINTH)
+      // the plot is paved flush with the ground, behind a kerb a few centimetres high: no island, no shadow;
+      // a light path runs round it on the tinted ground
+      const pw = shed ? 0.6 : 0.9
+      let g = flat([P(E - pw, E - pw, 0), P(PL - E + pw, E - pw, 0), P(PL - E + pw, PL - E + pw, 0), P(E - pw, PL - E + pw, 0)], PATH)
+      g += box(E, E, PL - 2 * E, PL - 2 * E, 0, 3, PLINTH)
       g += poly([P(E, E, 3), P(PL - E, E, 3), P(PL - E, PL - E, 3), P(E, PL - E, 3)], PLINTH[0], ' class="pl"')
       const bl = building(I, shed ? { k: 'shed' } : artOf(b.type), col, shed ? [] : cell.wins || [])
       // a paved way from the door to the edge of the plot
       g += flat([P(bl.door[0] - 0.45, bl.door[1] - 0.6, 3), P(bl.door[0] + 0.45, bl.door[1] - 0.6, 3), P(bl.door[0] + 0.45, PL - E, 3), P(bl.door[0] - 0.45, PL - E, 3)], '#E6EAEE')
+      // planting, drawn in code: a tree behind the building, and one on each side corner the building leaves free
+      const isHq = m.hq && cell.id === m.hq.id
+      if (!shed) g += tree(I, E + 0.7, E + 0.7)
       g += bl.svg
+      if (!shed) g += tree(I, E + 0.55, PL - E - 0.6) + (isHq ? '' : tree(I, PL - E - 0.6, E + 0.55))
       // a turned building is the same drawing seen from the other side; its sign and its door stay readable
       const flip = !shed && b.rot % 2 === 1
       if (flip) g = mirrored(g, ox)
@@ -347,10 +375,10 @@ function campusArt(h) {
       signs.push({ cell, x: ox, y: bl.top - 16 })
     }
     s += '</svg>'
-    const html = signs.map(({ cell, x, y }) => '<div class="sign' + (cell.small ? ' small' : '') + '" style="--c:' + esc(cell.color || '#8A97A6') + ';left:' + x + 'px;top:' + Math.round(y) + 'px">' + cell.sign + '</div>').join('')
+    const html = signs.map(({ cell, x, y }) => '<div class="sign' + (cell.small ? ' small' : '') + '" data-sign="' + esc(cell.id) + '" style="--c:' + esc(cell.color || '#8A97A6') + ';left:' + x + 'px;top:' + Math.round(y) + 'px">' + cell.sign + '</div>').join('')
     const total = c.grid.cols * c.grid.rows
     const zoom = '<div class="czoom" id="czoom" role="group" aria-label="' + T('Campus zoom') + '"><button type="button" data-czoom="out" title="' + T('Zoom out (-)') + '" aria-label="' + T('Zoom out') + '">−</button><output id="czoomv">' + digits(Math.round(cv.z * 100)) + T('%') + '</output><button type="button" data-czoom="in" title="' + T('Zoom in (+)') + '" aria-label="' + T('Zoom in') + '">+</button><button type="button" class="fitb" data-czoom="fit" title="' + T('Fit whole campus (0)') + '">' + T('Fit all') + '</button>' +
-      (editable() ? '<button type="button" class="cbuild' + (L.build ? ' on' : '') + '" data-c3="build">' + (L.build ? 'Done building' : 'Build') + '</button>' : '') +
+      (editable() ? '<button type="button" class="cbuild' + (L.build ? ' on' : '') + '" data-c3="build">' + (L.build ? 'Done building' : 'Build') + '</button>' + (L.build ? '' : '<button type="button" class="cbuild" data-ev="office-new">New office</button>') : '') +
       '<span class="zh">' + (L.build ? digits(c.buildings.length) + ' of ' + digits(total) + ' lots' : c.readOnly ? 'Read-only: newer file' : T('Mouse wheel: zoom · Drag: pan')) + '</span></div>'
     let tools = ''
     if (L.build) {
@@ -360,7 +388,7 @@ function campusArt(h) {
     }
     const msg = '<div class="c3msg' + (bm.bad ? ' bad' : '') + '" id="c3msg" role="status"' + (bm.msg ? '' : ' hidden') + '>' + esc(bm.msg) + '</div>'
     // the company summary steps aside while building: the board gets the whole width
-    return '<div class="cwrap"><div class="cmap' + (L.build ? ' building' : '') + '" id="cmap" tabindex="0" aria-label="' + T('Campus — mouse wheel or + and - to zoom, drag or arrow keys to pan, 0 to fit') + '"><div class="cmap-in" id="cmap-in" style="width:' + W + 'px;height:' + H + 'px">' + s + html + '</div>' + zoom + tools + msg + (L.build ? '' : (m.tip || '') + (m.legend || '')) + '</div>' + (L.build ? '' : m.side || '') + '</div>'
+    return '<div class="cwrap' + (m.sideOpen ? ' side-open' : '') + '"><div class="cmap' + (L.build ? ' building' : '') + '" id="cmap" tabindex="0" aria-label="' + T('Campus — mouse wheel or + and - to zoom, drag or arrow keys to pan, 0 to fit') + '"><div class="cmap-in" id="cmap-in" style="width:' + W + 'px;height:' + H + 'px">' + s + html + '</div>' + (L.build ? '' : m.title || '') + zoom + tools + msg + (L.build ? '' : (m.tip || '') + (m.legend || '') + (m.month || '')) + '</div>' + (L.build ? '' : m.side || '') + '</div>'
   }
 
   // ---------- build mode
@@ -424,6 +452,9 @@ function campusArt(h) {
   }
   const markSel = () => document.querySelectorAll('#cmap g.bld[data-b]').forEach((g) => g.classList.toggle('sel', g.getAttribute('data-b') === bm.sel))
   const rebuild = () => { clearGhost(); if (h.redraw) h.redraw() }
+  // the window crossing 480 px (the narrow layout) draws the campus again in its other arrangement
+  let lastNarrow = null
+  window.addEventListener('resize', () => { if (model && lastNarrow !== null && lastNarrow !== (!bm.on && window.innerWidth <= 480) && h.redraw) h.redraw() })
 
   async function act(body) {
     try {
@@ -510,6 +541,12 @@ function campusArt(h) {
   const CZ_MIN = 0.5, CZ_MAX = 4
   // the Today strip and the zoom control lie over the top of the map: "fit" keeps the campus below them
   const CZ_TOP = 56
+  // the page's look may keep more room free: --cz-left and --cz-top on #cmap (a column for the title and the dock)
+  function insets(box) {
+    const cs = getComputedStyle(box)
+    cv.L0 = parseFloat(cs.getPropertyValue('--cz-left')) || 0
+    cv.T0 = parseFloat(cs.getPropertyValue('--cz-top')) || CZ_TOP
+  }
   function campusClamp(v, SW, SH, W, H) {
     const k = Math.max(0.05, Math.min(SW / W, SH / H))
     const z = Math.min(CZ_MAX, Math.max(CZ_MIN, Number(v.z) || 1))
@@ -522,19 +559,20 @@ function campusArt(h) {
     }
     return { z, x: lim(SW, W * s, v.x), y: lim(SH, H * s, v.y), k, s }
   }
-  // Cards keep a readable size: they follow the zoom only between 85% and
-  // 115% of their real size, and counter-scale past that.
-  const campusCardScale = (s) => Math.min(1.15, Math.max(0.85, s)) / s
+  // Cards keep a readable size: they follow the zoom only between 100% and
+  // 115% of their real size, and counter-scale past that (never below 13 px text)
+  const campusCardScale = (s) => Math.min(1.15, Math.max(1, s)) / s
   const calmMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   let cEaseT = 0
   function applyCampus(ease) {
     const box = document.getElementById('cmap'), inner = document.getElementById('cmap-in')
     if (!box || !inner) return
-    cv.SW = box.clientWidth; cv.SH = Math.max(120, box.clientHeight - CZ_TOP)
+    insets(box)
+    cv.SW = Math.max(160, box.clientWidth - cv.L0); cv.SH = Math.max(120, box.clientHeight - cv.T0)
     const v = campusClamp(cv, cv.SW, cv.SH, cv.W, cv.H)
     cv.z = v.z; cv.x = v.x; cv.y = v.y
     if (ease && !calmMotion()) { inner.classList.add('ease'); clearTimeout(cEaseT); cEaseT = setTimeout(() => { const i = document.getElementById('cmap-in'); if (i) i.classList.remove('ease') }, 240) }
-    inner.style.transform = 'translate(' + ((cv.SW - cv.W * v.s) / 2 + v.x).toFixed(1) + 'px,' + ((cv.SH - cv.H * v.s) / 2 + v.y + CZ_TOP).toFixed(1) + 'px) scale(' + v.s.toFixed(4) + ')'
+    inner.style.transform = 'translate(' + ((cv.SW - cv.W * v.s) / 2 + v.x + cv.L0).toFixed(1) + 'px,' + ((cv.SH - cv.H * v.s) / 2 + v.y + cv.T0).toFixed(1) + 'px) scale(' + v.s.toFixed(4) + ')'
     inner.style.setProperty('--bs', campusCardScale(v.s).toFixed(3))
     // far out, full cards would cover each other: they shrink to the name and the counts
     inner.classList.toggle('far', v.s < 0.5)
@@ -543,7 +581,7 @@ function campusArt(h) {
   }
   /** Zoom by f, keeping the campus point under (mx, my) where it is. */
   function campusZoomAt(mx, my, f, ease) {
-    my -= CZ_TOP // box coordinates in, the fitted area's out
+    my -= cv.T0 || CZ_TOP; mx -= cv.L0 || 0 // box coordinates in, the fitted area's out
     const k = Math.max(0.05, Math.min(cv.SW / cv.W, cv.SH / cv.H)), s = k * cv.z
     const tx = (cv.SW - cv.W * s) / 2 + cv.x, ty = (cv.SH - cv.H * s) / 2 + cv.y
     const z2 = Math.min(CZ_MAX, Math.max(CZ_MIN, cv.z * f)), s2 = k * z2
@@ -621,7 +659,7 @@ function campusArt(h) {
     const b = e.target.closest && e.target.closest('[data-czoom]')
     if (!b) return
     if (b.dataset.czoom === 'fit') campusFit()
-    else campusZoomAt(cv.SW / 2, cv.SH / 2 + CZ_TOP, b.dataset.czoom === 'in' ? 1.25 : 0.8, true)
+    else campusZoomAt(cv.SW / 2 + (cv.L0 || 0), cv.SH / 2 + (cv.T0 || CZ_TOP), b.dataset.czoom === 'in' ? 1.25 : 0.8, true)
   })
   // the keyboard, while the map has the focus; the redraw would drop that
   // focus, so it is given back to the new map (see fit)
@@ -630,12 +668,23 @@ function campusArt(h) {
     if (!e.target || e.target.id !== 'cmap') return
     const pans = { ArrowLeft: [60, 0], ArrowRight: [-60, 0], ArrowUp: [0, 60], ArrowDown: [0, -60] }
     if (pans[e.key]) { cv.x += pans[e.key][0]; cv.y += pans[e.key][1]; applyCampus(true) }
-    else if (e.key === '+' || e.key === '=') campusZoomAt(cv.SW / 2, cv.SH / 2 + CZ_TOP, 1.25, true)
-    else if (e.key === '-' || e.key === '_') campusZoomAt(cv.SW / 2, cv.SH / 2 + CZ_TOP, 0.8, true)
+    else if (e.key === '+' || e.key === '=') campusZoomAt(cv.SW / 2 + (cv.L0 || 0), cv.SH / 2 + (cv.T0 || CZ_TOP), 1.25, true)
+    else if (e.key === '-' || e.key === '_') campusZoomAt(cv.SW / 2 + (cv.L0 || 0), cv.SH / 2 + (cv.T0 || CZ_TOP), 0.8, true)
     else if (e.key === '0') campusFit()
     else return
     e.preventDefault()
   })
+  // a building under the pointer or the keyboard opens its card, like the card itself on hover
+  const signHot = (e, on) => {
+    const g = e.target.closest && e.target.closest('#cmap g.bld[data-office]')
+    if (!g) return
+    const card = document.querySelector('#cmap .sign[data-sign="' + g.getAttribute('data-office') + '"]')
+    if (card) card.classList.toggle('hot', on)
+  }
+  document.addEventListener('pointerover', (e) => signHot(e, true))
+  document.addEventListener('pointerout', (e) => signHot(e, false))
+  document.addEventListener('focusin', (e) => signHot(e, true))
+  document.addEventListener('focusout', (e) => signHot(e, false))
   // keyboard: Enter on a building enters it, like a click
   document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches && e.target.matches('g.bld[data-goto]') && h.go) h.go(e.target.getAttribute('data-goto')) })
 

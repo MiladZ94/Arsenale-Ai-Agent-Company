@@ -1,5 +1,5 @@
 'use strict'
-/** Builds Arsenale-Guide-1.1.pdf from docs/guide/src with headless Chrome.
+/** Builds Arsenale-Guide-1.2.pdf from docs/guide/src with headless Chrome.
  *  node docs/guide/build.cjs */
 const fs = require('fs')
 const path = require('path')

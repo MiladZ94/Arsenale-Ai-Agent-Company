@@ -3,10 +3,11 @@
  * Everything lives in <ARSENALE_HOME>/company/ (paths.cjs), next to
  * agent-runs/ and never inside a repo:
  *   company.json        name, mission, the company budget, budgetsEnabled
- *   offices.json        [{ id, name, leadEmployeeId, profile, theme, order, budget, archived }]
+ *   offices.json        [{ id, name, leadEmployeeId, profile, theme, order, budget, archived,
+ *                         and since 1.2, all optional: kinds[] (kinds.cjs), createdBy, createdAt }]
  *   projects.json       [{ id, name, key, aliases[], officeId, status, budget, … }]
  *   employees.json      { <agent name>: { title, homeOfficeId, zone, reportsTo, budget, status, aliases[],
- *                         and since 1.0, all optional: name, skills[], look } }
+ *                         and since 1.0, all optional: name, skills[], look; since 1.2: kind } }
  *   activity.jsonl      one line per write made through the CLI or the dashboard
  *   inbox.jsonl         what the Board changed on the dashboard, for the supervisor
  *                       (log-agent-run.cjs --inbox; inbox.read.json is the pointer)
@@ -19,6 +20,8 @@
  * Run records are never rewritten. Which project, office and employee a run
  * belongs to, and what it cost, is worked out on every read (resolver() and
  * costEvents() below); the files in agent-runs/ stay exactly as they were.
+ * Since 1.2 a new run carries the office it was routed to at its start
+ * (routeOf(), stamped by runlog.cjs), which every read then keeps.
  *
  * Budgets are counted in tokens (input + cache writes + output, the dashboard's
  * tokTotal; cache reads excluded) and in USD from tools/model-prices.json. A
@@ -34,6 +37,7 @@ const { projectKey, modelKey, writeAtomic } = require('./build-agent-dashboard.c
 const { homeDesks } = require('./agent-office-page.cjs')
 const P = require('./paths.cjs')
 const { withLock } = require('./store.cjs')
+const K = require('./kinds.cjs')
 
 const COMPANY = P.COMPANY
 // ids come from files and requests: only own keys count, so "constructor" or
@@ -50,7 +54,8 @@ const FILES = {
 const fileOf = (k) => path.join(COMPANY, FILES[k])
 // Accent tokens for offices. The owner picks a name, never a raw colour, so
 // every office stays inside the dashboard's palette.
-const THEMES = { teal: '#2FA98A', blue: '#4E8BD4', violet: '#8C78C8', coral: '#D9785A', amber: '#C9A63A', slate: '#8A97A6', cyan: '#4FB0BC', pink: '#D9739F', green: '#5FB878' }
+// bolder since 1.2 (the Stage look): each one is a building's walls and roof, its sign is the dark shade of it
+const THEMES = { teal: '#1F9C7E', blue: '#3F7FD6', violet: '#7B66C9', coral: '#D4683F', amber: '#C98A2A', slate: '#7D8B9A', cyan: '#2B98AE', pink: '#C4578A', green: '#3E9B5A' }
 // a title made up from an id: these words are acronyms, so "seo-specialist"
 // reads "SEO specialist", never "Seo specialist"
 const ACRONYMS = new Set(['seo', 'ui', 'ux', 'qa', 'hr', 'faq', 'api', 'ceo', 'cli', 'cfo', 'cto', 'pr', 'crm', 'csv', 'pdf', 'it', 'kpi', 'mcp', 'sql', 'ai'])
@@ -156,10 +161,11 @@ function readCompany() {
     id: String(o.id), name: clip(o.name || o.id, 40), leadEmployeeId: clip(o.leadEmployeeId, 60),
     profile: clip(o.profile, 30), layout: 'standard', theme: Object.hasOwn(THEMES, o.theme) ? o.theme : 'slate',
     order: typeof o.order === 'number' ? o.order : i, budget: cleanBudget(o.budget), archived: !!o.archived, builtIn: false,
+    kinds: K.cleanKinds(o.kinds), createdBy: clip(o.createdBy, 60), createdAt: clip(o.createdAt, 40),
   })).sort((a, b) => a.order - b.order)
   // "unassigned" is never stored: it always exists and holds every project
   // that has no office
-  offices.push({ id: UNASSIGNED, name: 'Unassigned work', leadEmployeeId: '', profile: '', layout: 'standard', theme: 'slate', order: 1e9, budget: null, archived: false, builtIn: true })
+  offices.push({ id: UNASSIGNED, name: 'Unassigned work', leadEmployeeId: '', profile: '', layout: 'standard', theme: 'slate', order: 1e9, budget: null, archived: false, builtIn: true, kinds: [], createdBy: '', createdAt: '' })
   const officeIds = new Set(offices.map((o) => o.id))
   let projects = readJson(fileOf('projects'), null)
   if (!Array.isArray(projects)) { if (projects !== null) problems.push(FILES.projects + ' is not a list'); projects = [] }
@@ -184,9 +190,20 @@ function definedAgents(state) {
   return new Map((state && Array.isArray(state.agents) ? state.agents : []).map((a) => [a.name, a]))
 }
 
+/** Which office holds each kind of work. An archived office holds none; were
+ *  a kind written on two offices by hand, the first in order keeps it. */
+function kindHolders(co) {
+  const m = new Map()
+  for (const o of co.offices) if (!o.builtIn && !o.archived) for (const k of o.kinds || []) if (!m.has(k)) m.set(k, o.id)
+  return m
+}
+
 /** Which project, office and employee a record belongs to. Order (spec R5):
  *  an explicit projectId, then the project id, then an alias; else
- *  unassigned. An explicit officeId on a new run overrides the project's. */
+ *  unassigned. An explicit officeId on a new run overrides the project's.
+ *  office() is the read rule for every record; route() is the 1.2 rule a new
+ *  run is stamped with once, at its start (runlog.cjs), and the stamp is an
+ *  explicit officeId to office() from then on. */
 function resolver(co, agents) {
   const byName = new Map()
   for (const p of co.projects) {
@@ -226,7 +243,53 @@ function resolver(co, agents) {
     return name
   }
   const kind = (id) => (id === CEO ? 'ceo' : agents.has(id) ? 'employee' : own(co.employees, id) ? 'retired' : 'contractor')
-  return { project, office, employee, kind, offices, ids }
+  const holders = kindHolders(co)
+  // spec 1.2 rule 23: an explicit office, the office of the run's kind of
+  // work, the project's office, the home office, Unassigned work
+  const route = (rec) => {
+    if (rec.officeId && offices.has(rec.officeId)) return { officeId: rec.officeId, officeBy: 'explicit' }
+    const held = K.isKind(rec.kind) ? holders.get(rec.kind) : ''
+    if (held) return { officeId: held, officeBy: 'kind' }
+    const proj = project(rec)
+    if (proj) return { officeId: proj.officeId, officeBy: 'project' }
+    const id = office(Object.assign({}, rec, { officeId: '' }), null)
+    return { officeId: id, officeBy: id === UNASSIGNED ? 'unassigned' : 'home' }
+  }
+  return { project, office, employee, kind, offices, ids, route, holders }
+}
+
+/** The desk zone of an employee: the one the overlay gives, "lead" for an
+ *  office head, else the one its definition or its name suggests. */
+function zoneOf(id, co, guess) {
+  const ov = own(co.employees, id) || {}
+  const g = own(guess, id)
+  return ZONES.includes(ov.zone) ? ov.zone : co.offices.some((o) => o.leadEmployeeId === id) ? 'lead' : ZONES.includes(g) ? g : 'guest'
+}
+
+/** The kind of work of a run about to start (spec 1.2 rule 22): the one the
+ *  start names (an unknown one is ignored), the task's, the employee's own,
+ *  the one of its desk zone; else none (''). */
+function runKind(state, input, co, R) {
+  if (K.isKind(input.kind)) return input.kind
+  if (input.issue) {
+    try { const t = require('./tasks.cjs').readTask(String(input.issue)); if (t && K.isKind(t.kind)) return t.kind } catch { /* not a task id */ }
+  }
+  const id = R.employee(input.agent)
+  const ov = own(co.employees, id) || {}
+  if (K.isKind(ov.kind)) return ov.kind
+  const guess = homeDesks(state && Array.isArray(state.agents) ? state.agents : [], state && state.desks).zones
+  return K.kindOfZone(zoneOf(id, co, guess))
+}
+
+/** Where a run about to start goes, and why: {officeId, officeBy, kind}.
+ *  Read-only: the CLI, MCP and budgetCheck ask it, startRun stamps it. */
+function routeOf(state, input, co, R) {
+  co = co || readCompany()
+  if (!co.configured) return null
+  R = R || resolver(co, definedAgents(state))
+  const rec = { agent: String(input.agent || ''), project: input.project || '', projectId: input.projectId || '', officeId: input.officeId || '' }
+  rec.kind = runKind(state, Object.assign({}, input, rec), co, R)
+  return Object.assign(R.route(rec), { kind: rec.kind })
 }
 
 /** Adds projectId/officeId/employeeId to what the office page draws today:
@@ -389,7 +452,9 @@ function budgetCheck(state, input, co) {
   const rec = { agent: String(input.agent || ''), project: input.project || '', projectId: input.projectId || '', officeId: input.officeId || '' }
   const emp = R.employee(rec.agent)
   const proj = R.project(rec)
-  const officeId = R.office(rec, proj)
+  // the office the run goes to: its budget, and its archived state, are the ones that count
+  const route = routeOf(state, input, co, R)
+  const officeId = route.officeId
   const office = R.offices.get(officeId)
   const lines = []
   let level = 'ok'
@@ -413,7 +478,48 @@ function budgetCheck(state, input, co) {
   }
   if (!st.masterOn) lines.push('note budgets are switched off')
   if (!lines.some((l) => /^(stop|warn)/.test(l))) lines.unshift('ok')
-  return { level, lines, employeeId: emp, officeId, projectId: proj ? proj.id : '' }
+  return { level, lines, employeeId: emp, officeId, officeBy: route.officeBy, kind: route.kind, projectId: proj ? proj.id : '' }
+}
+
+/** Why a run is where it is, in the words of the run panel (spec 1.2 rule 25). */
+function becauseOf(route) {
+  if (!route || !route.officeBy) return ''
+  if (route.officeBy === 'kind') return K.labelOf(route.kind)
+  if (route.officeBy === 'explicit') return 'the office was named at the start'
+  if (route.officeBy === 'project') return 'its project'
+  if (route.officeBy === 'home') return 'the home office'
+  return 'no office takes this work'
+}
+
+/** What anyone may read about offices: the CLI's --office and MCP's
+ *  get_office. One office, a member's home office and where its next run
+ *  would go, or every open office. Read-only; changing offices is the
+ *  owner's (campus.cjs office). */
+function officeView(state, input) {
+  const co = readCompany()
+  if (!co.configured) return { lines: ['No company is set up yet.'], data: { configured: false } }
+  const T = require('./campus.cjs')
+  const show = (o) => (!o ? null : { id: o.id, name: o.name, colour: o.theme, building: o.builtIn ? '' : T.typeOfProfile(o.profile), kinds: o.kinds.map((k) => ({ id: k, label: K.labelOf(k) })), archived: o.archived })
+  const line = (o) => o.name + ' (' + o.id + ')' + (o.archived ? ', archived' : '') + (o.kinds.length ? ': ' + o.kinds.map(K.labelOf).join(', ') : '')
+  const byId = (id) => co.offices.find((o) => o.id === id)
+  if (input.agent) {
+    const R = resolver(co, definedAgents(state))
+    const emp = R.employee(input.agent)
+    const home = byId(homeOf(emp, co))
+    const route = routeOf(state, { agent: emp, project: input.project, kind: input.kind }, co, R)
+    const next = byId(route.officeId)
+    return {
+      lines: [emp + ': home office ' + (home ? line(home) : 'none'), 'next job: ' + (next ? next.name + ' (' + next.id + ')' : route.officeId) + '; here because: ' + becauseOf(route)],
+      data: { team_member: emp, home_office: show(home), next_job: { office: show(next), office_by: route.officeBy, kind: route.kind, because: becauseOf(route) } },
+    }
+  }
+  if (input.id) {
+    const o = byId(String(input.id))
+    if (!o) throw fail(404, 'no such office: ' + clip(input.id, 40))
+    return { lines: [line(o)], data: { office: show(o) } }
+  }
+  const open = co.offices.filter((o) => !o.archived)
+  return { lines: open.map(line), data: { offices: open.map(show) } }
 }
 
 // ---------- the org chart
@@ -463,8 +569,7 @@ function companyState(state) {
     const kind = st.R.kind(id)
     const def = agents.get(id) || {}
     const ov = own(co.employees, id) || {}
-    const guess = own(zoneGuess, id)
-    const zone = ZONES.includes(ov.zone) ? ov.zone : co.offices.some((o) => o.leadEmployeeId === id) ? 'lead' : ZONES.includes(guess) ? guess : 'guest'
+    const zone = zoneOf(id, co, zoneGuess)
     employees.push({
       id, kind,
       // no title typed: "code-reviewer" reads as "Code reviewer", "seo-specialist" as "SEO specialist"
@@ -495,6 +600,8 @@ function companyState(state) {
       assistants: Array.isArray(co.company.assistants) ? co.company.assistants.slice(0, 12).map((a) => clip(a, 30)) : [],
     },
     themes: THEMES,
+    // the kinds of work an office can hold (spec 1.2), for the office form
+    kinds: K.KINDS.map((k) => ({ id: k.id, label: k.label })),
     campus: require('./campus.cjs').view(co),
     offices: co.offices.map((o) => Object.assign({}, o, { color: THEMES[o.theme], standing: st.offices[o.id] })),
     projects: co.projects.map((p) => ({ id: p.id, name: p.name, key: p.key, officeId: p.officeId, status: p.status, aliases: p.aliases, standing: st.projects[p.id] })),
@@ -659,30 +766,129 @@ function updateEmployeeLocked(input, via, co) {
   return { id, employee: e, summary }
 }
 
+// ids and field names that an object lookup would find on every object
+const PROTO_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+/** A request body with a key such as "__proto__" is refused whole: copied
+ *  with Object.assign it would change what the copy inherits. */
+function noProtoKeys(v, depth) {
+  if (!v || typeof v !== 'object' || (depth || 0) > 4) return
+  for (const k of Object.keys(v)) {
+    if (PROTO_KEYS.has(k)) throw fail(400, 'bad field name: ' + k)
+    noProtoKeys(v[k], (depth || 0) + 1)
+  }
+}
+const fieldFail = (code, message, field) => { const e = fail(code, message); e.field = field; return e }
+
+/** The New office and Edit office form, checked (spec 1.2 rules 15, 17, 20).
+ *  Only the fields given are checked and returned; `selfId` is the office
+ *  being edited. Each refusal names its field (`e.field`, as notify.cjs). */
+function checkOfficeForm(input, co, selfId) {
+  noProtoKeys(input)
+  const out = {}
+  const others = co.offices.filter((o) => !o.builtIn && !o.archived && o.id !== selfId)
+  if (input.name !== undefined) {
+    const name = String(input.name == null ? '' : input.name).trim()
+    const n = Array.from(name).length
+    if (n < 1 || n > 40) throw fieldFail(400, 'Name: 1 to 40 characters', 'name')
+    if (others.some((o) => normName(o.name) === normName(name))) throw fieldFail(409, 'Name: another office is called ' + name, 'name')
+    out.name = name
+  }
+  if (input.theme !== undefined) {
+    if (typeof input.theme !== 'string' || !Object.hasOwn(THEMES, input.theme)) throw fieldFail(400, 'Colour: one of ' + Object.keys(THEMES).join(', '), 'theme')
+    out.theme = input.theme
+  }
+  if (input.type !== undefined) {
+    const T = require('./campus.cjs')
+    if (typeof input.type !== 'string' || !T.TYPE_IDS.has(input.type)) throw fieldFail(400, 'Building: one of ' + T.TYPES.map((t) => t.id).join(', '), 'type')
+    out.profile = input.type
+  }
+  if (input.kinds !== undefined) {
+    if (!Array.isArray(input.kinds) || input.kinds.length > K.KINDS.length) throw fieldFail(400, 'Kinds of work: a list of at most ' + K.KINDS.length, 'kinds')
+    const bad = input.kinds.find((k) => !K.isKind(k))
+    if (bad !== undefined) throw fieldFail(400, 'Kinds of work: unknown kind "' + clip(bad, 30) + '"', 'kinds')
+    const kinds = K.cleanKinds(input.kinds)
+    for (const k of kinds) {
+      const holder = others.find((o) => o.kinds.includes(k))
+      if (holder) throw fieldFail(409, K.labelOf(k) + ' is done by ' + holder.name + '. Remove it there first.', 'kinds')
+    }
+    out.kinds = kinds
+  }
+  return out
+}
+
 /** Adds an office to an existing company (an office pack installed after
  *  set-up, spec R-3.4). Board only. An archived office of the same id is
- *  brought back instead of duplicated. */
-function addOffice(o, by, via) {
+ *  brought back instead of duplicated. opts.form: the New office form's
+ *  fields (checkOfficeForm), checked again here under the lock; opts.archived:
+ *  written archived (campus.cjs brings it back once it has a building);
+ *  opts.quiet: the caller writes the one activity line itself. */
+function addOffice(o, by, via, opts) {
   checkBy(by)
   needCompany(true)
-  return locked('offices', () => addOfficeLocked(o, via))
+  return locked('offices', () => addOfficeLocked(o, via, opts || {}))
 }
-function addOfficeLocked(o, via) {
-  if (!o || !OFFICE_ID.test(String(o.id)) || o.id === UNASSIGNED) throw fail(400, 'bad office id')
+function addOfficeLocked(o, via, opts) {
+  if (!o || !OFFICE_ID.test(String(o.id)) || o.id === UNASSIGNED || PROTO_KEYS.has(o.id)) throw fail(400, 'bad office id')
   const list = readJson(fileOf('offices'), [])
   const all = Array.isArray(list) ? list : []
   const old = all.find((x) => x && x.id === o.id)
+  const form = opts.form ? checkOfficeForm(opts.form, readCompany(), o.id) : null
   if (old) {
     if (!old.archived) return { id: o.id, created: false }
     old.archived = false
+    // brought back, it takes up no kind another office holds by now
+    if (old.kinds !== undefined) {
+      const held = kindHolders(readCompany())
+      old.kinds = K.cleanKinds(old.kinds).filter((k) => !held.has(k))
+      if (!old.kinds.length) delete old.kinds
+    }
   } else {
-    all.push({ id: o.id, name: clip(o.name || o.id, 40), leadEmployeeId: clip(o.leadEmployeeId, 60), profile: clip(o.profile, 30), layout: 'standard', theme: Object.hasOwn(THEMES, o.theme) ? o.theme : 'slate', order: all.length, budget: null, archived: false })
+    all.push(Object.assign({ id: o.id, name: clip(o.name || o.id, 40), leadEmployeeId: clip(o.leadEmployeeId, 60), profile: clip(o.profile, 30), layout: 'standard', theme: Object.hasOwn(THEMES, o.theme) ? o.theme : 'slate', order: all.length, budget: null, archived: !!opts.archived },
+      // the 1.2 fields only from the form: a pack's or a campus office keeps the 1.1 shape
+      form ? Object.assign({ name: form.name, theme: form.theme, profile: form.profile }, form.kinds && form.kinds.length ? { kinds: form.kinds } : {}, { createdBy: 'board', createdAt: new Date().toISOString() }) : {}))
   }
   writeAtomic(fileOf('offices'), JSON.stringify(all, null, 2))
-  activity({ actor: 'board', action: 'office.added', entityType: 'office', entityId: o.id, summary: 'office ' + o.id + (old ? ' brought back' : ' added'), via: via || 'cli' })
+  if (!opts.quiet) activity({ actor: 'board', action: 'office.added', entityType: 'office', entityId: o.id, summary: 'office ' + o.id + (old ? ' brought back' : ' added'), via: via || 'cli' })
   return { id: o.id, created: !old }
 }
-/** Archives an office (never deletes it): its history stays. Board only. */
+
+/** Changes an office's name, colour, building type or kinds of work (spec
+ *  1.2 rule 17). Board only. The entry is changed in place, so a field this
+ *  version does not know stays. campus.cjs editOffice moves the building's
+ *  drawing along with the type. */
+function editOffice(input, by, via) {
+  checkBy(by)
+  needCompany(true)
+  noProtoKeys(input)
+  return locked('offices', () => editOfficeLocked(input, via))
+}
+function editOfficeLocked(input, via) {
+  const id = String(input.id == null ? '' : input.id)
+  if (!OFFICE_ID.test(id) || id === UNASSIGNED || PROTO_KEYS.has(id)) throw fail(400, 'bad office id')
+  const list = readJson(fileOf('offices'), [])
+  const o = Array.isArray(list) && list.find((x) => x && x.id === id)
+  if (!o) throw fail(404, 'no such office: ' + id)
+  if (o.archived) throw fail(409, 'This office is archived: bring it back first')
+  const fields = {}
+  for (const k of ['name', 'theme', 'type', 'kinds']) if (input[k] !== undefined) fields[k] = input[k]
+  const v = checkOfficeForm(fields, readCompany(), id)
+  const changed = []
+  for (const [k, val] of Object.entries(v)) {
+    const was = k === 'kinds' ? K.cleanKinds(o.kinds) : o[k]
+    if (JSON.stringify(was) === JSON.stringify(val)) continue
+    o[k] = val; changed.push(k)
+  }
+  if (!changed.length) return { id, changed, profile: o.profile, summary: 'office ' + id + ': nothing to change' }
+  if (Array.isArray(o.kinds) && !o.kinds.length) delete o.kinds
+  writeAtomic(fileOf('offices'), JSON.stringify(list, null, 2))
+  const say = (k) => (k === 'profile' ? 'building' : k) + '=' + (k === 'kinds' ? (o.kinds || []).join('|') || 'none' : o[k])
+  const summary = 'office ' + id + ': ' + changed.map(say).join(', ')
+  activity({ actor: 'board', action: 'office.updated', entityType: 'office', entityId: id, officeId: id, summary, via: via || 'cli' })
+  if (via === 'dashboard') inbox({ type: 'office.updated', scope: 'office', id, summary })
+  return { id, changed, profile: o.profile, summary }
+}
+/** Archives an office (never deletes it): its history stays. Board only.
+ *  It gives up its kinds of work (spec 1.2 rule 18). */
 function archiveOffice(id, by, via) {
   checkBy(by)
   needCompany(true)
@@ -693,6 +899,7 @@ function archiveOfficeLocked(id, via) {
   const o = Array.isArray(list) && list.find((x) => x && x.id === id)
   if (!o) throw fail(404, 'no such office: ' + id)
   o.archived = true
+  delete o.kinds
   writeAtomic(fileOf('offices'), JSON.stringify(list, null, 2))
   activity({ actor: 'board', action: 'office.archived', entityType: 'office', entityId: id, summary: 'office ' + id + ' archived', via: via || 'cli' })
   return { id }
@@ -830,4 +1037,5 @@ module.exports = {
   budgetCheck, bossOf, cycleIf, companyState, setBudget, setBudgetsEnabled, updateEmployee, noteIncidents, stampHeartbeat,
   unreadInbox, companyInit, etagOf, activity, inboxLine, addOffice, archiveOffice, writeOverlay, readLines, fileOf,
   OFFICE_ID, AGENT_ID, KEY, readJson,
+  kindHolders, routeOf, runKind, zoneOf, checkOfficeForm, editOffice, noProtoKeys, PROTO_KEYS, officeView, becauseOf,
 }

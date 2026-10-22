@@ -14,7 +14,7 @@
   // waiting: the run asked the owner something, so its person waits at the desk for the answer
   const restOf = (state) => (BUSY.has(state) || state === 'waiting' ? 'desk' : 'lounge')
   const floorY = (x, z) => (Math.abs(x) < SUP_S / 2 && Math.abs(z) < SUP_S / 2 ? DAIS : 0)
-  const seatedTpl = (p) => { const t = templates.get(p.src.agent) || templates.get(''); return !t || !!t.seated }
+  const seatedTpl = (p) => { const t = tplFor(p.src); return !t || !!t.seated }
   const near = (a, b) => Math.abs(a.x - b.x) < 1e-3 && Math.abs(a.z - b.z) < 1e-3
   const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a))
   function claim(list, taken, w, key) {
@@ -159,7 +159,8 @@
       if (!c) {
         c = { el: document.createElement('button'), key: '' }
         c.el.type = 'button'
-        c.el.dataset.anchor = src.id; c.el.dataset.at = src.kind === 'tray' ? 'card' : 'pill'
+        // the tray's count sits on the tray itself, never over a head
+        c.el.dataset.anchor = src.id; c.el.dataset.at = src.kind === 'tray' ? 'tray' : 'pill'
         cards.set(src.id, c)
         cardsEl.appendChild(c.el)
       }
@@ -173,10 +174,13 @@
       for (const a of [...el.attributes]) if (/^data-(?!anchor$|at$)/.test(a.name)) el.removeAttribute(a.name)
       const tmp = document.createElement('div'); tmp.innerHTML = '<i ' + (src.attrs || '') + '></i>'
       for (const a of [...tmp.firstChild.attributes]) if (/^data-/.test(a.name)) el.setAttribute(a.name, a.value)
-      el.className = 'w3card tone-' + (src.kind === 'tray' ? 'tray' : pill.tone) + ' st-' + src.state + (src.kind === 'tray' ? ' tray' : '') + (model.selected === src.id ? ' sel' : '') + (src.state === 'away' ? ' away' : '') + (src.present === false && src.kind !== 'tray' ? ' absent' : '') + (glb ? ' glb' : '')
+      el.className = 'w3card tone-' + (src.kind === 'tray' ? 'tray' : pill.tone) + ' st-' + src.state + (src.kind === 'tray' ? ' tray' : '') + (model.selected === src.id ? ' sel' : '') + (src.state === 'away' ? ' away' : '') + (src.present === false && src.kind !== 'tray' ? ' absent' : '') + (glb ? ' glb' : '') + (src.kind === 'tray' ? ' badge' + (src.count ? '' : ' off') : '')
       el.setAttribute('aria-label', src.aria || src.name || '')
-      el.innerHTML = (src.kind === 'tray' ? '<span class="ic">' + TRAY_ICON + '</span>' : '<i class="dot" aria-hidden="true"></i>') +
-        '<b dir="auto">' + esc(src.name || '') + '</b>' + (src.kind !== 'tray' && pill.word ? '<small>' + esc(pill.word) + '</small>' : '')
+      // one line (owner, 1.2): the dot and the name; the status word is the tooltip. The tray shows
+      // only its count, and nothing at all while it is 0 ("0 reports handed in" is never drawn)
+      el.title = src.kind === 'tray' ? src.name || '' : pill.word || ''
+      el.innerHTML = src.kind === 'tray' ? '<span class="ic">' + TRAY_ICON + '</span><b>' + esc(h.digits ? h.digits(src.count || 0) : String(src.count || 0)) + '</b>'
+        : '<i class="dot" aria-hidden="true"></i><b dir="auto">' + esc(src.name || '') + '</b>'
     }
     for (const [id, c] of cards) if (!seen.has(id)) { c.el.remove(); cards.delete(id) }
   }
@@ -253,15 +257,36 @@
   // sight; the card still says the person is working. The selected one always shows.
   // Pills that would touch step up, one pill-height at a time, until they clear. The
   // selected one stays put, then the ones lower on the screen (nearer the viewer).
+  // A free or finished person's pill waits out of sight until hovered, focused or selected, and takes no room.
+  const stepsBack = (c) => c.classList.contains('tone-idle') && !c.classList.contains('sel') && !c.classList.contains('hov') && c !== document.activeElement
+  /** Every head on the screen, as a box no pill may cover (the person's own pill hangs just above it). */
+  function headBoxes() {
+    if (!O) return []
+    const r0 = ov.getBoundingClientRect(), out = []
+    for (const p of O.byId.values()) {
+      if (!p.ch || p.kind === 'tray') continue
+      const hp = p.ch.holder.position, top = hp.y + (p.w ? p.w.h : p.ch.height)
+      _v.set(hp.x, top, hp.z).project(cam)
+      const x = (_v.x + 1) / 2 * W + r0.left, y0 = (1 - _v.y) / 2 * H + r0.top
+      _v.set(hp.x, top - 0.34, hp.z).project(cam)
+      const y1 = (1 - _v.y) / 2 * H + r0.top, hw = Math.max(5, (y1 - y0) * 0.55)
+      out.push({ id: p.id, left: x - hw, right: x + hw, top: y0, bottom: y1 })
+    }
+    return out
+  }
   function liftPills() {
-    const els = [...cardsEl.children].filter((c) => c.style.display !== 'none')
-    for (const e of els) { e.style.marginTop = ''; e.classList.remove('w3gone') }
+    const all = [...cardsEl.children].filter((c) => c.classList.contains('w3card') && c.style.display !== 'none')
+    for (const e of all) { e.style.marginTop = ''; e.classList.remove('w3gone') }
+    // close pills of one state become a counter chip, and the showcase keeps the four most urgent
+    if (h.crowd) h.crowd(cardsEl, all.filter((c) => !stepsBack(c)), () => { clearTimeout(declutterT); declutterT = setTimeout(declutter, 30) })
+    const els = [...cardsEl.children].filter((c) => c.style.display !== 'none' && !c.classList.contains('w3in') && (c.classList.contains('w3chip') || !stepsBack(c)))
     // a pill lifted up under the office strip would sit on text: it waits out of sight (the person
     // still shows in the lounge and the list); the selected one always shows
     const floorTop = ov.getBoundingClientRect().top + ((h.pad && h.pad.top) || 0)
     const list = els.map((e) => ({ e, r: e.getBoundingClientRect() }))
     list.sort((a, b) => (b.e.classList.contains('sel') - a.e.classList.contains('sel')) || b.r.bottom - a.r.bottom)
-    const placed = []
+    // the heads are there first: a pill steps up past any head it would cover
+    const placed = headBoxes()
     for (const q of list) {
       let top = q.r.top, bottom = q.r.bottom, lift = 0
       for (let i = 0; i < 16; i++) {
@@ -306,7 +331,17 @@
     const hitObj = ray.intersectObjects(O.pick, false)[0]
     return hitObj ? O.byId.get(hitObj.object.userData.id) : null
   }
+  let hovId = null
   function showHover(p, col) {
+    // a free or finished person shows the name only while hovered (or focused, or selected): see .w3card.tone-idle
+    const id = p ? p.id : null
+    if (id !== hovId) {
+      for (const c of cardsEl.querySelectorAll('.w3card.hov')) c.classList.remove('hov')
+      const c = id && cards.get(id)
+      if (c) c.el.classList.add('hov')
+      hovId = id
+      ovDirty = true; clearTimeout(declutterT); declutterT = setTimeout(declutter, 60)
+    }
     if (!p) { hovRing.visible = false; return }
     hovRing.visible = true; hovRing.geometry = podRing(p.S, 0.05); hovRing.position.set(p.x, p.ringY - 0.001, p.z); hovRing.material.color.set(col || '#94a3b8')
   }
@@ -407,11 +442,13 @@
   })
   /** The inspector's "Character" box for one person. */
   function characterBox(agent) {
-    const own = templates.get(agent), tpl = own || templates.get('')
-    if (!tpl) return ''
+    const own = templates.get(agent)
     const ch = O && [...O.byId.values()].find((p) => p.src.agent === agent && p.ch)
+    const tpl = own || (ch ? ch.tpl : templates.get(''))
+    if (!tpl) return ''
     const map = ch ? Object.entries(ch.ch.map).map(([k, v]) => T(k) + ' → ' + (v || '—')).join(' · ') : ''
-    const src = !own ? T('Default character') : own.source === 'dropped' ? T('remembered in this browser') : T('from the characters folder')
+    // no file of the person's own: one of the shipped set (KayKit), picked by the person's look
+    const src = !own ? T('One of the shipped characters') : own.source === 'dropped' ? T('remembered in this browser') : T('from the characters folder')
     return '<h3 class="sect">' + T('Character') + '</h3><div class="w3box"><div class="h"><b dir="ltr">' + esc(tpl.name) + '</b><span class="dim">' + src + '</span></div>' +
       (map ? '<div class="map" dir="ltr">' + esc(map) + '</div>' : '') +
       '<div class="acts"><button type="button" data-w3load="' + esc(agent) + '">' + T('Load .glb…') + '</button>' +
@@ -439,7 +476,7 @@
       p.src = src
       if ((!!p.ch) !== (!!src.present) || (p.ch && p.charSig !== charSigOf(src))) placeCharacter(p)
       if (p.kind === 'desk') syncWalker(p, src)
-      else if (p.ch) playState(p.ch, src.anim || 'idle')
+      else if (p.ch) playState(p.ch, src.anim === 'celebrate' && p.ch.tpl.seated ? 'idle' : src.anim || 'idle')
       if (p.pb) {
         const col = STATE_COL[src.state] || STATE_COL.none
         p.pb.material.color.set(col); p.pb.material.emissive.set(col)
@@ -505,13 +542,15 @@
         const w = p.w
         if (p.ch && w) {
           if (stepWalker(w, wdt)) ovDirty = true
-          const clip = w.path.length ? 'walk' : w.pause > 0 || w.loc === 'sup' ? 'stand' : w.loc === 'desk' ? (p.src.anim || 'idle') : 'idle'
+          // standing at the bar is "stand", on a sofa "idle" (seated); a report handed in as "done" is cheered once
+          const sofa = w.loc === 'lounge' && w.seat >= 0 && O.lounge.seats[w.seat] && O.lounge.seats[w.seat].sofa
+          const clip = w.path.length ? 'walk' : w.act === 'handin' && p.src.state === 'done' ? 'celebrate' : w.pause > 0 || w.loc === 'sup' ? 'stand' : w.loc === 'desk' ? (p.src.anim === 'celebrate' ? 'idle' : p.src.anim || 'idle') : w.loc === 'lounge' && !sofa ? 'stand' : 'idle'
           playState(p.ch, clip)
           const hp = p.ch.holder
           hp.position.set(w.pos.x, floorY(w.pos.x, w.pos.z), w.pos.z)
           const want = w.path.length ? w.head : w.rot
           hp.rotation.y = calm ? want : hp.rotation.y + wrapA(want - hp.rotation.y) * Math.min(1, wdt * 9)
-          w.h = clip === 'walk' || clip === 'stand' || !p.ch.tpl.seated ? p.ch.standH : p.ch.height
+          w.h = clip === 'walk' || clip === 'stand' || clip === 'celebrate' || !p.ch.tpl.seated ? p.ch.standH : p.ch.height
         }
         if (p.ch && !calm) p.ch.mixer.update(dt)
         if (p.pb) {
@@ -559,9 +598,11 @@
   const chars = h.characters || {}
   const boot = (async () => {
     if (chars.default) { try { await addTemplate('', fromB64(chars.default), 'default.glb', 'default') } catch (e) { /* no default: the podiums stay empty */ } }
+    for (const [name, b64] of Object.entries(chars.set || {})) { try { await addTemplate('~set:' + name, fromB64(b64), 'person-' + name + '.glb', 'set') } catch (e) { /* a broken file: that look falls back to the default */ } }
     for (const [agent, b64] of Object.entries(chars.byAgent || {})) { try { await addTemplate(agent, fromB64(b64), agent + '.glb', 'file') } catch (e) { /* a broken file: that person keeps the default */ } }
     await idbOpen()
     for (const [k, v] of await idbAll()) if (v && v.buf) { try { await addTemplate(k, v.buf, v.name, 'dropped') } catch (e) { idbDel(k) } }
+    booted = true
     refreshCharacters()
   })()
 
@@ -577,7 +618,7 @@
     info: () => ({
       key: O ? O.key : '', calls: renderer.info.render.calls, soft,
       podiums: O ? [...O.byId.values()].map((p) => ({
-        id: p.id, kind: p.kind, agent: p.src.agent || '', state: p.src.state, character: !!p.ch, clip: p.ch ? p.ch.cur : null, cell: [p.x / PITCH, p.z / PITCH],
+        id: p.id, kind: p.kind, agent: p.src.agent || '', state: p.src.state, tone: (p.src.pill && p.src.pill.tone) || '', character: !!p.ch, model: p.ch ? p.ch.tpl.name : null, clip: p.ch ? p.ch.cur : null, cell: [p.x / PITCH, p.z / PITCH],
         // where the person is: 'desk', 'lounge', 'sup' (at the supervisor) or 'walk'; the lead is always at the supervisor's desk
         loc: p.w ? (p.w.path.length ? 'walk' : p.w.loc) : p.kind === 'lead' && p.ch ? 'sup' : null,
         act: p.w ? p.w.act : null, trail: p.w ? p.w.trail.slice() : [],
@@ -586,6 +627,8 @@
         pos: p.ch ? [p.ch.holder.position.x, p.ch.holder.position.y, p.ch.holder.position.z] : null,
       })) : [],
       cards: cards.size,
+      // where each head is on the screen (no pill may cover one)
+      heads: headBoxes(),
       // the fixed places of the floor
       spots: O ? { supervisor: { x: O.sup.x, z: O.sup.z, visits: O.sup.visits.length, tray: [O.sup.trayAt.x, O.sup.trayAt.z] }, lounge: { seats: O.lounge.seats.filter((s) => s.sofa).length, standing: O.lounge.seats.filter((s) => !s.sofa).length }, room: O.r } : null,
       // nothing casts or takes a shadow, and nothing hangs below the floor
