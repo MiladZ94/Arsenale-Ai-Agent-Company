@@ -69,7 +69,7 @@ touches your data:
 
 ```
 git clone https://github.com/emadbarandan/Arsenale-Ai-Agent-Company.git
-cd Arsenale
+cd Arsenale-Ai-Agent-Company
 node bin/arsenale.cjs demo
 ```
 
