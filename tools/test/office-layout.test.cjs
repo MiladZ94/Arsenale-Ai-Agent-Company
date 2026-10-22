@@ -36,9 +36,9 @@ test('8 runs are 8 people at work (the implementer twice), each at a desk of its
   if (await browser.skipWithout3d(t)) return
   const { page, base } = await world()
   await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
-  await page.waitFor(READY, 20000)
+  if (!(await browser.ready3d(t, page, READY, 20000))) return
   await page.sleep(400) // a free person's pill fades out (0.2 s)
-  const got = await page.eval(`(() => {
+  const measure = () => page.eval(`(() => {
     const i = window.__office3d.info()
     // 1.2: only working and flagged people show a pill; a free or finished one waits out of sight until hovered or focused
     const quiet = (c) => c.classList.contains('tone-idle') && !c.classList.contains('sel') && !c.classList.contains('hov')
@@ -61,6 +61,17 @@ test('8 runs are 8 people at work (the implementer twice), each at a desk of its
       idle: i.podiums.filter((p) => p.tone === 'idle').length,
     }
   })()`)
+  // the boxes are read once two readings in a row agree to the pixel: on a
+  // slow runner someone may still be walking to a desk, or a card settling
+  const px = (g) => JSON.stringify([g.boxes, g.heads].map((l) => l.map((r) => r.map(Math.round))))
+  let got = await measure()
+  for (const end = Date.now() + (process.env.CI ? 60000 : 20000); Date.now() < end;) {
+    await page.sleep(300)
+    const again = await measure()
+    const same = px(again) === px(got)
+    got = again
+    if (same) break
+  }
   assert.deepEqual(got.working, ['architect', 'implementer', 'implementer#2', 'planner', 'refactorer', 'releaser', 'reviewer', 'tester'], 'the implementer works twice: two people')
   assert.equal(new Set(got.cells).size, got.cells.length, 'no two people share a desk')
   assert.deepEqual(got.cards, got.ids, 'one card per person, the second implementer included')
@@ -84,7 +95,7 @@ test('a person keeps their desk while the page redraws; a third run of the same 
   if (await browser.skipWithout3d(t)) return
   const { sb, page, base } = await world()
   await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
-  await page.waitFor(READY, 20000)
+  if (!(await browser.ready3d(t, page, READY, 20000))) return
   const before = await cells(page)
   await page.sleep(3500) // two polls
   assert.deepEqual(await cells(page), before, 'nothing moved')

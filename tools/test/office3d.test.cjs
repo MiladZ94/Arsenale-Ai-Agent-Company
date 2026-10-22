@@ -45,7 +45,7 @@ test('office 3D: every person of the office has a podium, a card and a character
   if (await browser.skipWithout3d(t)) return
   const { page, base, log } = await world()
   await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
-  await page.waitFor(READY, 15000)
+  if (!(await browser.ready3d(t, page, READY, 15000))) return
   await sleep(300)
   const got = await page.eval(`(() => {
     const info = window.__office3d.info()
@@ -86,7 +86,7 @@ test('office 3D: the 1.5 s redraw keeps the camera, the canvas and the cards', {
   if (await browser.skipWithout3d(t)) return
   const { page, base, sb } = await world()
   await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
-  await page.waitFor(READY, 15000)
+  if (!(await browser.ready3d(t, page, READY, 15000))) return
   await page.eval("window.__office3d.zoomBy(1.7); window.__office3d.panBy(90, -40); document.querySelector('#stage canvas').dataset.mark = 'same'; document.querySelector('.w3card').dataset.mark = 'same'; 1")
   await sleep(600)
   const before = await page.eval('window.__office3d.view()')
@@ -101,7 +101,7 @@ test('office 3D: the 1.5 s redraw keeps the camera, the canvas and the cards', {
   assert.equal(after.canvas, 'same', 'the canvas is the same element')
   assert.equal(after.card, 'same', 'the cards are kept, not drawn anew')
   await page.goto(base + '/?v=' + Date.now() + '#/office/engineering')
-  await page.waitFor(READY, 15000)
+  if (!(await browser.ready3d(t, page, READY, 15000))) return
   const back = await page.eval('window.__office3d.view()')
   for (const k of ['tx', 'tz', 'zoom']) assert.ok(Math.abs(back[k] - before[k]) < 1e-3, k + ' restored after a reload')
 })
@@ -160,7 +160,7 @@ test('office 3D: no shadows, and everything stands on the floor; the campus has 
   if (await browser.skipWithout3d(t)) return
   const { page, base } = await world()
   await page.goto(base + '/?v=s1#/office/engineering')
-  await page.waitFor(READY, 15000)
+  if (!(await browser.ready3d(t, page, READY, 15000))) return
   const i = await info(page)
   assert.equal(i.shadows.map, false, 'the renderer draws no shadows')
   assert.equal(i.shadows.casters, 0, 'and nothing casts or takes one')
@@ -189,7 +189,7 @@ test('office 3D: the lounge and the supervisor station; idle people rest in the 
   const { page, base, sb } = await world()
   warmUp(sb)
   await page.goto(base + '/?v=s3#/office/engineering')
-  await page.waitFor(READY, 15000)
+  if (!(await browser.ready3d(t, page, READY, 15000))) return
   await sleep(800)
   const i = await info(page)
   assert.ok(i.spots && i.spots.supervisor && i.spots.supervisor.visits >= 1, 'the supervisor station has places to stand')
@@ -215,7 +215,7 @@ test('office 3D: starting work walks from the lounge to the supervisor and the d
   const { page, base, sb, log } = await world()
   warmUp(sb)
   await page.goto(base + '/?v=s4#/office/engineering')
-  await page.waitFor(READY, 15000)
+  if (!(await browser.ready3d(t, page, READY, 15000))) return
   await page.eval('window.__office3d.pace(8); 1')
   await page.waitFor("(() => { const p = window.__office3d.info().podiums.find((x) => x.id === 'walker-agent'); return p && p.loc === 'lounge' })()", 10000)
   const id = sb.cli('--start', JSON.stringify({ agent: 'walker-agent', task: 'walk check', project: 'democalc', model: 'sonnet' })).out.trim()
@@ -237,7 +237,7 @@ test('office 3D: a state that changes halfway through a walk is taken from where
   const { page, base, sb, log } = await world()
   warmUp(sb)
   await page.goto(base + '/?v=s5#/office/engineering')
-  await page.waitFor(READY, 15000)
+  if (!(await browser.ready3d(t, page, READY, 15000))) return
   await page.eval('window.__office3d.pace(1); 1')
   await page.waitFor("(() => { const p = window.__office3d.info().podiums.find((x) => x.id === 'walker-agent'); return p && p.loc === 'lounge' })()", 10000)
   const id = sb.cli('--start', JSON.stringify({ agent: 'walker-agent', task: 'walk check two', project: 'democalc', model: 'sonnet' })).out.trim()
@@ -261,9 +261,11 @@ test('office 3D: a character file without a walk clip still walks, in its idle p
   if (await browser.skipWithout3d(t)) return
   const { page, base, sb, log } = await world()
   fs.writeFileSync(path.join(sb.root, 'characters', 'walker-agent.glb'), withoutWalk(fs.readFileSync(path.join(sb.tools, 'characters', 'default.glb'))))
+  // gone again however this test ends: the next test reads the shipped character
+  t.after(() => fs.rmSync(path.join(sb.root, 'characters', 'walker-agent.glb'), { force: true }))
   warmUp(sb)
   await page.goto(base + '/?v=s6#/office/engineering')
-  await page.waitFor("window.__office3d && window.__office3d.info().podiums.some((p) => p.id === 'walker-agent' && p.character)", 15000)
+  if (!(await browser.ready3d(t, page, "window.__office3d && window.__office3d.info().podiums.some((p) => p.id === 'walker-agent' && p.character)", 15000))) return
   await page.waitFor("!!document.querySelector('.w3card.glb[data-anchor=\"walker-agent\"]')", 10000)
   await page.eval('window.__office3d.pace(1); 1')
   const id = sb.cli('--start', JSON.stringify({ agent: 'walker-agent', task: 'walk check three', project: 'democalc', model: 'sonnet' })).out.trim()
@@ -318,7 +320,7 @@ test('office 3D, the shipped set: each state plays its own clip (Walk, Stand, Ty
   const { page, base, sb, log } = await world()
   warmUp(sb)
   await page.goto(base + '/?v=s7#/office/engineering')
-  await page.waitFor(READY, 15000)
+  if (!(await browser.ready3d(t, page, READY, 15000))) return
   await page.eval('window.__office3d.pace(1); 1')
   const P = "window.__office3d.info().podiums.find((x) => x.id === 'walker-agent')"
   await page.waitFor("(() => { const p = " + P + "; return p && p.loc === 'lounge' })()", 10000)

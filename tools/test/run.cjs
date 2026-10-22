@@ -22,15 +22,17 @@ const FAST = all.filter((f) => !UI.includes(f)).sort((a, b) => rank(a) - rank(b)
 
 // A test that hangs fails after five minutes instead of holding the whole run.
 // Fast files run side by side, one per two cores; TEST_CONCURRENCY overrides.
-function run(files, concurrency) {
+function run(files, concurrency, timeoutMs) {
   if (!files.length) return 0
   // on GitHub Actions the failures are annotations too (annotate.cjs)
   const report = process.env.GITHUB_ACTIONS ? ['--test-reporter=spec', '--test-reporter-destination=stdout', '--test-reporter=' + require('url').pathToFileURL(path.join(__dirname, 'annotate.cjs')).href, '--test-reporter-destination=stdout'] : []
-  const r = spawnSync(process.execPath, ['--test', '--test-timeout=300000', '--test-concurrency=' + concurrency, ...report, ...files.map((f) => path.join(__dirname, f))], { stdio: 'inherit' })
+  const r = spawnSync(process.execPath, ['--test', '--test-timeout=' + (timeoutMs || 300000), '--test-concurrency=' + concurrency, ...report, ...files.map((f) => path.join(__dirname, f))], { stdio: 'inherit' })
   return r.status === null ? 1 : r.status
 }
 const fastN = process.env.TEST_CONCURRENCY || String(Math.max(2, Math.min(7, Math.floor(require('os').availableParallelism() / 2))))
 let status = 0
 if (tier !== 'ui') status = run(FAST, fastN) || status
-if (tier !== 'fast') status = run(UI, '2') || status
+// A CI runner draws the 3D pages in software on a few cores: there the ui
+// files run one at a time, with 15 minutes each.
+if (tier !== 'fast') status = (process.env.GITHUB_ACTIONS ? run(UI, '1', 900000) : run(UI, '2')) || status
 process.exit(status)

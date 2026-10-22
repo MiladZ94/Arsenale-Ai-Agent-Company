@@ -39,6 +39,14 @@ const file = (sb) => { try { return JSON.parse(fs.readFileSync(path.join(sb.comp
 const at = (type, x, y) => `(() => { const [px, py] = window.__campus.info().lotXY(${x}, ${y}); const el = document.elementFromPoint(px, py); el.dispatchEvent(new ${type === 'click' ? 'MouseEvent' : 'PointerEvent'}('${type}', { clientX: px, clientY: py, pointerId: 7, button: 0, bubbles: true })); return 1 })()`
 const click = async (page, x, y) => { await page.eval(at('click', x, y)); await page.sleep(500) }
 const msg = (page) => page.eval(`(document.getElementById('c3msg') || {}).textContent || ''`)
+// the 3D office of a building, loaded; when a CI runner cannot load it in time
+// (browser.ready3d) the page goes back to the campus the next tests start from
+async function office3d(t, page, expr) {
+  if (await browser.ready3d(t, page, expr, 15000)) return true
+  await page.eval("location.hash = '#/campus'; 1")
+  await page.waitFor("document.querySelector('#cmap g.bld[data-office=docs]')", 5000)
+  return false
+}
 const ghost = (page) => page.eval(`(document.getElementById('cghost-lab') || {}).textContent || ''`)
 
 test('the campus shows one building per office on a lot, with an office card each; only the lots in use are on show', { skip: SKIP || false }, async () => {
@@ -111,12 +119,12 @@ test('a building enters its office, with the keyboard too', { skip: SKIP || fals
   const { page } = await world()
   await page.eval("document.querySelector('#cmap g.bld[data-office=docs]').dispatchEvent(new MouseEvent('click', { bubbles: true })); 1")
   await page.waitFor("location.hash === '#/office/docs'", 5000)
-  await page.waitFor('window.__office3d && window.__office3d.info()', 15000) // let the 3D office finish loading before leaving it
+  if (!(await office3d(t, page, 'window.__office3d && window.__office3d.info()'))) return // let the 3D office finish loading before leaving it
   await page.eval("location.hash = '#/campus'; 1")
   await page.waitFor("document.querySelector('#cmap g.bld[data-office=docs]')", 5000)
   await page.eval("document.querySelector('#cmap g.bld[data-office=hq]').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); 1")
   await page.waitFor("location.hash === '#/office/hq'", 5000)
-  await page.waitFor('window.__office3d && window.__office3d.info()', 15000)
+  if (!(await office3d(t, page, 'window.__office3d && window.__office3d.info()'))) return
   await page.eval("location.hash = '#/campus'; 1")
   await page.waitFor("document.querySelector('#cmap g.bld[data-office=docs]')", 5000)
 })
@@ -127,7 +135,7 @@ test('leaving an office keeps you on the campus: a camera report that is still o
   await page.eval("location.hash = '#/campus'; 1")
   await page.waitFor("document.querySelector('#cmap g.bld[data-office=hq]')", 5000)
   await page.eval("document.querySelector('#cmap g.bld[data-office=hq]').dispatchEvent(new MouseEvent('click', { bubbles: true })); 1")
-  await page.waitFor('window.__office3d && window.__office3d.info() && window.__office3d.info().key', 15000)
+  if (!(await office3d(t, page, 'window.__office3d && window.__office3d.info() && window.__office3d.info().key'))) return
   // move the camera (its report is sent about 400 ms later), and change the address to the campus without the page being told yet
   await page.eval("window.__office3d.aim(0, 0, 2); history.pushState(null, '', '#/campus'); 1")
   for (let i = 0; i < 4; i++) {

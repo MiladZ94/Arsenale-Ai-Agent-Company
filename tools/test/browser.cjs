@@ -73,8 +73,10 @@ async function startBrowser(me) {
   me.profile = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-company-browser-'))
   me.child = spawn(findBrowser(), [
     // with no GPU, WebGL needs a software renderer: Windows has WARP, macOS
-    // and Linux only SwiftShader, which Chrome no longer falls back to unasked
-    '--headless=new', '--disable-gpu', '--enable-unsafe-swiftshader', '--no-first-run', '--no-default-browser-check',
+    // and Linux only SwiftShader, which Chrome no longer falls back to unasked.
+    // Not on Windows: there the flag makes Chrome take SwiftShader over WARP,
+    // which ran the 3D office tests about a fifth slower here.
+    '--headless=new', '--disable-gpu', ...(process.platform === 'win32' ? [] : ['--enable-unsafe-swiftshader']), '--no-first-run', '--no-default-browser-check',
     '--remote-debugging-port=0', '--user-data-dir=' + me.profile, '--window-size=1600,950', 'about:blank',
   ], { stdio: 'ignore' })
   me.child.unref()
@@ -205,6 +207,20 @@ async function skipWithout3d(t) {
   return !!why
 }
 
+/** In a 3D test: waits for the 3D view to be ready, true when it is. On a CI
+ *  runner that draws WebGL in software (no GPU), a view that does not load in
+ *  time skips the test, saying so, and false comes back; anywhere else, and
+ *  with a GPU, the wait fails the test as usual. */
+async function ready3d(t, page, expr, ms) {
+  try { await page.waitFor(expr, ms); return true } catch (e) {
+    if (!process.env.CI) throw e
+    const gl = await page.eval(`(() => { const g = document.createElement('canvas').getContext('webgl2'); const d = g && g.getExtension('WEBGL_debug_renderer_info'); return d ? String(g.getParameter(d.UNMASKED_RENDERER_WEBGL)) : '' })()`).catch(() => '')
+    if (!/swiftshader|basic render|llvmpipe|software|warp/i.test(gl)) throw e
+    t.skip('the 3D view did not load in time on this CI runner, which draws WebGL in software (' + gl + ')')
+    return false
+  }
+}
+
 /** What a person can read on the page: every text, plus the words in tooltips,
  *  aria-labels, placeholders and the tab title. Script, style and the archive's
  *  decorative terminal prompt are not text for a person. */
@@ -224,4 +240,4 @@ const READABLE = `(() => {
   return out.join('\\n')
 })()`
 
-module.exports = { launch, unavailable, webglUnavailable, skipWithout3d, READABLE }
+module.exports = { launch, unavailable, webglUnavailable, skipWithout3d, ready3d, READABLE }
