@@ -162,9 +162,9 @@ fi
 echo "Arsenale installer$([ "$DRY" -eq 1 ] && echo ' (dry run: nothing is changed)' || true)"
 echo "  code:        $REPO"
 echo "  data folder: $DATA"
-if ! command -v node >/dev/null 2>&1; then echo "Node.js was not found. Install Node.js 20 or newer from https://nodejs.org and run this again." >&2; exit 1; fi
+if ! command -v node >/dev/null 2>&1; then echo "Node.js was not found. Install Node.js 22 or newer from https://nodejs.org and run this again." >&2; exit 1; fi
 NODEV="$(node --version | sed 's/^v//')"
-if [ "${NODEV%%.*}" -lt 20 ]; then echo "Node.js $NODEV is too old: Arsenale needs 20 or newer." >&2; exit 1; fi
+if [ "${NODEV%%.*}" -lt 22 ]; then echo "Node.js $NODEV is too old: Arsenale needs 22 or newer." >&2; exit 1; fi
 echo "  node:        $NODEV"
 
 act "create $BIN"

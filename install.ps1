@@ -8,7 +8,7 @@
   What it does, in order. Every step that touches a file outside the data
   folder asks first; -Yes answers yes to all of them, -DryRun only prints.
 
-    1. Checks Node.js 20 or newer.
+    1. Checks Node.js 22 or newer.
     2. Creates the data folder (default $HOME\.arsenale) with:
          bin\arsenale.cmd and bin\arsenale   launchers for cmd/PowerShell and Git Bash
          config.json                          which agent and transcript folders to read
@@ -229,9 +229,9 @@ Say "  code:        $Repo"
 Say "  data folder: $DataDir"
 
 $node = Get-Command node -ErrorAction SilentlyContinue
-if (-not $node) { Write-Error 'Node.js was not found. Install Node.js 20 or newer from https://nodejs.org and run this again.'; exit 1 }
+if (-not $node) { Write-Error 'Node.js was not found. Install Node.js 22 or newer from https://nodejs.org and run this again.'; exit 1 }
 $ver = (& node --version) -replace '^v', ''
-if ([int]($ver.Split('.')[0]) -lt 20) { Write-Error "Node.js $ver is too old: Arsenale needs 20 or newer."; exit 1 }
+if ([int]($ver.Split('.')[0]) -lt 22) { Write-Error "Node.js $ver is too old: Arsenale needs 22 or newer."; exit 1 }
 Say "  node:        $ver"
 
 # 2. data folder, launchers, config

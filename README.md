@@ -62,7 +62,7 @@ folder or a `.zip` someone gave you.
 
 ## Install
 
-You need [Node.js](https://nodejs.org) 20 or newer and git.
+You need [Node.js](https://nodejs.org) 22 or newer and git.
 
 Try it first. This shows an invented company in a temporary folder and never
 touches your data:

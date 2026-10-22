@@ -59,7 +59,7 @@ You, your assistant, and the offices with the people who work in them:
 
 ## Quick start
 
-You need [Node.js](https://nodejs.org) 20 or newer and git.
+You need [Node.js](https://nodejs.org) 22 or newer and git.
 
 ```
 git clone https://github.com/emadbarandan/Arsenale.git
@@ -747,7 +747,7 @@ back from the backup), the launchers and the PATH entry. Your run logs stay in
 Version 1.1.0. There is no desktop app yet: Arsenale runs as `arsenale serve`
 in your browser, so the installer still needs Node.js. Tested on Windows 11
 with Node.js 24; the CI runs the test
-suite on Windows, macOS and Ubuntu with Node.js 20, 22 and 24. The transcript
+suite on Windows, macOS and Ubuntu with Node.js 22 and 24. The transcript
 reading follows Claude Code's file layout as of this release and degrades to
 "not recorded" if that layout changes.
 
