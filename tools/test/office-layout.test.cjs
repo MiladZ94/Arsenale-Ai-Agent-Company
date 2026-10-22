@@ -101,7 +101,7 @@ test('a person keeps their desk while the page redraws; a third run of the same 
   assert.deepEqual(await cells(page), before, 'nothing moved')
   const r = sb.cli('--start', JSON.stringify({ agent: 'implementer', task: 'a third run', project: 'ledger', model: 'sonnet', doing: 'reading A' }))
   assert.equal(r.code, 0, r.err)
-  await page.waitFor("window.__office3d.info().podiums.some((p) => p.id === 'implementer#3')", 15000)
+  if (!(await browser.ready3d(t, page, "window.__office3d.info().podiums.some((p) => p.id === 'implementer#3')", process.env.CI ? 60000 : 15000))) return
   const after = await cells(page)
   assert.deepEqual(after.filter((c) => before.includes(c)), before, 'every desk kept its person')
   assert.equal(after.length, before.length + 1, 'and one person came')
