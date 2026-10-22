@@ -134,7 +134,7 @@ test('phone buttons: action approvals the rules allow and choice questions only;
   assert.equal(hg.approvalType, 'hire')
   assert.equal(buttons(hg), 0)
   // a forged-looking tap on it is still refused, and the proposal waits
-  assert.equal(N.accept(N.sign(hg, 'approve'), 'ntfy').reason, 'not-eligible')
+  assert.equal(N.accept(N.sign(hg, 'approve', { channel: 'ntfy' }), 'ntfy').reason, 'not-eligible')
   assert.equal(gateOf(sb, hire.question_id).status, 'waiting')
   // an action approval in a category the phone may approve: buttons; off in the rules: none
   const act = gateOf(sb, Po.checkAction({ team_member: 'copywriter', category: 'post.public', summary: 'post the autumn menu' }, sup).question_id)
@@ -401,4 +401,9 @@ test('Create that fails after the company was made removes company/ too, so "Try
   const r = O.create({ name: 'Bluefin Bakery', packs: ['hr'] }, board)
   assert.equal(r.company, 'Bluefin Bakery')
   assert.ok(fs.existsSync(path.join(sb.company, 'company.json')))
+})
+
+test('.gitignore: a data folder pointed at the checkout keeps its secrets, keys and settings out of git', () => {
+  const lines = fs.readFileSync(path.join(__dirname, '..', '..', '.gitignore'), 'utf8').split(/\r?\n/).map((l) => l.trim())
+  for (const want of ['secrets/', 'notify/', 'secrets.json', '/launch-key', '/settings/', '/alerts/', '/test-queue/', '/resume/']) assert.ok(lines.includes(want), want)
 })

@@ -162,9 +162,9 @@ fi
 echo "Arsenale installer$([ "$DRY" -eq 1 ] && echo ' (dry run: nothing is changed)' || true)"
 echo "  code:        $REPO"
 echo "  data folder: $DATA"
-if ! command -v node >/dev/null 2>&1; then echo "Node.js was not found. Install Node.js 20 or newer from https://nodejs.org and run this again." >&2; exit 1; fi
+if ! command -v node >/dev/null 2>&1; then echo "Node.js was not found. Install Node.js 22 or newer from https://nodejs.org and run this again." >&2; exit 1; fi
 NODEV="$(node --version | sed 's/^v//')"
-if [ "${NODEV%%.*}" -lt 20 ]; then echo "Node.js $NODEV is too old: Arsenale needs 20 or newer." >&2; exit 1; fi
+if [ "${NODEV%%.*}" -lt 22 ]; then echo "Node.js $NODEV is too old: Arsenale needs 22 or newer." >&2; exit 1; fi
 echo "  node:        $NODEV"
 
 act "create $BIN"
@@ -214,7 +214,7 @@ for t in "${WANT[@]+"${WANT[@]}"}"; do
   case "$t" in
     claude-code)
       ask "Set up Claude Code in $CLAUDE (agent team, /feature and /fix skills, a block in CLAUDE.md)?" || continue
-      files=(); for f in "$REPO"/agents/*.md "$REPO"/agents/labels.fa.json; do [ -e "$f" ] && files+=("$f"); done
+      files=(); for f in "$REPO"/agents/*.md "$REPO"/agents/labels.json; do [ -e "$f" ] && files+=("$f"); done
       copy_side_by_side "$REPO/agents" "$CLAUDE/agents" "agent files" "${files[@]}"
       files=(); while IFS= read -r f; do files+=("$f"); done < <(find "$REPO/adapters/claude-code/skills" -type f | sort)
       copy_side_by_side "$REPO/adapters/claude-code/skills" "$CLAUDE/skills" "skill files" "${files[@]}"

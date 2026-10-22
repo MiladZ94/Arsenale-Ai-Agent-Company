@@ -1,0 +1,18 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs, design, verify, ship, plan, ops, data or legal.",
+  "release-lead": {
+    "dept": "lead"
+  },
+  "release-notes-writer": {
+    "dept": "docs"
+  },
+  "install-tester": {
+    "dept": "ship"
+  },
+  "release-manager": {
+    "dept": "build"
+  },
+  "release-builder": {
+    "dept": "build"
+  }
+}

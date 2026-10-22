@@ -1,0 +1,110 @@
+{
+  "format": "arsenale-pack",
+  "formatVersion": 1,
+  "id": "verification",
+  "version": "1.0.0",
+  "name": "Verification",
+  "description": "Check that work is really done: run the suite, look at the screen, re-check every finding and keep the evidence.",
+  "minArsenale": "1.0.0",
+  "office": {
+    "id": "verification",
+    "name": "Verification",
+    "theme": "violet",
+    "profile": "verification",
+    "lead": "verification-lead"
+  },
+  "members": [
+    {
+      "file": "agents/verification-lead.md",
+      "id": "verification-lead",
+      "zone": "lead",
+      "title": "Verification Lead",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/flaky-test-triager.md",
+      "id": "flaky-test-triager",
+      "zone": "verify",
+      "title": "Flaky Test Triager",
+      "tier": "light"
+    },
+    {
+      "file": "agents/evidence-collector.md",
+      "id": "evidence-collector",
+      "zone": "verify",
+      "title": "Evidence Collector",
+      "tier": "light"
+    },
+    {
+      "file": "agents/regression-guard.md",
+      "id": "regression-guard",
+      "zone": "verify",
+      "title": "Regression Guard",
+      "tier": "standard"
+    },
+    {
+      "id": "tester",
+      "ref": true,
+      "zone": "build",
+      "title": "Tester",
+      "tier": "standard"
+    },
+    {
+      "id": "visual-qa",
+      "ref": true,
+      "zone": "design",
+      "title": "Visual QA",
+      "tier": "standard"
+    },
+    {
+      "id": "finding-verifier",
+      "ref": true,
+      "zone": "review",
+      "title": "Finding Verifier",
+      "tier": "light"
+    },
+    {
+      "id": "code-reviewer",
+      "ref": true,
+      "zone": "review",
+      "title": "Code Reviewer",
+      "tier": "standard"
+    }
+  ],
+  "sampleTasks": [
+    {
+      "title": "Collect the evidence of a finished phase",
+      "description": "From the invented gate reports I name, list every check with its result line and the path of its proof.",
+      "assignee": "evidence-collector"
+    },
+    {
+      "title": "Sort the failures of a red test run",
+      "description": "From the invented test output I name, group the failures and mark the ones that look flaky, with reasons.",
+      "assignee": "flaky-test-triager"
+    }
+  ],
+  "policy": {
+    "members": {
+      "verification-lead": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "flaky-test-triager": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "evidence-collector": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "regression-guard": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      }
+    }
+  }
+}

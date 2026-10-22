@@ -4,14 +4,11 @@
   "id": "design",
   "version": "1.0.0",
   "name": "Design",
-  "nameFa": "طراحی",
   "description": "Develop brand moodboards and palettes, describe or draw flyer and poster layouts, write briefs for image tools and review designs before they go out.",
-  "descriptionFa": "تهیه‌ی مودبورد و پالت رنگ برند، توصیف یا ترسیم چیدمان بروشور و پوستر، نوشتن بریف برای ابزارهای تصویرساز و بازبینی طرح‌ها پیش از انتشار.",
   "minArsenale": "1.0.0",
   "office": {
     "id": "design",
     "name": "Design",
-    "nameFa": "طراحی",
     "theme": "green",
     "profile": "design",
     "lead": "design-lead"
@@ -22,7 +19,6 @@
       "id": "design-lead",
       "zone": "lead",
       "title": "Design Lead",
-      "titleFa": "مدیر طراحی",
       "tier": "standard"
     },
     {
@@ -30,7 +26,6 @@
       "id": "brand-designer",
       "zone": "design",
       "title": "Brand Designer",
-      "titleFa": "طراح برند",
       "tier": "standard"
     },
     {
@@ -38,7 +33,6 @@
       "id": "layout-designer",
       "zone": "design",
       "title": "Layout Designer",
-      "titleFa": "طراح چیدمان",
       "tier": "standard"
     },
     {
@@ -46,7 +40,6 @@
       "id": "image-brief-writer",
       "zone": "design",
       "title": "Image Brief Writer",
-      "titleFa": "نویسنده‌ی بریف تصویر",
       "tier": "standard"
     },
     {
@@ -54,7 +47,6 @@
       "id": "design-reviewer",
       "zone": "review",
       "title": "Design Reviewer",
-      "titleFa": "بازبین طراحی",
       "tier": "light"
     }
   ],

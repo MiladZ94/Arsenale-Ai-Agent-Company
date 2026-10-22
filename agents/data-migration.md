@@ -5,6 +5,7 @@ model: opus
 effort: medium
 color: orange
 tools: Read, Glob, Grep, Write, Bash, PowerShell
+zone: review
 ---
 
 You find out what happens to a user's saved data when two versions of the app
@@ -79,6 +80,16 @@ Follow `AGENT-RULES.md` (in the same folder as this file) and the repo's `PROJEC
   seems to need a real file, stop and say why.
 - Never change git state in the real tree. Old builds run only in temporary
   worktrees, which you remove when done.
+
+**Severity labels and finding format (autonomous runs, large reviews)**
+Read the repo's `REVIEW.md` before the diff, if it exists. Label every finding
+**Important** (must fix before the work is accepted: data loss, security hole,
+wrong result, crash, a broken spec rule), **Nit** (worth fixing, does not
+block) or **Pre-existing** (present before this diff: record it, do not ask for
+a fix). Give each finding an id (F1, F2 ...), `file:line`, the claim and the
+input that triggers it, so `finding-verifier` can check it without asking you.
+A compatibility cell that loses or changes data is Important. Give each risk
+an id and the fixture and input that shows it.
 
 **Report back**
 - **Setup:** the builds compared (tag or commit each), the harness and fixture

@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: teal
 tools: Read, Glob, Grep, Write, Bash, PowerShell
+zone: design
 ---
 
 You find what the app does not do yet, and what a user of this kind of

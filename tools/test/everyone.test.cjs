@@ -81,8 +81,8 @@ test('tasks: keys per prefix, validation with units, links only http(s) or a pat
   assert.equal(ok.dueDate, '2025-01-01', 'a past date is allowed')
   // the board's task is in the assistant's inbox
   assert.ok(sb.lines('company/inbox.jsonl').some((l) => l.type === 'task.created' && l.id === 'BLU-1'))
-  // a Persian title is clipped on characters, never in the middle of one
-  const long = T.createTask({ title: 'ن'.repeat(150) + '😀'.repeat(100) }, board)
+  // a title is clipped on characters, never in the middle of one
+  const long = T.createTask({ title: 'n'.repeat(150) + '😀'.repeat(100) }, board)
   assert.equal(Array.from(long.title).length, 200)
   assert.ok(!/[\uD800-\uDBFF]$/.test(long.title))
 })
@@ -285,10 +285,11 @@ test('packs: every bundled pack is valid, tool-agnostic and invented (T-4.6, T-4
   t.after(() => sb.cleanup())
   const Pk = sb.mod('packs.cjs')
   const list = Pk.bundled()
-  assert.deepEqual(list.map((p) => p.id).sort(), ['content-marketing', 'customer-support', 'design', 'finance', 'hr', 'operations', 'research'])
+  assert.deepEqual(list.map((p) => p.id).sort(), ['autonomous-dev', 'content-marketing', 'core-team', 'customer-support', 'data-integrity', 'design', 'devops', 'docs', 'domain-engineering', 'finance', 'hr', 'legal-compliance', 'operations', 'release', 'research', 'security', 'verification'])
   const repo = path.join(__dirname, '..', '..', 'packs')
   for (const p of list) {
     for (const m of p.members) {
+      if (m.core || m.ref) continue // core team definitions are agents/ files, checked by packs.test.cjs
       const text = fs.readFileSync(path.join(repo, p.id, 'agents', m.id + '.md'), 'utf8')
       const fm = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text)[1]
       assert.deepEqual(fm.split(/\r?\n/).map((l) => l.split(':')[0]), ['name', 'description', 'model', 'effort', 'tools', 'color', 'zone'], m.id)
@@ -296,7 +297,7 @@ test('packs: every bundled pack is valid, tool-agnostic and invented (T-4.6, T-4
       assert.doesNotMatch(body, /\b(Bash|PowerShell|WebFetch|Claude|Anthropic|OpenAI|GPT|Gemini|Sonnet|Opus|Haiku|ChatGPT|Copilot)\b/, m.id)
       assert.match(body, /## Safety: prepare, do not act/, m.id)
       assert.match(body, /Follow `AGENT-RULES\.md`/, m.id)
-      if (p.id === 'hr' || p.id === 'finance') assert.match(body, /not legal, tax or employment advice/, m.id)
+      if (['hr', 'finance', 'legal-compliance'].includes(p.id)) assert.match(body, /not legal, tax or employment advice/, m.id)
     }
   }
   for (const f of fs.readdirSync(repo, { recursive: true })) {
@@ -387,7 +388,7 @@ test('T-3.1: Create with three packs: offices, employees, policy, config; a samp
   assert.equal(O.status().wizard, true)
   const r = O.create({ name: 'Bluefin Bakery', mission: 'Three bakeries and a delivery service', payModel: 'plan', packs: ['content-marketing', 'customer-support', 'operations'], assistants: ['claude-desktop'] }, board)
   assert.equal(r.issuePrefix, 'BLU')
-  assert.deepEqual(sb.read('company/offices.json').map((o) => o.id), ['marketing', 'support', 'operations'])
+  assert.deepEqual(sb.read('company/offices.json').map((o) => o.id), ['engineering', 'marketing', 'support', 'operations'])
   const emp = sb.read('company/employees.json')
   for (const id of ['marketing-lead', 'copywriter', 'reply-drafter', 'support-lead', 'operations-lead', 'process-writer']) assert.ok(emp[id], id)
   assert.equal(emp['reply-drafter'].homeOfficeId, 'support')
@@ -422,11 +423,11 @@ test('T-3.2/T-3.6/R-3.2: nothing before Create; a bad amount writes nothing; a f
   // with runs but no company: a banner, not the wizard (T-3.3)
   sb.run({ agent: 'tester' })
   assert.deepEqual([O2.status().wizard, O2.status().banner], [false, true])
-  // a Persian name: the prefix falls back to CO, the name is stored in both fields (T-3.5)
-  const r = O2.create({ name: 'نانوایی آبی', lang: 'fa', packs: ['design'] }, board)
+  // a name with no letters to make a prefix from: the prefix falls back to CO (T-3.5)
+  const r = O2.create({ name: '1234 !!', packs: ['design'] }, board)
   assert.equal(r.issuePrefix, 'CO')
   const co = sb.read('company/company.json')
-  assert.equal(co.name, 'نانوایی آبی'); assert.equal(co.nameFa, 'نانوایی آبی')
+  assert.equal(co.name, '1234 !!')
 })
 
 // ---------- phone approvals (token core)
@@ -440,9 +441,9 @@ test('T-8.3/T-8.4/T-8.5/T-8.9: a phone token works once, never with another key,
   // an action approval in a category the phone may approve (a bare yes/no question gets no button)
   const asked = sb.mod('policy.cjs').checkAction({ team_member: 'copywriter', category: 'post.public', summary: 'Post the autumn menu on Instagram' }, sup)
   const g = sb.read('agent-runs/gates/' + asked.question_id + '.json')
-  const tok = N.sign(g, 'approve')
+  const tok = N.sign(g, 'approve', { channel: 'ntfy' })
   // another key: refused, counted, the gate still waits
-  const other = (() => { process.env.ARSENALE_PHONE_KEY = 'z'.repeat(40); const x = N.sign(g, 'approve'); process.env.ARSENALE_PHONE_KEY = 'k'.repeat(40); return x })()
+  const other = (() => { process.env.ARSENALE_PHONE_KEY = 'z'.repeat(40); const x = N.sign(g, 'approve', { channel: 'ntfy' }); process.env.ARSENALE_PHONE_KEY = 'k'.repeat(40); return x })()
   const forged = N.accept(other, 'ntfy')
   assert.equal(forged.ok, false); assert.equal(forged.reason, 'signature')
   assert.equal(sb.read('agent-runs/gates/' + g.id + '.json').status, 'waiting')
@@ -462,13 +463,13 @@ test('T-8.3/T-8.4/T-8.5/T-8.9: a phone token works once, never with another key,
   assert.equal(again.ok, false); assert.match(again.message, /^Already answered/)
   // a question edited after sending
   const g2 = L.gate({ question: 'Open on Sunday?', kind: 'approval' }, sup)
-  const t2 = N.sign(g2, 'decline')
+  const t2 = N.sign(g2, 'decline', { channel: 'ntfy' })
   const f = path.join(sb.runs, 'gates', g2.id + '.json')
   const raw = JSON.parse(fs.readFileSync(f, 'utf8')); raw.question = 'Open on Sunday and Monday?'; fs.writeFileSync(f, JSON.stringify(raw))
   assert.equal(N.accept(t2, 'ntfy').reason, 'changed')
   // sign out all phones: every outstanding button dies
   const g3 = L.gate({ question: 'Third?', kind: 'approval' }, sup)
-  const t3 = N.sign(g3, 'approve')
+  const t3 = N.sign(g3, 'approve', { channel: 'telegram' })
   N.rotate()
   assert.equal(N.accept(t3, 'telegram').reason, 'signature')
 })

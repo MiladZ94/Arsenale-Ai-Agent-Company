@@ -1,0 +1,17 @@
+{
+  "unit": "tokens",
+  "note": "Advisory starting points. The supervisor re-estimates after phase 1 and records it as a decision. A PROJECT.md section can override them.",
+  "defaultVersionBudget": 2000000,
+  "perRunByTier": { "low": 30000, "medium": 120000, "high": 300000 },
+  "perAgentKind": {
+    "scanner": 20000,
+    "implementer": 150000,
+    "tester": 100000,
+    "reviewer": 80000,
+    "finding-verifier": 30000,
+    "docs": 40000
+  },
+  "fixRoundReserve": { "extraRoundsPerPhase": 1 },
+  "warnAt": 0.8,
+  "stopAt": 1.0
+}

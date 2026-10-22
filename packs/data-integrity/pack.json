@@ -1,0 +1,89 @@
+{
+  "format": "arsenale-pack",
+  "formatVersion": 1,
+  "id": "data-integrity",
+  "version": "1.0.0",
+  "name": "Data integrity",
+  "description": "Protect saved data: compatibility across versions, schema changes, backups and old records. Reports; it never changes app code.",
+  "minArsenale": "1.0.0",
+  "office": {
+    "id": "data-integrity",
+    "name": "Data Integrity",
+    "theme": "slate",
+    "profile": "data",
+    "lead": "data-lead"
+  },
+  "members": [
+    {
+      "file": "agents/data-lead.md",
+      "id": "data-lead",
+      "zone": "lead",
+      "title": "Data Lead",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/schema-diff-reviewer.md",
+      "id": "schema-diff-reviewer",
+      "zone": "data",
+      "title": "Schema Diff Reviewer",
+      "tier": "heavy"
+    },
+    {
+      "file": "agents/backup-restore-checker.md",
+      "id": "backup-restore-checker",
+      "zone": "data",
+      "title": "Backup Restore Checker",
+      "tier": "standard"
+    },
+    {
+      "file": "agents/archive-curator.md",
+      "id": "archive-curator",
+      "zone": "data",
+      "title": "Archive Curator",
+      "tier": "light"
+    },
+    {
+      "id": "data-migration",
+      "ref": true,
+      "zone": "data",
+      "title": "Data Migration",
+      "tier": "heavy"
+    }
+  ],
+  "sampleTasks": [
+    {
+      "title": "Diff two invented file shapes",
+      "description": "Compare the two invented sample files I name and list every field added, removed or changed, with the effect on an older version.",
+      "assignee": "schema-diff-reviewer"
+    },
+    {
+      "title": "Check an invented backup",
+      "description": "For the invented backup listing I name, say what it holds, what it misses and how to restore it.",
+      "assignee": "backup-restore-checker"
+    }
+  ],
+  "policy": {
+    "members": {
+      "data-lead": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "schema-diff-reviewer": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "backup-restore-checker": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      },
+      "archive-curator": {
+        "message.send": "never",
+        "post.public": "never",
+        "payment": "never"
+      }
+    }
+  }
+}

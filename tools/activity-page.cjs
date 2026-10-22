@@ -14,14 +14,14 @@
  */
 
 const ACTIVITY_STYLE = `
-.act{overflow:auto;scrollbar-width:thin;scrollbar-color:#2A3644 transparent;flex:1;min-height:0}
-.act h3{font:600 11px var(--mono);letter-spacing:.8px;text-transform:uppercase;color:var(--ink-dim);margin:14px 0 6px;position:sticky;top:0;background:var(--ground);padding:4px 0;z-index:1}
+.act{overflow:auto;scrollbar-width:thin;scrollbar-color:#C9D1D9 transparent;flex:1;min-height:0}
+.act h3{font:700 11px var(--font-ui);letter-spacing:.8px;text-transform:uppercase;color:var(--ink-dim);margin:14px 0 6px;position:sticky;top:0;background:var(--ground);padding:4px 0;z-index:1}
 .act ol{list-style:none;margin:0;padding:0}
 .act li{display:grid;grid-template-columns:52px 120px 1fr auto;gap:10px;align-items:baseline;padding:6px 8px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft)}
-.act li time{font:12px var(--mono);color:var(--ink-dim);direction:ltr}
-.act li .who{font:600 12px var(--mono);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:start}
-.act li .what b{color:var(--ink);font-weight:600}
-.act li .k{font:10.5px var(--mono);padding:0 5px;border-radius:3px;border:1px solid var(--line);color:var(--ink-dim);white-space:nowrap}
+.act li time{font:12px var(--font-ui);color:var(--ink-dim);direction:ltr}
+.act li .who{font:700 12px var(--font-ui);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:ltr;text-align:start}
+.act li .what b{color:var(--ink);font-weight:700}
+.act li .k{font:10.5px var(--font-ui);padding:0 5px;border-radius:3px;border:1px solid var(--line);color:var(--ink-dim);white-space:nowrap}
 .act li .k.der{border-style:dashed}
 .act li.t-budget .k,.act li.t-company .k{color:var(--gate);border-color:var(--gate-line)}
 .act li.t-gate .k{color:var(--warn)}
@@ -30,7 +30,7 @@ const ACTIVITY_STYLE = `
 `
 
 function activityView(h) {
-  const { esc, fa, hhmm, ms, T, cleanTask } = h
+  const { esc, digits, hhmm, ms, T, cleanTask } = h
   const st = { who: '', type: '', days: 7 }
   const DAY = 86400000
 
@@ -77,7 +77,7 @@ function activityView(h) {
       chip('who', '', T('Everyone')) + chip('who', 'board', T('You')) + chip('who', 'supervisor', T('Supervisor')) + chip('who', 'agent', T('Agents')) + chip('who', 'system', T('System')) +
       '<span class="dim" style="margin-inline-start:12px"></span>' +
       chip('type', '', T('Everything')) + chip('type', 'run', T('Runs')) + chip('type', 'gate', T('Questions')) + chip('type', 'decision', T('Decisions')) + chip('type', 'company', T('Company & budgets')) + '</div>'
-    html += '<p class="muted">' + T('Newest first. Lines marked “derived” are read from the run records, questions and decisions; the others are the company log (company/activity.jsonl).') + '</p>'
+    html += '<p class="muted">' + T('Newest first. “Derived” lines come from run records.') + '</p>'
     html += '<div class="act" id="act">'
     if (!recent.length) html += '<p class="empty">' + T('Nothing recorded in these days.') + '</p>'
     let day = ''
@@ -87,13 +87,13 @@ function activityView(h) {
       if (key !== day) {
         if (day) html += '</ol>'
         day = key
-        html += '<h3>' + esc(d.toLocaleDateString(LANG === 'fa' ? 'fa-IR' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' })) + '</h3><ol>'
+        html += '<h3>' + esc(d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })) + '</h3><ol>'
       }
       html += '<li class="t-' + KIND[e.type] + (e.bad ? ' bad' : '') + '"><time>' + hhmm(e.at) + '</time><span class="who" title="' + esc(e.who) + '">' + esc(e.who === 'supervisor' ? T('Supervisor') : e.who) + '</span>' +
         '<span class="what">' + esc(e.text) + '</span><span class="k' + (e.derived ? ' der' : '') + '">' + T(e.type === 'budget' ? 'budget' : e.type === 'company' ? 'company' : e.type) + (e.derived ? ' · ' + T('derived') : '') + '</span></li>'
     }
     if (day) html += '</ol>'
-    if (older) html += '<p class="more"><button type="button" class="fchip" data-amore="1">' + T('Show 7 more days') + ' (' + fa(older) + T(' older') + ')</button></p>'
+    if (older) html += '<p class="more"><button type="button" class="fchip" data-amore="1">' + T('Show 7 more days') + ' (' + digits(older) + T(' older') + ')</button></p>'
     return html + '</div>'
   }
 

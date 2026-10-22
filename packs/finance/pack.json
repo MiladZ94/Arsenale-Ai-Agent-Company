@@ -4,14 +4,11 @@
   "id": "finance",
   "version": "1.0.0",
   "name": "Finance",
-  "nameFa": "مالی",
   "description": "Categorise exported transactions, draft invoices, explain monthly budget differences in plain words and check expense lists against your own rules. Drafts only; never pays.",
-  "descriptionFa": "دسته‌بندی تراکنش‌های خروجی‌گرفته‌شده، پیش‌نویس فاکتور، توضیح ساده‌ی تفاوت‌های ماهانه‌ی بودجه و بررسی فهرست هزینه‌ها بر پایه‌ی قوانین خودتان؛ فقط پیش‌نویس و بدون پرداخت.",
   "minArsenale": "1.0.0",
   "office": {
     "id": "finance",
     "name": "Finance",
-    "nameFa": "مالی",
     "theme": "blue",
     "profile": "finance",
     "lead": "finance-lead"
@@ -22,7 +19,6 @@
       "id": "finance-lead",
       "zone": "lead",
       "title": "Finance Lead",
-      "titleFa": "مدیر مالی",
       "tier": "standard"
     },
     {
@@ -30,7 +26,6 @@
       "id": "bookkeeping-assistant",
       "zone": "build",
       "title": "Bookkeeping Assistant",
-      "titleFa": "دستیار حسابداری",
       "tier": "standard"
     },
     {
@@ -38,7 +33,6 @@
       "id": "invoice-drafter",
       "zone": "docs",
       "title": "Invoice Drafter",
-      "titleFa": "نویسنده‌ی پیش‌نویس فاکتور",
       "tier": "standard"
     },
     {
@@ -46,7 +40,6 @@
       "id": "budget-analyst",
       "zone": "build",
       "title": "Budget Analyst",
-      "titleFa": "تحلیلگر بودجه",
       "tier": "standard"
     },
     {
@@ -54,7 +47,6 @@
       "id": "expense-checker",
       "zone": "review",
       "title": "Expense Checker",
-      "titleFa": "بررسی‌کننده‌ی هزینه‌ها",
       "tier": "light"
     }
   ],

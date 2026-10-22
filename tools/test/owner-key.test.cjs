@@ -38,14 +38,14 @@ async function setup(t) {
 
 test('no key cookie: every page, API read, deliverable and write answers 401; the favicon and /mcp keep their own rules', async (t) => {
   const { port, cookie, token } = await setup(t)
-  for (const url of ['/', '/index.html', '/archive', '/archive?lang=fa', '/deliverables/dl-x', '/nothing']) {
+  for (const url of ['/', '/index.html', '/archive', '/archive?lang=xx', '/deliverables/dl-x', '/nothing']) {
     const r = await req(port, { url })
     assert.equal(r.status, 401, url)
     assert.match(r.headers['content-type'], /^text\/html/, url)
     assert.equal(r.headers['x-frame-options'], 'DENY')
     assert.equal(r.headers['content-security-policy'], "default-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
     assert.match(r.text, /arsenale open/)
-    assert.match(r.text, /\p{Script=Arabic}/u, 'the Persian line is there too')
+    assert.doesNotMatch(r.text, /\p{Script=Arabic}/u, 'English only: no Arabic-script line')
     assert.doesNotMatch(r.text, /<script/)
   }
   for (const url of ['/api/state', '/api/company', '/api/tasks', '/api/team', '/api/notify', '/api/connect', '/api/deliverables']) {
@@ -69,7 +69,7 @@ test('no key cookie: every page, API read, deliverable and write answers 401; th
   assert.match(mcp.json.error, /MCP over HTTP is off/)
   // with the key cookie the same requests go through
   assert.equal((await req(port, { url: '/', headers: { Cookie: cookie } })).status, 200)
-  assert.equal((await req(port, { url: '/api/state', headers: { Cookie: 'dash-lang=fa; ' + cookie } })).status, 200)
+  assert.equal((await req(port, { url: '/api/state', headers: { Cookie: 'dash-lang=xx; ' + cookie } })).status, 200)
   assert.equal((await req(port, Object.assign({}, post, { headers: Object.assign({ Cookie: cookie }, post.headers) }))).status, 200)
 })
 
@@ -87,9 +87,9 @@ test('a wrong key buys no cookie; the right one a strict, port-named cookie and 
     assert.equal(r.status, 401, k)
     assert.ok(!(r.headers['set-cookie'] || []).some((c) => c.startsWith('arsenale-key-')), 'no key cookie for ' + k)
   }
-  const ok = await req(port, { url: '/archive?lang=fa&k=' + key })
+  const ok = await req(port, { url: '/archive?lang=xx&k=' + key })
   assert.equal(ok.status, 302)
-  assert.equal(ok.headers.location, '/archive?lang=fa', 'other parameters stay, the key goes')
+  assert.equal(ok.headers.location, '/archive?lang=xx', 'other parameters stay, the key goes')
   assert.equal(ok.headers['cache-control'], 'no-store')
   assert.equal(ok.headers['referrer-policy'], 'no-referrer')
   const set = ok.headers['set-cookie'].find((c) => c.startsWith('arsenale-key-'))
@@ -122,6 +122,7 @@ test('the key file is the owner\'s only (mode 0600), and a wider one is narrowed
   const sb = makeSandbox()
   t.after(() => sb.cleanup())
   const LK = sb.mod('launch-key.cjs')
+  fs.rmSync(LK.FILE, { force: true }) // the sandbox makes one for the CLI board tests
   const first = LK.ensure()
   assert.equal(first.created, true)
   assert.equal(fs.statSync(first.file).mode & 0o777, 0o600)

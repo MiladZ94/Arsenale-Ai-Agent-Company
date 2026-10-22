@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /* Records agent activity for the dashboard. Any coding agent, script or
  * supervising session can call it; it only writes JSON files under
- * ARSENALE_HOME (paths.cjs) and never starts a process.
+ * ARSENALE_HOME (paths.cjs) and never starts a process, except the two modes
+ * that exist to do so: --testq run (the caller's own test command, when its
+ * turn comes) and --resume-scan (read-only git).
  *
  * Usually called through the launcher, `arsenale log <mode> …` (or a short
  * alias such as `arsenale start`); `node tools/log-agent-run.cjs <mode> …` is
@@ -38,20 +40,41 @@ JSON input, for every mode that takes it:
 
 Runs
   --start <json>      {"agent","task", optional "model","effort","project","parent",
-                      "projectId","officeId","session","issue","doing"}
+                      "projectId","officeId","kind" (a kind of work, see --office),"session","issue","doing",
+                      "versionRun","phase" (autonomous mode: version run id and phase),
+                      "pid" (the agent's own long-lived process, never the shell that runs
+                      this command, so a resume can tell a dead run from a live one; its
+                      start time is read from the system, never from the input),
+                      "tier": light|standard|heavy (a 4th heavy run at once is refused),
+                      "worktree", "branch", "brief" (at most 8000 characters)
+                      or "briefFile" (read from a file), "plannedFiles", "plannedTests"}
                       prints the new run id
-  --progress <json>   {"id","doing"}: one line of what the agent is doing now
-  <json>              finish (no mode): {"id","agent","task","status": ok|findings|
+  --progress <json>   {"id","doing", optional "pct": 0-100}: one line of what the agent
+                      is doing now, and how far it is. Optional too: "plan":[{"name","weight"}]
+                      (the first call that has one), then "step" (a name or 1-based number;
+                      "pct" is then that step's own progress), "files" (count changed),
+                      "plannedFiles", "tests":{"run","of"} or "testsRun","plannedTests"
+  --progress <id> "<step>" [<pct>]   the same for fixed text without quotes
+  [--finish] <json>   finish: {"id","agent","task","status": ok|findings|
                       failed|stopped, optional "summary","findings":[...],"files":[...],
                       "usage":{"tokens","toolUses","durationMs","model"},"transcript"}
                       prints the path of the run record
 
+Autonomous version runs (the state file in the repo is the source; this is its mirror)
+  --version-run <json>     {"id":"app-x-1.2", optional "app","version","status","budget"
+                      (positive whole tokens),"phases":[{"id","name","tier": low|medium|high,
+                      "requests","dependsOn","status","percent"}],"stateFile",
+                      "integrationBranch","reviews":[{"phase","round","findings","confirmed",
+                      "rejected","unclear","report" (a path, shown as text)}]}: creates or updates <data>/version-runs/<id>.json
+  --version-ledger <json>  {"versionRun"} ("id" is accepted too): tokens per phase from the run log, as JSON
+                      (null = not recorded, never 0)
+
 Gates and decisions
   --gate <json>       {"project","question", optional "kind": A|B|C|approval,"label",
-                      "choices":[...],"run"}: prints the gate id. With "id" and
+                      "choices":[...],"run","versionRun" (the run that asks)}: prints the gate id. With "id" and
                       "status": waiting|answered|expired it updates that gate
   --decision <json>   {"project","by": user|supervisor|agent,"text", optional
-                      "reason","run","agent","state":"open","closes"}
+                      "reason","run" or "versionRun","agent","state":"open","closes"}
   --answers [--peek|--all|--json]   answers given on the dashboard since the
                       last read (then marked read)
   --dismiss <gate id> [<gate id> ...]    close waiting gates without an answer
@@ -66,8 +89,37 @@ Company (optional; see company.example/seed.json)
   --budgets on|off <json>          every budget on or off: {"by":"board"}
   --employee <json>   {"id", "homeOfficeId","zone","reportsTo","status","pauseReason",
                       "title","aliases", "by":"board"}
+  --board-token <key>  proves "by":"board" is the owner (or set ARSENALE_BOARD_TOKEN to the
+                      launch-key in the data folder); without it "board" acts as an agent
   --inbox [--peek|--all|--json]    what the owner changed on the dashboard
   --heartbeat [json]               "the supervisor is here"
+
+Live progress, test queue, unfinished work
+  --testq run --run <run id> [--repo <path>] -- <command ...>
+                      waits until no other full test suite runs on this machine, runs the
+                      command, gives the turn back; exits with the command's exit code
+  --testq status [--json]          who holds the suite and who waits
+  --testq leave --run <run id>     leave the queue
+  --resume-scan [--dir <repo>] [--json]
+                      runs that ended without finishing and left changes in their worktree
+                      (read-only git); written to <data>/resume/candidates.json
+  --alerts [--json]   stalled and dead runs now (read-only)
+
+Campus
+  --campus <json>     {"op": list|place|move|rotate|remove, "type" (place), "name", "x","y", "rot",
+                      "id" or "officeId" (move, rotate, remove), "reason", "by"}. The supervisor may
+                      change the campus in an autonomous run only; each change is also a
+                      decision. Removing a building archives its office
+
+Offices
+  --office <json>     read: {} every open office; {"id"} one office; {"agent", optional "project",
+                      "kind"} that member's home office and where its next run goes, and why
+                      (--json for the data).
+                      The owner only ("by":"board" with the board token): {"op":"create","name",
+                      "type" (a building type),"theme","kinds":[...], optional "x","y"},
+                      {"op":"edit","id", any of "name","theme","type","kinds"}, {"op":"archive","id"}.
+                      Kinds of work: ${require('./kinds.cjs').KINDS.slice(0, 9).map((k) => k.id).join(', ')},
+                      ${require('./kinds.cjs').KINDS.slice(9).map((k) => k.id).join(', ')}
 
 Tasks, deliverables and the safety rules
   --task <json>       create: {"title", optional "description","assignee","officeId",
@@ -90,6 +142,13 @@ Exit codes
 Data folder: ${P.HOME}  (set ARSENALE_HOME to change it)`
 
 const args = process.argv.slice(2)
+// --board-token <key> proves a "by":"board" action comes from the owner (see
+// runlog.cjs cliActor). The environment variable ARSENALE_BOARD_TOKEN is
+// better: a command line shows in the process list.
+for (let i = args.indexOf('--board-token'); i !== -1; i = args.indexOf('--board-token')) {
+  process.env.ARSENALE_BOARD_TOKEN = String(args[i + 1] || '')
+  args.splice(i, 2)
+}
 const company = () => require('./agent-company.cjs')
 const shown = (iso) => { const d = new Date(iso); return isNaN(d) ? String(iso || '?') : d.toLocaleString('en-GB', { hour12: false }).replace(',', '') }
 const die = (e) => { console.error(e.message || String(e)); process.exit(1) }
@@ -117,6 +176,55 @@ function jsonAt(i) {
   }
 }
 
+// ---------- spec 1.1: the test queue, the resume scan, the alerts view
+const flagOf = (name) => { const i = args.indexOf(name); return i > 0 && args[i + 1] !== undefined && args[i + 1] !== '--' ? args[i + 1] : '' }
+if (args[0] === '--testq') {
+  const Q = require('./testq.cjs')
+  const sub = args[1]
+  if (sub === 'status') {
+    const s = Q.status()
+    if (args.includes('--json')) { console.log(JSON.stringify(s, null, 2)); process.exit(0) }
+    const min = (ms) => Math.floor(ms / 60000) + ' min'
+    console.log(s.holder ? 'Testing: ' + (s.holder.agent || s.holder.run) + ' (run ' + s.holder.run + ') for ' + min(s.holder.heldMs) + (s.holder.repo ? ' · ' + s.holder.repo : '') + (s.holder.hung ? ' · held over 60 min' : '') : 'Nobody is testing.')
+    for (const w of s.waiting) console.log('  ' + (w.gone ? 'gone' : '#' + w.position) + ' ' + (w.agent || w.run) + ' (run ' + w.run + '), waiting ' + min(w.waitMs) + (w.repo ? ' · ' + w.repo : ''))
+    process.exit(0)
+  }
+  if (sub === 'leave') {
+    const run = flagOf('--run')
+    if (!run) die(new Error('usage: testq leave --run <run id>'))
+    console.log(Q.leave(run) ? 'left the queue' : 'not waiting')
+    process.exit(0)
+  }
+  if (sub === 'run') {
+    const run = flagOf('--run')
+    const dd = args.indexOf('--')
+    const command = dd > 0 ? args.slice(dd + 1) : []
+    if (!run || !command.length) die(new Error('usage: testq run --run <run id> [--repo <path>] -- <command ...>'))
+    Q.run({ run, repo: flagOf('--repo'), command }).then((code) => process.exit(code), (e) => die(e))
+    return
+  }
+  die(new Error('usage: testq run|status|leave (see --help)'))
+}
+if (args[0] === '--resume-scan') {
+  let doc
+  try { doc = require('./resume.cjs').scan({ dir: flagOf('--dir'), limits: require('./watch.cjs').limits() }) } catch (e) { die(e) }
+  if (args.includes('--json')) { console.log(JSON.stringify(doc, null, 2)); process.exit(0) }
+  if (!doc.candidates.length) { console.log('No unfinished work found.'); process.exit(0) }
+  console.log(doc.candidates.length + ' unfinished run' + (doc.candidates.length === 1 ? '' : 's') + ':')
+  for (const c of doc.candidates) console.log('\n' + c.run + ' · ' + (c.agent || '-') + ' · ' + (c.branch || '-') + '\n  ' + c.worktree + '\n  ' + c.changed + ' changed file(s), ' + c.unmerged + ' unmerged commit(s) · ' + (c.brief ? 'brief stored' : 'No brief stored (limited: resume by the task text)') + '\n  task: ' + c.task)
+  process.exit(0)
+}
+if (args[0] === '--alerts') {
+  // read-only: the same view as the Live page, without closing anything
+  const v = require('./watch.cjs').live()
+  const out = { stalled: v.runs.filter((r) => r.state === 'stalled').map((r) => ({ run: r.id, agent: r.agent, quietMin: r.quietMin, alerted: !!r.alert })), dead: v.runs.filter((r) => r.state === 'dead').map((r) => ({ run: r.id, agent: r.agent, reason: r.deadReason, quietMin: r.quietMin })), limits: v.limits }
+  if (args.includes('--json')) { console.log(JSON.stringify(out, null, 2)); process.exit(0) }
+  if (!out.stalled.length && !out.dead.length) { console.log('No stalled or dead run.'); process.exit(0) }
+  for (const r of out.stalled) console.log('stalled  ' + r.run + ' · ' + r.agent + ' · quiet ' + r.quietMin + ' min')
+  for (const r of out.dead) console.log('dead     ' + r.run + ' · ' + r.agent + ' · ' + r.reason + ' (closed by the dashboard on its next check)')
+  process.exit(0)
+}
+
 // Nothing is being logged here: this one only reads, so it is handled before
 // the "needs a JSON argument" check below.
 if (args[0] === '--answers') {
@@ -128,14 +236,27 @@ if (args[0] === '--answers') {
   const { fresh } = all ? { fresh: readAnswers().filter(Boolean) } : unreadAnswers(!peek)
   // reading the answers is the supervisor's start of a turn: it is here
   try { company().stampHeartbeat() } catch { /* no company: nothing to stamp */ }
+  // autoRun lets the supervisor act without asking again; a line anyone could
+  // have appended is passed on only when the stored gate backs it
+  const { verify } = require('./automation.cjs')
+  const gateOf = (id) => { try { return JSON.parse(fs.readFileSync(path.join(RUNS, 'gates', String(id).replace(/[^\w.-]/g, '') + '.json'), 'utf8')) } catch { return null } }
+  for (const a of fresh) {
+    if (!a || !('autoRun' in a)) continue
+    const why = a.autoRun === true ? verify(a, gateOf(a.gate)) : 'not true'
+    delete a.autoRun
+    if (why) a.autoRunRefused = why
+    else a.autoRun = true
+  }
   if (asJson) { console.log(JSON.stringify(fresh, null, 2)); process.exit(0) }
   if (!fresh.length) { console.log(all ? 'No answers recorded yet.' : 'No new answers.'); process.exit(0) }
   console.log((all ? 'All answers' : fresh.length + ' new answer' + (fresh.length === 1 ? '' : 's')) + (all || peek ? '' : ' (now marked read)') + ':')
   for (const a of fresh) {
-    const what = a.type === 'dismiss' ? 'DISMISSED (no answer needed, settled elsewhere)' : 'ANSWER: ' + a.answer
+    const what = a.type === 'dismiss' ? 'DISMISSED (no answer needed, settled elsewhere)' : a.type === 'undo' ? 'UNDO: the owner takes back what ran by itself; stop it, or reverse it if it already ran' : 'ANSWER: ' + a.answer
     console.log('\n[' + shown(a.at) + '] ' + (a.project || '-') + ' · gate ' + a.gate + (a.kind ? ' (' + a.kind + ')' : '') + (a.run ? ' · run ' + a.run : ''))
     console.log('  Q: ' + a.question)
     console.log('  ' + what)
+    if (a.autoRun === true) console.log('  autoRun: checked against the gate; go ahead without asking again')
+    else if (a.autoRunRefused) console.log('  autoRun dropped: ' + a.autoRunRefused + '; ask the owner before acting')
   }
   process.exit(0)
 }
@@ -237,11 +358,18 @@ if (args[0] === '--company-status') {
   process.exit(0)
 }
 
-const MODES = ['--start', '--progress', '--budget-check', '--budget', '--employee', '--decision', '--gate', '--task', '--comment', '--deliverable', '--check-action']
-// no mode: the JSON (inline, --stdin, --file or @file) is a finish
+const MODES = ['--start', '--progress', '--budget-check', '--budget', '--employee', '--decision', '--gate', '--task', '--comment', '--deliverable', '--check-action', '--version-run', '--version-ledger', '--campus', '--office']
+// no mode: the JSON (inline, --stdin, --file or @file) is a finish. "--finish"
+// says so outright; older run logs took it (as any unknown mode) for a finish,
+// and supervisors' notes still use it.
+const finishFlag = args[0] === '--finish'
 const mode = MODES.includes(args[0]) ? args[0] : ''
-if (!mode && /^--[a-z]/.test(args[0]) && args[0] !== '--stdin' && args[0] !== '--file') die(new Error('unknown mode ' + args[0] + ' (see --help)'))
-const input = jsonAt(mode ? 1 : 0)
+if (!mode && !finishFlag && /^--[a-z]/.test(args[0]) && args[0] !== '--stdin' && args[0] !== '--file') die(new Error('unknown mode ' + args[0] + ' (see --help)'))
+// the short form for fixed text: progress <run id> "<step>" [<pct>] is
+// {"id","doing","pct"}; anything that looks like JSON input takes the long way
+const shortProgress = mode === '--progress' && args[1] !== undefined && !/^(\{|@|-$|--stdin$|--file$)/.test(args[1])
+if (shortProgress && args.length > 4) die(new Error('usage: progress <run id> "<step>" [<pct>] (text with quotes: use --stdin or --file)'))
+const input = shortProgress ? Object.assign({ id: args[1], doing: args[2] || '' }, args[3] !== undefined ? { pct: args[3] } : {}) : jsonAt(mode || finishFlag ? 1 : 0)
 if (!input || typeof input !== 'object' || Array.isArray(input)) die(new Error((mode || 'finish') + ' needs a JSON object (see --help)'))
 
 // Every write goes through runlog.cjs, the library the MCP server and the
@@ -249,6 +377,7 @@ if (!input || typeof input !== 'object' || Array.isArray(input)) die(new Error((
 // it always was: the CLI runs as the user and proves nothing more.
 const L = require('./runlog.cjs')
 const actor = L.cliActor(input)
+if (actor.claimedBoard) console.error('note: "by":"board" needs the owner board token (ARSENALE_BOARD_TOKEN, the launch-key in the data folder); treating this as an agent, so board-only actions are refused.')
 
 // Every write rebuilds the page, so a window left open follows the work.
 const refresh = () => { try { build() } catch (e) { console.warn('dashboard not rebuilt: ' + e.message) } }
@@ -274,6 +403,38 @@ if (mode === '--budget' || mode === '--employee') {
     console.log(r.summary)
     process.exit(0)
   } catch (e) { die(e) }
+}
+
+if (mode === '--campus') {
+  try {
+    if (input.op === 'list') {
+      const v = require('./campus.cjs').view(company().readCompany())
+      console.log(JSON.stringify({ grid: v.grid, buildings: v.buildings, types: v.types.map((t) => t.id) }, null, 2))
+    } else console.log(L.campus(input, actor).summary)
+    if (input.op !== 'list') refresh()
+  } catch (e) { die(e) }
+  process.exit(0)
+}
+
+if (mode === '--office') {
+  try {
+    if (!input.op || input.op === 'show') {
+      const v = company().officeView(require('./build-agent-dashboard.cjs').collect(), input)
+      console.log(args.includes('--json') ? JSON.stringify(v.data, null, 2) : v.lines.join('\n'))
+    } else {
+      console.log(L.office(input, actor).summary)
+      refresh()
+    }
+  } catch (e) { die(e) }
+  process.exit(0)
+}
+
+if (mode === '--version-run' || mode === '--version-ledger') {
+  try {
+    if (mode === '--version-run') console.log(L.versionRun(input, actor).id)
+    else console.log(JSON.stringify(L.versionLedger(input.versionRun || input.id), null, 2))
+  } catch (e) { die(e) }
+  process.exit(0)
 }
 
 if (mode === '--decision' || mode === '--gate') {
@@ -314,6 +475,10 @@ if (mode === '--task' || mode === '--comment' || mode === '--deliverable' || mod
 
 if (mode === '--start') {
   let r
+  if (input.briefFile && !input.brief) {
+    try { input.brief = P.stripBom(fs.readFileSync(path.resolve(String(input.briefFile)), 'utf8')) } catch (e) { die(new Error('cannot read the brief file: ' + e.message)) }
+  }
+  delete input.briefFile
   try { r = L.startRun(input, actor) } catch (e) { die(e) }
   for (const w of r.warnings) console.error(w)
   refresh()

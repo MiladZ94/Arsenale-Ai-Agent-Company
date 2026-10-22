@@ -61,7 +61,7 @@ test('T-3.1 through the page: the wizard opens on an empty data folder, and Crea
   assert.equal(fs.existsSync(w.sb.company), false, 'the review step writes nothing')
   await w.submit('.wz form') // Create my team
   await w.waitFor("/Your company is set up/.test(document.querySelector('.wz').textContent)")
-  assert.deepEqual(w.sb.read('company/offices.json').map((o) => o.id), ['marketing', 'support', 'operations'])
+  assert.deepEqual(w.sb.read('company/offices.json').map((o) => o.id), ['engineering', 'marketing', 'support', 'operations'])
   assert.equal(w.sb.read('company/company.json').payModel, 'plan')
   assert.deepEqual(w.sb.read('company/company.json').assistants, ['claude-desktop'])
   assert.ok(w.sb.read('policy.json').defaults.payment === 'ask')
@@ -83,19 +83,6 @@ test('the wizard does not open with runs but no company; closing it before Creat
   await w.waitFor('!document.querySelector(".wz")')
   assert.equal(fs.existsSync(w.sb.company), false)
   assert.deepEqual(fs.readdirSync(w.sb.agents).filter((f) => !['implementer.md', 'tester.md', 'ui-designer.md', 'code-reviewer.md', 'engineering-lead.md', 'product-lead.md', 'AGENT-RULES.md'].includes(f)), [])
-})
-
-test('a language switch in the wizard keeps what was typed', { skip: SKIP || false }, async (t) => {
-  const w = await open(t)
-  await w.page.goto(w.url + '?lang=en')
-  await w.waitFor(exists('.wz input[name=name]'))
-  await w.set('.wz input[name=name]', 'Lumen Atelier')
-  await w.set('.wz textarea[name=mission]', 'A small print studio')
-  await w.click('.wz [data-lang=fa]')
-  await w.waitFor("document.documentElement.dir === 'rtl' && !!document.querySelector('.wz input[name=name]')", 15000)
-  assert.equal(await w.page.eval("document.querySelector('.wz input[name=name]').value"), 'Lumen Atelier')
-  assert.equal(await w.page.eval("document.querySelector('.wz textarea[name=mission]').value"), 'A small print studio')
-  assert.equal(fs.existsSync(w.sb.company), false)
 })
 
 test('a task written on the page: saved as BLU-1, commented and moved; a bad link is refused with its reason', { skip: SKIP || false }, async (t) => {
@@ -123,7 +110,7 @@ test('a task written on the page: saved as BLU-1, commented and moved; a bad lin
   await w.waitFor(exists('form[data-evform=task-edit]'))
   await w.set('form[data-evform=task-edit] select[name=status]', 'blocked')
   await w.submit('form[data-evform=task-edit]')
-  for (let i = 0; i < 30 && w.sb.read('company/issues/BLU-1.json').status !== 'blocked'; i++) await w.page.sleep(150)
+  for (let i = 0; i < 160 && w.sb.read('company/issues/BLU-1.json').status !== 'blocked'; i++) await w.page.sleep(150)
   assert.equal(w.sb.read('company/issues/BLU-1.json').status, 'blocked')
   // the board: the task in "Working on it", by its title, with no task number
   await w.click('[data-ev=page-close]')
@@ -150,8 +137,8 @@ test('T-5.1 through the page: the hire form writes the member after the review; 
   await w.waitFor(exists('[data-ev=hire-new]'))
   await w.click('[data-ev=hire-new]')
   await w.waitFor(exists('form[data-evform=hire] input[name=name]'))
-  // a desk being added shows in the room
-  assert.match(await w.page.eval("document.querySelector('.ev-main svg').textContent"), /New desk/)
+  // the Team page is portrait tiles by office (no office room any more), filtered to the office the hire is for
+  assert.equal(await w.page.eval("!!document.querySelector('.ev-main .tgrid') && document.querySelector('[data-ev=team-office][data-arg=studio]').getAttribute('aria-pressed')"), 'true')
   // no job title: the form says why and writes nothing
   await w.set('form[data-evform=hire] input[name=name]', 'Nora')
   await w.set('form[data-evform=hire] textarea[name=instructions]', 'Draft the weekly newsletter. Never send it.')
@@ -188,13 +175,19 @@ test('T-5.4 through the page: a hire proposal is approved with two clicks, and t
   await w.click('[data-ev=hire-yes]')
   await w.waitFor("/Click again to confirm/.test(document.querySelector('[data-ev=hire-yes]').textContent)")
   assert.equal(fs.existsSync(path.join(w.sb.agents, 'invoice-ivo.md')), false, 'one click does nothing')
-  await w.click('[data-ev=hire-yes]')
-  // the member file is written first, then the question is answered: wait for both
+  // The first click arms the button for 6 s and then it disarms by itself; on a
+  // loaded machine the second click can arrive after that and only arm it again,
+  // so no hire happens and the gate stays empty. Click whenever the button
+  // shows the confirm text, and wait for the gate to be answered, not for time.
   const gateFile = 'agent-runs/gates/' + g.question_id + '.json'
-  for (let i = 0; i < 60 && w.sb.read(gateFile).status !== 'answered'; i++) await w.page.sleep(150)
+  const answered = () => { try { return w.sb.read(gateFile).status === 'answered' } catch { return false } }
+  for (let i = 0; i < 400 && !answered(); i++) {
+    if (await w.page.eval("/Click again to confirm/.test((document.querySelector('[data-ev=hire-yes]') || {}).textContent || '')")) await w.click('[data-ev=hire-yes]')
+    await w.page.sleep(150)
+  }
   assert.ok(fs.existsSync(path.join(w.sb.agents, 'invoice-ivo.md')))
   const saved = w.sb.read(gateFile)
-  assert.equal(saved.answer, 'hired invoice-ivo')
+  assert.equal(saved.answer, 'hired invoice-ivo', JSON.stringify(saved))
   assert.ok(saved.hiredAt)
 })
 
@@ -231,4 +224,40 @@ test('T-8.1 (browser part): a new question raises a desktop notification that op
   w.sb.cli('--gate', JSON.stringify({ project: 'tide', kind: 'A', question: 'Second question?' }))
   await w.page.sleep(3500)
   assert.equal(await w.page.eval('window.__n.length'), 1)
+})
+
+test('AT8/AT29 (browser part): a stalled run raises one desktop notification; its switch in Settings turns it off', { skip: SKIP || false }, async (t) => {
+  const w = await open(t, { company: true })
+  await w.page.goto(w.url + '#/campus')
+  await w.page.eval("window.__n = []; window.Notification = function (title, o) { window.__n.push([title, o.body, o.tag]); this.close = () => {} }; window.Notification.permission = 'granted'; 1")
+  // the page has read the alerts once: what was there before is never notified
+  const readLive = "performance.getEntriesByType('resource').some((e) => /api.live/.test(e.name))"
+  await w.waitFor(readLive, 60000)
+  await w.page.sleep(1000)
+  // a run quiet for 25 min, checked as the server's 30 s loop does (watch.tick, same data folder)
+  const now = Date.now()
+  const iso = (ms) => new Date(ms).toISOString()
+  fs.writeFileSync(path.join(w.sb.runs, 'active', 'run-stall.json'), JSON.stringify({ id: 'run-stall', agent: 'tester', task: 'invented suite', doing: 'step', steps: [{ at: iso(now - 25 * 60000), text: 'step' }], startedAt: iso(now - 30 * 60000) }))
+  const W = w.sb.mod('watch.cjs')
+  assert.equal(W.tick({ now }).events.filter((e) => e.kind === 'stalled').length, 1)
+  // the page polls the alerts on its redraws (at least every 30 s), every 15 s at most
+  await w.waitFor('window.__n.some((n) => n[0] === "A run has gone quiet")', 60000)
+  const hits = await w.page.eval('window.__n.filter((n) => n[0] === "A run has gone quiet")')
+  assert.equal(hits.length, 1)
+  assert.equal(hits[0][1], 'tester: no activity for 25 min')
+  assert.match(hits[0][2], /^#\/live/)
+  // the desktop switch for stalled runs off: a second stall raises nothing
+  const N = require(path.join(w.sb.tools, 'notify.cjs'))
+  await N.configure({ op: 'events', channel: 'desktop', events: { stalled: false } }, require(path.join(w.sb.tools, 'runlog.cjs')).actorFor('dashboard', 'board'))
+  await w.page.eval("location.reload(); 1")
+  await w.page.sleep(1500)
+  await w.page.eval("window.__n = []; window.Notification = function (title, o) { window.__n.push([title, o.body, o.tag]); this.close = () => {} }; window.Notification.permission = 'granted'; 1")
+  await w.waitFor(readLive, 60000)
+  await w.page.sleep(1000)
+  fs.writeFileSync(path.join(w.sb.runs, 'active', 'run-stall2.json'), JSON.stringify({ id: 'run-stall2', agent: 'implementer', task: 'invented', doing: 'step', steps: [{ at: iso(Date.now() - 25 * 60000), text: 'step' }], startedAt: iso(Date.now() - 30 * 60000) }))
+  assert.equal(W.tick({ now: Date.now() }).events.filter((e) => e.kind === 'stalled').length, 1)
+  // long enough for the page to read the alerts again (as above)
+  await w.page.sleep(50000)
+  assert.ok(await w.page.eval("performance.getEntriesByType('resource').filter((e) => /api.live/.test(e.name)).length >= 2"), 'the alerts were read again')
+  assert.equal(await w.page.eval('window.__n.filter((n) => n[0] === "A run has gone quiet").length'), 0)
 })

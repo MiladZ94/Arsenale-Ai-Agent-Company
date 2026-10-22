@@ -1,0 +1,18 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs or design.",
+  "people-lead": {
+    "dept": "lead"
+  },
+  "job-ad-writer": {
+    "dept": "docs"
+  },
+  "interview-planner": {
+    "dept": "docs"
+  },
+  "onboarding-planner": {
+    "dept": "docs"
+  },
+  "policy-drafter": {
+    "dept": "docs"
+  }
+}

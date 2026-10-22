@@ -1,0 +1,18 @@
+{
+  "_": "Which desk each agent takes: lead, build, review, docs, design, verify, ship, plan, ops, data or legal.",
+  "security-lead": {
+    "dept": "lead"
+  },
+  "dependency-auditor": {
+    "dept": "review"
+  },
+  "secrets-scanner": {
+    "dept": "review"
+  },
+  "threat-modeller": {
+    "dept": "review"
+  },
+  "security-reviewer": {
+    "dept": "review"
+  }
+}

@@ -4,10 +4,13 @@
  *
  * The only processes this ever starts: the system's browser opener, once,
  * after `serve` or `demo` is listening and for `open` (skip it with
- * --no-open); and on Windows, when it makes the launch key file, icacls once
- * (an argument list, no shell) to limit that file to the current user. The
+ * --no-open); and on Windows icacls (an argument list, no shell) once when it
+ * makes the launch key file, and once per data folder for the notify folder,
+ * to limit them to the current user. The
  * server, the run log and the MCP server (`arsenale mcp`) never start a
- * process.
+ * process, with two exceptions the caller asks for by name: `testq run` runs
+ * the command the caller gave, with the caller's console, when its turn
+ * comes, and `resume-scan` runs read-only git in each worktree.
  */
 const path = require('path')
 const fs = require('fs')
@@ -26,10 +29,21 @@ Commands
                                  (--no-open only prints the address)
   demo  [--port N] [--no-open]   the dashboard on an invented company, in a temporary
                                  folder that is deleted when it stops (default port 4311);
-                                 --shop: a small shop with office packs and no developers
+                                 --shop: a small shop with office packs and no developers;
+                                 --showcase: hide the dock, legends and notes, for recordings
   log <mode> [json] [flags]      record agent activity; "arsenale log --help" lists the modes
   start | progress | finish | gate | decision | answers | inbox | dismiss | budget-check
+                                 | version-run | version-ledger | campus | office | alerts
                                  short for "log --start", "log --progress", "log <json>" …
+  progress <run id> "<step>" [<pct>]   a progress line for fixed text, without JSON
+  testq run --run <id> [--repo <path>] -- <command ...>  |  testq status | leave
+                                 one full test suite at a time on this machine
+  resume-scan [--dir D] [--json] unfinished runs whose worktree still has changes
+  init [--dir D] [--dry-run] [--yes] [--force]
+                                 install agents, rules and skills; scaffold PROJECT.md, REVIEW.md, docs/specs
+  autonomous start|status|resume <version>
+                                 state file docs/specs/<version>-list.md for an autonomous run
+  awake start [--pid N] | stop   keep the machine awake while a process lives (macOS, Linux)
   mcp                            the MCP server on stdin/stdout, for an assistant to start
                                  (Settings > Connect your assistant shows the exact line)
   task | comment | deliverable | check-action
@@ -60,6 +74,8 @@ const ALIASES = {
   dismiss: '--dismiss', 'budget-check': '--budget-check', budget: '--budget', budgets: '--budgets', employee: '--employee',
   heartbeat: '--heartbeat', 'company-init': '--company-init', 'company-status': '--company-status',
   task: '--task', comment: '--comment', deliverable: '--deliverable', 'check-action': '--check-action',
+  campus: '--campus', office: '--office', 'version-run': '--version-run', 'version-ledger': '--version-ledger',
+  testq: '--testq', 'resume-scan': '--resume-scan', alerts: '--alerts',
 }
 
 function flags(args) {
@@ -71,7 +87,8 @@ function flags(args) {
     else if (/^--port=/.test(a)) out.port = Number(a.slice(7))
     else out.rest.push(a)
   }
-  if (out.port && (!Number.isInteger(out.port) || out.port < 1 || out.port > 65535)) fail('--port needs a number from 1 to 65535')
+  // 0 means "not given"; NaN ("--port abc") is falsy too, so it is tested apart, or serve would fall back to 4310
+  if (out.port !== 0 && (!Number.isInteger(out.port) || out.port < 1 || out.port > 65535)) fail('--port needs a number from 1 to 65535')
   return out
 }
 
@@ -105,11 +122,26 @@ function launchKey() {
   return k
 }
 
+/** Windows: the notify folder, where Settings saves the phone channels'
+ *  secrets (tools/notify.cjs), limited to this user with inheritance, so
+ *  every file the server writes there later (atomic writes make a new file
+ *  each time) is the owner's only. Read back at every start and re-applied
+ *  when wrong (tools/owner-only.cjs): an ACL changed after the first start
+ *  must not hide behind the mark file. On macOS and Linux notify.cjs keeps
+ *  the folder 0700 and its files 0600. */
+function ownerOnlyNotifyFolder() {
+  if (process.platform !== 'win32') return
+  const dir = path.join(require(path.join(TOOLS, 'paths.cjs')).HOME, 'notify')
+  const r = require(path.join(TOOLS, 'owner-only.cjs')).ensure(dir)
+  if (!r.ok) console.warn('Warning: could not limit ' + dir + ' to your account (' + r.reason + '). Check that only you can read it before you save phone secrets in Settings.')
+}
+
 async function serve(opts, label) {
   launchKey()
+  ownerOnlyNotifyFolder()
   const { start } = require(path.join(TOOLS, 'agent-dashboard-server.cjs'))
   let s
-  try { s = await start({ port: opts.port || 4310 }) } catch (e) { fail(e.message) }
+  try { s = await start({ port: opts.port || 4310, demo: !!opts.demo, showcase: !!opts.showcase }) } catch (e) { fail(e.message) }
   console.log((label || 'Arsenale dashboard') + ': ' + s.keyUrl + '   (Ctrl+C to stop)')
   console.log('Data folder: ' + require(path.join(TOOLS, 'paths.cjs')).HOME)
   if (opts.open) openBrowser(s.keyUrl)
@@ -131,12 +163,18 @@ async function demo(opts) {
   // before anything reads paths.cjs: the demo must never see the user's data
   // --shop: a small shop with no developers, as the first-start wizard sets it up
   const shop = opts.rest.includes('--shop')
+  const showcase = opts.rest.includes('--showcase')
   const { makeDemoHome, makeShopHome } = require(path.join(TOOLS, 'demo.cjs'))
   const home = shop ? makeShopHome() : makeDemoHome()
   process.env.ARSENALE_HOME = home
   delete process.env.ARSENALE_AGENT_DIRS
   delete process.env.ARSENALE_TRANSCRIPT_ROOTS
   const { seedCompany, seedEveryone, seedShop, simulate } = require(path.join(TOOLS, 'demo.cjs'))
+  // The address first, then the seed (seconds on a busy machine), then the
+  // browser: a script reading the output gets the key URL at once. The seed
+  // runs in one synchronous stretch, so a request that arrives meanwhile
+  // waits for it and never sees half the invented company.
+  const s = await serve({ port: opts.port || 4311, open: false, demo: true, showcase }, 'Arsenale demo (invented data)')
   let stop = () => {}
   if (shop) seedShop(home)
   else {
@@ -144,7 +182,8 @@ async function demo(opts) {
     try { seedEveryone() } catch (e) { console.error('demo: the 1.0 screens have no data (' + e.message + ')') }
     stop = simulate(home)
   }
-  const s = await serve({ port: opts.port || 4311, open: opts.open }, 'Arsenale demo (invented data)')
+  require(path.join(TOOLS, 'build-agent-dashboard.cjs')).invalidate()
+  if (opts.open) openBrowser(s.keyUrl)
   const cleanup = () => {
     stop()
     try { s.server.close() } catch { /* already closed */ }
@@ -165,18 +204,23 @@ const [cmd, ...args] = process.argv.slice(2)
 if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') { console.log(HELP); process.exit(cmd ? 0 : 1) }
 if (cmd === '--version' || cmd === '-v' || cmd === 'version') { console.log(VERSION); process.exit(0) }
 
-if (cmd === 'serve') serve(flags(args))
+// the showcase look is for recordings of the invented company only
+if (cmd === 'serve' && args.includes('--showcase')) fail('--showcase works with "arsenale demo" only.')
+else if (cmd === 'serve') serve(flags(args))
 else if (cmd === 'open') openDashboard(flags(args))
 else if (cmd === 'demo') demo(flags(args))
 else if (cmd === 'log') log(args)
-else if (cmd === 'mcp') require(path.join(TOOLS, 'mcp-server.cjs')).runStdio()
+else if (cmd === 'init' || cmd === 'autonomous' || cmd === 'awake') {
+  const A = require(path.join(TOOLS, 'autonomous.cjs'))
+  process.exitCode = A[cmd](args, console.log)
+} else if (cmd === 'mcp') require(path.join(TOOLS, 'mcp-server.cjs')).runStdio()
 else if (cmd === 'finish') log(args)
-else if (Object.hasOwn(ALIASES, cmd)) log([ALIASES[cmd], ...args])
+else if (Object.hasOwn(ALIASES, cmd)) log(args.length === 1 && ['--help', '-h'].includes(args[0]) ? ['--help'] : [ALIASES[cmd], ...args])
 else if (cmd === 'build') {
   const B = require(path.join(TOOLS, 'build-agent-dashboard.cjs'))
   const n = B.build()
   console.log(B.OUT + ': ' + n.runs + ' runs, ' + n.active + ' running, ' + n.agents + ' agents')
 } else if (cmd === 'paths') {
   const P = require(path.join(TOOLS, 'paths.cjs'))
-  console.log(JSON.stringify({ home: P.HOME, agentDirs: P.AGENT_DIRS, transcriptRoots: P.TRANSCRIPT_ROOTS, prices: fs.existsSync(P.PRICES) ? P.PRICES : P.PRICES_TEMPLATE + ' (empty template)' }, null, 2))
+  console.log(JSON.stringify({ home: P.HOME, runs: P.RUNS, company: P.COMPANY, agentDirs: P.AGENT_DIRS, transcriptRoots: P.TRANSCRIPT_ROOTS, prices: fs.existsSync(P.PRICES) ? P.PRICES : P.PRICES_TEMPLATE + ' (empty template)' }, null, 2))
 } else fail('unknown command "' + cmd + '" (see arsenale --help)')

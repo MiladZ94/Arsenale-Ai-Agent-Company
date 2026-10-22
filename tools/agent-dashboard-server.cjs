@@ -28,9 +28,12 @@
  * The 1.0 screens write through the same library as the CLI and the MCP
  * server (runlog.cjs and the modules next to it), always as the board: tasks
  * (api/task, api/task-comment), the team (api/team-member, api/hire-decision),
- * the safety rules (api/policy), office packs (api/pack), the first-start
+ * the safety rules (api/policy), office packs (api/pack, and api/pack-local
+ * for a pack from a folder or a .zip), the first-start
  * wizard (api/onboard), "Connect your assistant" (api/connect-*), and phone
- * notifications (api/notify). GET /deliverables/<id> serves a stored copy of a
+ * notifications (api/notify), the owner's offices (api/office, 1.2), and the
+ * 1.1 data: api/live (read), api/automation, api/limits, api/resume,
+ * api/alerts. GET /deliverables/<id> serves a stored copy of a
  * deliverable, only from Arsenale's own store, under a sandbox CSP.
  *
  * /mcp is the MCP server over HTTP, for clients that take only a URL. It is
@@ -55,7 +58,7 @@ const http = require('http')
 const fs = require('fs')
 const crypto = require('crypto')
 
-const PARTS = ['./build-agent-dashboard.cjs', './agent-office-page.cjs', './dashboard-strings.cjs', './agent-company.cjs', './agent-company-page.cjs', './activity-page.cjs', './everyone-page.cjs', './everyone-art.cjs', './paths.cjs'].map((f) => require.resolve(f))
+const PARTS = ['./build-agent-dashboard.cjs', './agent-office-page.cjs', './dashboard-strings.cjs', './agent-company.cjs', './agent-company-page.cjs', './activity-page.cjs', './version-run-page.cjs', './everyone-page.cjs', './everyone-art.cjs', './office-world.cjs', './paths.cjs'].map((f) => require.resolve(f))
 let stamp = ''
 let page = null
 function pages() {
@@ -80,11 +83,18 @@ const KEY_HELP = 'This dashboard opens only with its key. Run `arsenale open`, o
 // Style attributes are drawn by the page's own script on every redraw, so
 // style-src needs 'unsafe-inline'; scripts do not.
 // Images may also come from this server's deliverable store, and from
-// nowhere else on it (spec R-7.8).
-const csp = (nonce, port) => "default-src 'none'; script-src 'nonce-" + nonce + "'; style-src 'unsafe-inline'; img-src data: http://localhost:" + port + "/deliverables/ http://127.0.0.1:" + port + "/deliverables/; connect-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'"
+// nowhere else on it (spec R-7.8). blob: is for the 3D office: the textures
+// inside a character file someone drops on a desk are read through blob URLs
+// the page makes itself (GLTFLoader), as images and by fetch.
+const csp = (nonce, port) => "default-src 'none'; script-src 'nonce-" + nonce + "'; style-src 'unsafe-inline'; img-src data: blob: http://localhost:" + port + "/deliverables/ http://127.0.0.1:" + port + "/deliverables/; connect-src 'self' blob:; base-uri 'none'; form-action 'none'; object-src 'none'; frame-ancestors 'none'"
+
+/** ?showcase=1 or 0 on a demo page; with neither, what the demo was started with. */
+const showcaseAsked = (full, dflt) => { const q = new URLSearchParams(String(full).split('?')[1] || ''); return q.has('showcase') ? q.get('showcase') === '1' : dflt }
 
 function start(opts = {}) {
   const port = Number(opts.port) || 4310
+  // arsenale demo only: the showcase look for recordings (hides the dock, legends and notes); the real app never has it
+  const DEMO = !!opts.demo, SHOWCASE = DEMO && !!opts.showcase
   const LK = require('./launch-key.cjs')
   const { key: KEY } = LK.ensure()
   const TOKEN = LK.pageToken(KEY)
@@ -92,6 +102,12 @@ function start(opts = {}) {
   const COOKIE = LK.cookieName(port)
   const HOSTS = ['127.0.0.1:' + port, 'localhost:' + port]
   const ORIGINS = HOSTS.map((h) => 'http://' + h)
+  // One thread answers every page and agent: a request whose file is locked
+  // waits with timers (withLockAsync) and briefly, and a lock taken deeper
+  // down blocks for at most a second (store.cjs).
+  const S = require('./store.cjs')
+  S.configure({ syncWaitMs: 1000, asyncWaitMs: 5000 })
+  const companyFiles = (...ks) => { try { const C = require('./agent-company.cjs'); return ks.map((k) => C.fileOf(k)).filter((f) => fs.existsSync(f)) } catch { return [] } }
 
   const sameToken = (given) => LK.same(given, TOKEN)
   const hasKey = (req) => {
@@ -101,13 +117,12 @@ function start(opts = {}) {
     }
     return false
   }
-  /** No key: JSON for the API, a short page in both languages for the rest. */
+  /** No key: JSON for the API, a short English page for the rest. */
   function noKey(res, url) {
     if (url.startsWith('/api/')) return sendJson(res, 401, { error: 'key' })
-    const { t } = require('./dashboard-strings.cjs')
     const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     res.writeHead(401, Object.assign({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Security-Policy': BARE_CSP }, FRAME))
-    res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Arsenale</title></head><body><p>' + esc(KEY_HELP) + '</p><p lang="fa" dir="rtl">' + esc(t('fa', KEY_HELP)) + '</p></body></html>')
+    res.end('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>Arsenale</title></head><body><p>' + esc(KEY_HELP) + '</p></body></html>')
   }
 
   function sendJson(res, code, body) {
@@ -150,7 +165,8 @@ function start(opts = {}) {
       if (done) return
       let body
       try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')) } catch { return sendJson(res, 400, { error: 'bad json' }) }
-      const fault = (e) => sendJson(res, e.code >= 400 && e.code < 500 ? e.code : 500, { error: e.message })
+      // `field`: the form field a refusal names (notify.cjs), for the page to mark
+      const fault = (e) => sendJson(res, e.code >= 400 && e.code < 500 ? e.code : 500, e.field ? { error: e.message, field: String(e.field) } : { error: e.message })
       try {
         const out = handle(body)
         if (out && typeof out.then === 'function') return out.then((v) => { if (after) after(); sendJson(res, 200, { ok: true, [key || 'gate']: v }) }, fault)
@@ -166,9 +182,9 @@ function start(opts = {}) {
   const mcpHttp = require('./mcp-server.cjs').httpTransport()
   // Board writes of the 1.0 screens: url -> [handler(body), body limit]
   const WRITES = {
-    '/api/task': [(b) => { const T = require('./tasks.cjs'); return b.op === 'update' ? T.updateTask(b, BOARD).task : T.createTask(b, BOARD) }, 32768],
+    '/api/task': [(b) => { const T = require('./tasks.cjs'); return b.op === 'update' ? S.withLockAsync(T.lockFilesOf(b.id), () => T.updateTask(b, BOARD).task) : T.createTask(b, BOARD) }, 32768],
     '/api/task-comment': [(b) => require('./tasks.cjs').addComment(String(b.id || ''), b.text, BOARD)],
-    '/api/team-member': [(b) => {
+    '/api/team-member': [(b) => S.withLockAsync(companyFiles('employees'), () => {
       const Tm = require('./team.cjs')
       if (b.op === 'edit') return Tm.edit(b, BOARD)
       if (b.op === 'retire') return Tm.retire(String(b.id || ''), BOARD)
@@ -176,17 +192,35 @@ function start(opts = {}) {
       if (b.op === 'restore') return Tm.restore(String(b.id || ''), String(b.backup || ''), BOARD)
       if (b.op === 'preview') return { text: Tm.fileText(Tm.cleanForm(b)) }
       return Tm.hire(b, BOARD)
-    }, 32768],
-    '/api/hire-decision': [(b) => require('./team.cjs').decideProposal(String(b.gate || ''), b.decision === 'decline' ? 'decline' : 'hire', b.edits, BOARD), 32768],
+    }), 32768],
+    '/api/hire-decision': [(b) => S.withLockAsync(companyFiles('employees'), () => require('./team.cjs').decideProposal(String(b.gate || ''), b.decision === 'decline' ? 'decline' : 'hire', b.edits, BOARD)), 32768],
     '/api/policy': [(b) => require('./policy.cjs').setPolicy(b, BOARD)],
-    '/api/pack': [(b) => { const Pk = require('./packs.cjs'); return b.op === 'remove' ? Pk.uninstallPack(String(b.id || ''), BOARD) : b.op === 'update' ? Pk.updatePack(String(b.id || ''), BOARD) : Pk.installPack(String(b.id || ''), BOARD, { onConflict: b.onConflict }) }],
+    '/api/pack': [(b) => { const Pk = require('./packs.cjs'); return b.op === 'remove' ? Pk.uninstallPack(String(b.id || ''), BOARD, { keepEdited: b.keepEdited === true }) : b.op === 'update' ? Pk.updatePack(String(b.id || ''), BOARD) : Pk.installPack(String(b.id || ''), BOARD, { onConflict: b.onConflict }) }],
+    // spec 1.2: a pack from a folder or a .zip, uploaded as its bytes (base64),
+    // staged and checked, then installed on the owner's click (pack-local.cjs);
+    // 1 MB of pack is about 1.4 MB of base64
+    '/api/pack-local': [(b) => require('./pack-local.cjs').handle(b, BOARD), 2 * 1024 * 1024],
     '/api/onboard': [(b) => (b.op === 'preview' ? require('./onboard.cjs').preview(b) : require('./onboard.cjs').create(b, BOARD))],
     '/api/connect-preview': [(b) => require('./connect.cjs').preview(String(b.client || ''))],
     '/api/connect-apply': [(b) => require('./connect.cjs').apply(String(b.client || ''), String(b.hash || ''), BOARD)],
     '/api/mcp-forget': [(b) => require('./mcp-server.cjs').forgetClient(String(b.id || ''), BOARD)],
     '/api/notify': [(b) => require('./notify.cjs').configure(b, BOARD)],
+    '/api/campus': [(b) => require('./campus.cjs').apply(b, BOARD, 'dashboard')],
+    // spec 1.2: New office, Edit office, Archive (campus.cjs office, the owner only)
+    '/api/office': [(b) => require('./campus.cjs').office(b, BOARD, 'dashboard')],
+    // spec 1.1: the auto-run switch, the run limits, Resume / Dismiss of
+    // unfinished work, and hiding a stalled run's alert
+    '/api/automation': [(b) => require('./automation.cjs').set(b, BOARD)],
+    '/api/limits': [(b) => require('./watch.cjs').setLimits(b, BOARD)],
+    '/api/resume': [(b) => { const R = require('./resume.cjs'); return b.op === 'dismiss' ? R.dismiss(String(b.run || ''), BOARD) : R.resume(String(b.run || ''), BOARD) }],
+    '/api/alerts': [(b) => require('./watch.cjs').dismiss(String(b.run || ''), BOARD)],
+    // the Live buttons (Nudge, Stop, Clean) and Undo on the Decisions page
+    '/api/run-action': [(b) => require('./liveactions.cjs').act(b, BOARD, pages().snapshot().state)],
+    '/api/undo': [(b) => require('./autolog.cjs').undo(String(b.gate || ''), BOARD)],
   }
   const READS = {
+    // the percent comes from the same place as the Live page (watch.live -> progress.overallPercent): the mirror file has no percent of its own
+    '/api/version-runs': () => require('./version-run-page.cjs').withLive(require('./version-run-page.cjs').load(), require('./watch.cjs').live({ state: pages().snapshot().state }).versionRuns),
     '/api/tasks': () => ({ tasks: require('./tasks.cjs').listTasks() }),
     '/api/task': (q) => require('./tasks.cjs').getTask(q.get('id')),
     '/api/team': () => {
@@ -200,7 +234,7 @@ function start(opts = {}) {
     },
     '/api/member': (q) => require('./team.cjs').member(q.get('id')),
     '/api/policy': () => { const pol = require('./policy.cjs'); return { policy: pol.readPolicy(), categories: pol.CATEGORIES } },
-    '/api/packs': () => ({ packs: require('./packs.cjs').listPacks() }),
+    '/api/packs': () => ({ packs: require('./packs.cjs').listPacks(), local: require('./packs.cjs').listLocal() }),
     '/api/deliverables': () => ({ deliverables: require('./deliverables.cjs').listDeliverables(), store: require('./deliverables.cjs').storeSize() }),
     '/api/connect': () => {
       const C = require('./connect.cjs')
@@ -209,6 +243,10 @@ function start(opts = {}) {
     },
     '/api/onboard': () => Object.assign(require('./onboard.cjs').status(), { packs: require('./packs.cjs').listPacks(), home: require('./paths.cjs').HOME }),
     '/api/notify': () => require('./notify.cjs').publicState(),
+    '/api/live': () => require('./watch.cjs').live({ state: pages().snapshot().state }),
+    '/api/automation': () => require('./automation.cjs').read(),
+    '/api/run-actions': () => require('./liveactions.cjs').view(pages().snapshot().state),
+    '/api/auto-log': () => require('./autolog.cjs').log(),
   }
 
   const server = http.createServer((req, res) => {
@@ -238,12 +276,10 @@ function start(opts = {}) {
     if (url !== '/favicon.ico' && url !== '/mcp' && !hasKey(req)) return noKey(res, url)
     try {
       const B = pages()
-      const { renderPage, renderArchive, answerGate, dismissGate, langFromRequest } = B
+      const { renderPage, renderArchive, answerGate, dismissGate } = B
       const fresh = () => B.invalidate()
-      // The language is picked per request: ?lang= in the address, else the
-      // `dash-lang` cookie the page sets, else English (tools/dashboard-strings.cjs).
-      const { lang, explicit } = langFromRequest(full.split('?')[1] || '', req.headers.cookie)
-      const langCookie = explicit ? { 'Set-Cookie': 'dash-lang=' + lang + '; Path=/; Max-Age=31536000; SameSite=Strict' } : {}
+      // English only: ?lang= and the old `dash-lang` cookie are not read (tools/dashboard-strings.cjs)
+      const lang = 'en'
       if (url === '/api/answer' || url === '/api/dismiss') {
         if (req.method !== 'POST') return sendJson(res, 405, { error: 'POST only' })
         const act = url === '/api/answer' ? answerGate : dismissGate
@@ -253,13 +289,15 @@ function start(opts = {}) {
           // "approve": the same call as the Approvals screen's buttons.
           const hire = (() => { try { const g = JSON.parse(fs.readFileSync(require('path').join(require('./paths.cjs').GATES, id.replace(/[^\w.-]/g, '') + '.json'), 'utf8')); return g.approvalType === 'hire' && g.status === 'waiting' } catch { return false } })()
           if (hire && url === '/api/answer') return require('./team.cjs').decideProposal(id, String(body.answer) === 'approve' ? 'hire' : 'decline', null, BOARD).gate
-          return url === '/api/answer' ? act(id, String(body.answer || '')) : act(id)
+          // the gate's lock, waited for with timers (answerGate takes it again inside)
+          const gateFile = require('path').join(require('./paths.cjs').GATES, id.replace(/[^\w.-]/g, '') + '.json')
+          return S.withLockAsync(fs.existsSync(gateFile) ? [gateFile] : [], () => (url === '/api/answer' ? act(id, String(body.answer || ''), body.hash !== undefined ? { hash: String(body.hash) } : undefined) : act(id)))
         }, 'gate', fresh)
       }
       if (url === '/api/budget') {
         if (req.method !== 'POST') return sendJson(res, 405, { error: 'POST only' })
         const C = require('./agent-company.cjs')
-        return postJson(req, res, (body) => {
+        return postJson(req, res, (body) => S.withLockAsync(companyFiles('company', 'offices', 'employees'), () => {
           const scope = String(body.scope || '')
           if (scope === 'master') return C.setBudgetsEnabled(body.enabled === true, 'board', 'dashboard')
           // ids end up compared with file contents, never used as a path; one
@@ -267,7 +305,7 @@ function start(opts = {}) {
           const id = String(body.id == null ? '' : body.id)
           if (id !== id.replace(/[^\w.-]/g, '')) { const e = new Error('bad id'); e.code = 400; throw e }
           return C.setBudget({ scope, id, budget: body.budget === undefined ? {} : body.budget, by: 'board' }, 'dashboard')
-        }, 'saved', fresh)
+        }), 'saved', fresh)
       }
       if (url === '/mcp') return mcpHttp.handle(req, res, ORIGINS)
       if (Object.hasOwn(WRITES, url) && req.method === 'POST') {
@@ -310,14 +348,25 @@ function start(opts = {}) {
         const nonce = crypto.randomBytes(16).toString('base64')
         const html = url === '/archive'
           ? renderArchive(s.state, { live: true, lang })
-          : renderPage(s.state, { live: true, token: TOKEN, lang, company: s.company() })
+          : renderPage(s.state, { live: true, token: TOKEN, lang, company: s.company(), demo: DEMO, showcase: DEMO && showcaseAsked(full, SHOWCASE) })
         res.writeHead(200, Object.assign({
           'Content-Type': 'text/html; charset=utf-8',
           'Cache-Control': 'no-store',
           'Content-Security-Policy': csp(nonce, port),
-        }, FRAME, langCookie))
+        }, FRAME))
         res.end(html.replace(/<script>/g, '<script nonce="' + nonce + '">'))
         return
+      }
+      // Help: the user guide, read from docs/guide/src only when someone opens it
+      if (url === '/help' && (req.method === 'GET' || req.method === 'HEAD')) {
+        const nonce = crypto.randomBytes(16).toString('base64')
+        res.writeHead(200, Object.assign({ 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Security-Policy': csp(nonce, port).replace('img-src ', "img-src 'self' ") }, FRAME))
+        res.end(require('./help-page.cjs').render('help'))
+        return
+      }
+      if (url.startsWith('/help/img/') && (req.method === 'GET' || req.method === 'HEAD')) {
+        const p = require('./help-page.cjs').imagePath(url.slice('/help/img/'.length))
+        if (p) { res.writeHead(200, Object.assign({ 'Content-Type': 'image/png', 'Cache-Control': 'no-store' }, FRAME)); fs.createReadStream(p).pipe(res); return }
       }
       res.writeHead(404, Object.assign({ 'Content-Type': 'text/plain; charset=utf-8' }, FRAME))
       res.end('nothing here')
@@ -337,8 +386,18 @@ function start(opts = {}) {
       // phone replies come back over outbound polls, and only while a channel is on
       const stopNotify = require('./notify.cjs').startLoop()
       server.on('close', stopNotify)
+      // stalled and dead runs: checked now and every 30 s (watch.cjs); it
+      // reads and writes records only, and never starts or stops a process
+      // its new alerts go to the phone channels that are on (notify.onEvents,
+      // outbound only, in the background: a slow service never holds a tick)
+      const stopWatch = require('./watch.cjs').startLoop({ after: () => { try { pages().invalidate() } catch { /* next read rebuilds */ } }, onEvents: (evs) => { require('./notify.cjs').onEvents(evs) } })
+      server.on('close', stopWatch)
       // the first start of 1.0 writes the safety defaults (spec 7, Migration)
       try { require('./policy.cjs').ensureDefaults('dashboard') } catch { /* read-only folder: every category reads as ask anyway */ }
+      // a writer killed between its temp file and the rename left the temp behind
+      try { const Pt = require('./paths.cjs'); require('./store.cjs').cleanStray([Pt.RUNS, Pt.ACTIVE, Pt.GATES, Pt.DECISIONS, Pt.VERSION_RUNS, Pt.COMPANY, require('path').join(Pt.HOME, 'alerts'), require('path').join(Pt.HOME, 'test-queue'), require('path').join(Pt.HOME, 'test-queue', 'waiting'), require('path').join(Pt.HOME, 'resume'), require('path').join(Pt.HOME, 'settings'), require('path').join(Pt.COMPANY, 'issues')]) } catch { /* nothing to clean */ }
+      // a pack review closed without Install, or cut off by a restart
+      try { require('./pack-local.cjs').cleanStaging() } catch { /* nothing staged */ }
       const url = 'http://localhost:' + port + '/'
       resolve({ server, port, url, keyUrl: url + '?k=' + KEY })
     })

@@ -45,7 +45,7 @@ test('JSON input: --stdin, --file and @file carry quotes and non-ASCII text that
   assert.equal(sb.read('agent-runs/active/' + a.out + '.json').task, task)
   // a file written by Windows PowerShell 5.1 starts with a byte-order mark
   const f = path.join(sb.base, 'p.json')
-  fs.writeFileSync(f, '﻿' + JSON.stringify({ id: a.out, doing: "reading 'App.jsx'" }), 'utf8')
+  fs.writeFileSync(f, '\uFEFF' + JSON.stringify({ id: a.out, doing: "reading 'App.jsx'" }), 'utf8')
   assert.equal(sb.cli('--progress', '--file', f).code, 0)
   assert.equal(sb.cli('--progress', '@' + f).code, 0)
   assert.equal(sb.read('agent-runs/active/' + a.out + '.json').steps.length, 2)

@@ -1,0 +1,26 @@
+{
+  "office-company": {
+    "sha256": "124383bf533f6bea67f39bc9ccfed85473ca727419f565c6df4c895c03f4ad7c",
+    "length": 793598
+  },
+  "office-company-live": {
+    "sha256": "550ebbabadab1e7052813d354fc8145932b32e1081f4528fe816de9cda90ec4f",
+    "length": 7986702
+  },
+  "office-plain": {
+    "sha256": "ba1fd6a4ad3771f8db4f0b4dd9bfee0d5822f70015a673cef1d34f4e2d015046",
+    "length": 771441
+  },
+  "office-plain-live": {
+    "sha256": "c9ac4d261a1072bfa7eed609d29254f874f6d2370e324ce87509385d226120c6",
+    "length": 7957144
+  },
+  "archive": {
+    "sha256": "44633baaf6d93070971c6793038c6c711fee16779c1b2cdd506ba8446969c175",
+    "length": 49698
+  },
+  "archive-live": {
+    "sha256": "8f0d67ed997721c209df87b6be0386c35ad3c6e8f0a445b7cc316292819d11dc",
+    "length": 49626
+  }
+}

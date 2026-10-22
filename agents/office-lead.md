@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: yellow
 tools: Read, Glob, Grep, Write, Bash
+zone: lead
 ---
 
 You are the head of one office. The supervisor is the CEO. It is the only one

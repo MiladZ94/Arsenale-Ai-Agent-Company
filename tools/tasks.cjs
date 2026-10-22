@@ -19,6 +19,7 @@ const fs = require('fs')
 const path = require('path')
 const P = require('./paths.cjs')
 const { writeAtomic } = require('./build-agent-dashboard.cjs')
+const { withLock } = require('./store.cjs')
 const { fail, OWNER_ONLY, clipCp, actorLabel } = require('./runlog.cjs')
 
 const ISSUES = path.join(P.COMPANY, 'issues')
@@ -40,6 +41,14 @@ function checkId(id) {
   if (!TASK_ID.test(s)) throw fail(400, 'bad task id: ' + clipCp(s, 20))
   return s
 }
+
+// A read-change-write of one task holds its lock: jobs of several agents
+// link to the same task at once (store.cjs). No file, no lock: the caller
+// then answers "no such task" as before.
+const lockTask = (id, fn) => (TASK_ID.test(String(id || '')) && fs.existsSync(fileOf(String(id))) ? withLock(fileOf(String(id)), fn) : fn())
+// the files lockTask would lock, for a server that takes them first without
+// blocking (store.cjs withLockAsync)
+const lockFilesOf = (ids) => (Array.isArray(ids) ? ids : [ids]).map((id) => String(id || '')).filter((id) => TASK_ID.test(id) && fs.existsSync(fileOf(id))).map(fileOf)
 
 function readTask(id) {
   try { return JSON.parse(fs.readFileSync(fileOf(checkId(id)), 'utf8')) } catch (e) { if (e.code === 400) throw e; return null }
@@ -117,6 +126,14 @@ const pushHistory = (t, by, field, from, to) => {
   if (t.history.length > 100) t.history = t.history.slice(-100)
 }
 
+/** A task's kind of work (spec 1.2): one of kinds.cjs, or '' for none. */
+function kindOf(input) {
+  const K = require('./kinds.cjs')
+  const v = input.kind === null ? '' : String(input.kind)
+  if (v && !K.isKind(v)) throw fail(400, 'Kind of work: unknown kind "' + clipCp(v, 30) + '"')
+  return v
+}
+
 function assigneeOf(co, input, out) {
   if (input.assignee !== undefined || input.assigneeAgentId !== undefined) {
     const a = String(input.assignee !== undefined ? input.assignee : input.assigneeAgentId)
@@ -172,6 +189,17 @@ function createTask(input, actor) {
     t.parentId = parent.id
   }
   assigneeOf(co, input, t)
+  if (input.kind !== undefined) {
+    t.kind = kindOf(input)
+    // a task with a kind and no office goes where a run of that kind would
+    // (spec 1.2 rule 24): the office holding the kind, the project's, the
+    // assignee's home office, Unassigned work
+    if (t.kind && !t.assigneeOfficeId) {
+      const R = C.resolver(co, new Map())
+      t.assigneeOfficeId = R.route({ kind: t.kind, projectId, agent: t.assigneeAgentId }).officeId
+    }
+    if (!t.kind) delete t.kind
+  }
   const id = allocate(prefixFor(co, projectId), (cand) => {
     t.id = cand
     fs.writeFileSync(fileOf(cand), JSON.stringify(t, null, 2), { flag: 'wx' })
@@ -187,6 +215,9 @@ const MCP_STATUS = { in_progress: 'in_progress', waiting_for_you: 'in_review', b
 
 /** Changes a task. Each actor has its own allowed moves (R-6.6). */
 function updateTask(input, actor) {
+  return lockTask(input && input.id, () => updateTaskLocked(input, actor))
+}
+function updateTaskLocked(input, actor) {
   const C = company()
   const co = C.readCompany()
   if (!co.configured) throw fail(409, 'Set up your company first: tasks belong to a company')
@@ -226,8 +257,9 @@ function updateTask(input, actor) {
     if (input.labels !== undefined) set('labels', cleanLabels(input.labels))
     if (input.priority !== undefined) { if (!PRIORITIES.includes(String(input.priority))) throw fail(400, 'priority must be one of ' + PRIORITIES.join(', ')); set('priority', String(input.priority)) }
     if (input.needsSignOff !== undefined) set('needsSignOff', input.needsSignOff === true)
+    if (input.kind !== undefined) set('kind', kindOf(input))
   } else {
-    for (const k of ['title', 'description', 'dueDate', 'links', 'labels', 'priority', 'needsSignOff']) {
+    for (const k of ['title', 'description', 'dueDate', 'links', 'labels', 'priority', 'needsSignOff', 'kind']) {
       if (input[k] !== undefined) throw fail(403, 'Only the owner can change ' + k + '. ' + OWNER_ONLY)
     }
   }
@@ -296,7 +328,7 @@ function summaryOf(t) {
   const seen = t.seenBy && typeof t.seenBy === 'object' ? Object.values(t.seenBy).sort().pop() || '' : ''
   return {
     id: t.id, title: t.title, status: t.status, priority: t.priority, projectId: t.projectId,
-    assigneeAgentId: t.assigneeAgentId, assigneeUserId: t.assigneeUserId, assigneeOfficeId: t.assigneeOfficeId || '',
+    assigneeAgentId: t.assigneeAgentId, assigneeUserId: t.assigneeUserId, assigneeOfficeId: t.assigneeOfficeId || '', kind: t.kind || '',
     dueDate: t.dueDate || '', needsSignOff: !!t.needsSignOff, createdBy: t.createdBy, updatedAt: t.updatedAt, createdAt: t.createdAt, completedAt: t.completedAt || '',
     comments, seenAt: seen, runs: (t.runIds || []).length,
   }
@@ -312,19 +344,22 @@ function getTask(id, opts) {
 function markSeen(ids, clientId) {
   const key = String(clientId || '').replace(/[^\w.-]/g, '').slice(0, 60)
   if (!key) return
-  for (const id of ids) {
+  for (const id of ids) lockTask(id, () => {
     const t = readTask(id)
-    if (!t) continue
+    if (!t) return
     t.seenBy = t.seenBy && typeof t.seenBy === 'object' ? t.seenBy : {}
     t.seenBy[key] = new Date().toISOString()
     writeAtomic(fileOf(t.id), JSON.stringify(t, null, 2))
-  }
+  })
 }
 
 /** A job started or finished for this task (R-6.10): the job is linked, and
  *  a task still "to do" moves to "in progress", never backwards. */
 function linkRun(taskId, runId, actor, opts) {
   if (!TASK_ID.test(String(taskId)) || !runId) return null
+  return lockTask(taskId, () => linkRunLocked(taskId, runId, actor, opts))
+}
+function linkRunLocked(taskId, runId, actor, opts) {
   const t = readTask(taskId)
   if (!t) return null
   t.runIds = Array.isArray(t.runIds) ? t.runIds : []
@@ -341,5 +376,5 @@ function linkRun(taskId, runId, actor, opts) {
 
 module.exports = {
   ISSUES, COMMENTS, STATUSES, MCP_STATUS, TASK_ID, LINK_BAD,
-  createTask, updateTask, addComment, readComments, listTasks, getTask, readTask, markSeen, linkRun, cleanDate, cleanLinks,
+  createTask, updateTask, addComment, readComments, listTasks, getTask, readTask, markSeen, linkRun, cleanDate, cleanLinks, lockFilesOf,
 }

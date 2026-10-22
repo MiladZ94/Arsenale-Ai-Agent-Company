@@ -54,6 +54,12 @@ Arsenale runs on your own machine. Its model, in short (details in the README,
   hire or a plain yes/no question. Telegram pairs through a one-time link
   from a private chat, and afterwards listens only to that person in that
   chat.
+- **Phone secrets** saved in Settings live in `<data>/notify/secrets.json`:
+  mode 0600 on macOS and Linux; on Windows the launcher limits the `notify`
+  folder to the owner's account once, with inheritance. They are write-only:
+  the page and the API show only whether a secret is set, and error texts
+  have every secret value replaced before they are shown or printed. An
+  environment variable of the same name wins over the file.
 - **Connecting an assistant** edits only that client's fixed settings file,
   after the owner saw the change, never a file with comments, with a backup.
   The file keeps its permissions, and the preview shows only the Arsenale
@@ -62,8 +68,11 @@ Arsenale runs on your own machine. Its model, in short (details in the README,
 ## Threat model
 
 Trusted: your operating-system account, and everything that runs as it. That
-includes the command line, which believes `"by":"board"`: a program running
-as you can act as you, through the CLI or by editing the files directly.
+includes the command line: a program running as you can act as you, through
+the CLI or by editing the files directly. The CLI no longer takes `"by":"board"`
+on its word: it needs the launch key (`ARSENALE_BOARD_TOKEN`, or `--board-token`),
+and without it acts as an agent. This keeps a stray agent honest; it is not a
+defence against a program that can read your home folder.
 
 The launch key protects against:
 - other accounts on a shared machine (a terminal server, a shared Linux box,
@@ -81,7 +90,7 @@ Pushover) sees the text of each question. The default, minimal mode sends
 only "1 question waiting".
 
 Out of scope: a program that already runs as your user (it can edit the JSON
-files, call the CLI with `"by":"board"`, start `arsenale mcp`, read the
+files, read the key and call the CLI as the board, start `arsenale mcp`, read the
 launch key, or read the MCP token from your assistant's settings), and other
 users of a shared machine with access to your home folder. The safety rules
 (`policy.json`) are advisory: Arsenale cannot block a tool inside another

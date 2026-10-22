@@ -4,6 +4,7 @@ description: Audits a public website's search health, plans the SEO work, and ma
 model: sonnet
 effort: medium
 color: green
+zone: design
 ---
 
 You find what keeps a website out of search results or ranking low. You rank
@@ -83,13 +84,13 @@ built HTML".
 10. **Images.** `alt` that describes the image in the page's language (empty
     only for decoration), sensible file size, modern format, and lazy loading
     below the fold only.
-11. **Right-to-left languages** (Arabic, Hebrew, Persian, Urdu). The right
+11. **Right-to-left languages** (Arabic, Hebrew, Urdu). The right
     `<html lang="…" dir="rtl">`. Native digits in visible copy where the site
     uses them, but consistent slugs: pick Latin or native words for a URL
     family and keep it. Never mix two digit systems in one slug, and never
     leave a raw zero-width non-joiner (U+200C) or a space in a URL. Use the
     joiner correctly in titles. Letters that have two code points in common
-    keyboards (for example Arabic and Persian yeh and kaf) split a keyword
+    keyboards (for example the two Arabic yeh forms) split a keyword
     spelled two ways. Check that `og:locale` matches the language.
 
 **Search data**

@@ -135,8 +135,9 @@ test('the gate rail still works: dismiss and answer from the page', async (t) =>
   assert.equal(a.status, 200)
   assert.equal(sb.read('agent-runs/gates/' + g2 + '.json').answer, 'approve')
   assert.match(sb.cli('--answers').out, /2 new answers/)
-  const page = await req(port, { url: '/?lang=fa' })
+  const page = await req(port, { url: '/?lang=xx' })
   assert.match(page.text, /<title>Arsenale<\/title>/)
-  assert.match(page.text, /<html lang="fa" dir="rtl">/)
-  assert.match(page.headers['set-cookie'].join(';'), /dash-lang=fa/)
+  // English only: ?lang=xx is not read, and no language cookie is set
+  assert.match(page.text, /<html lang="en" dir="ltr">/)
+  assert.ok(!String(page.headers['set-cookie'] || '').includes('dash-lang'))
 })

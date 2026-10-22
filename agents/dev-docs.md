@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: purple
 tools: Read, Glob, Grep, Write, Edit, Bash, PowerShell
+zone: docs
 ---
 
 You keep the developer documents true. You do not change behaviour, and you

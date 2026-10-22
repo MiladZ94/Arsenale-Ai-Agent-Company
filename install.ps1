@@ -8,7 +8,7 @@
   What it does, in order. Every step that touches a file outside the data
   folder asks first; -Yes answers yes to all of them, -DryRun only prints.
 
-    1. Checks Node.js 20 or newer.
+    1. Checks Node.js 22 or newer.
     2. Creates the data folder (default $HOME\.arsenale) with:
          bin\arsenale.cmd and bin\arsenale   launchers for cmd/PowerShell and Git Bash
          config.json                          which agent and transcript folders to read
@@ -110,16 +110,25 @@ function Backup([string]$path) {
   return $dest
 }
 
+# SHA-256 of a file, upper-case hex as Get-FileHash gives it. Not Get-FileHash
+# itself: Windows PowerShell 5.1 started from PowerShell 7 (pwsh) inherits a
+# PSModulePath where that command cannot be found.
+function Hash-Of([string]$path) {
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  $stream = [System.IO.File]::OpenRead($path)
+  try { return [System.BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-', '') } finally { $stream.Dispose(); $sha.Dispose() }
+}
+
 # One line per file written: its hash, its path, and the backup of what it
 # replaced (if anything), so -Uninstall can put the original back.
 function Note-Installed([string]$path, [string]$backup) {
   if ($DryRun) { return }
-  $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
+  $hash = (Hash-Of $path)
   [System.IO.File]::AppendAllText($Manifest, "$hash`t$path`t$backup`r`n", $Utf8)
 }
 
 function Same-File([string]$a, [string]$b) {
-  return (Get-FileHash -LiteralPath $a -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $b -Algorithm SHA256).Hash
+  return (Hash-Of $a) -eq (Hash-Of $b)
 }
 
 # Copies files side by side: new ones are added, identical ones skipped, and
@@ -195,7 +204,7 @@ if ($Uninstall) {
         $parts = $l.Split("`t"); $hash = $parts[0]; $f = $parts[1]; $orig = ''
         if ($parts.Count -gt 2) { $orig = $parts[2] }
         if (-not (Test-Path -LiteralPath $f)) { continue }
-        if ((Get-FileHash -LiteralPath $f -Algorithm SHA256).Hash -ne $hash) { Say "  kept $f (changed since install)"; continue }
+        if ((Hash-Of $f) -ne $hash) { Say "  kept $f (changed since install)"; continue }
         if ($orig -and (Test-Path -LiteralPath $orig)) {
           Act "restore $f from $orig"
           if (-not $DryRun) { Copy-Item -LiteralPath $orig -Destination $f -Force }
@@ -229,9 +238,9 @@ Say "  code:        $Repo"
 Say "  data folder: $DataDir"
 
 $node = Get-Command node -ErrorAction SilentlyContinue
-if (-not $node) { Write-Error 'Node.js was not found. Install Node.js 20 or newer from https://nodejs.org and run this again.'; exit 1 }
+if (-not $node) { Write-Error 'Node.js was not found. Install Node.js 22 or newer from https://nodejs.org and run this again.'; exit 1 }
 $ver = (& node --version) -replace '^v', ''
-if ([int]($ver.Split('.')[0]) -lt 20) { Write-Error "Node.js $ver is too old: Arsenale needs 20 or newer."; exit 1 }
+if ([int]($ver.Split('.')[0]) -lt 22) { Write-Error "Node.js $ver is too old: Arsenale needs 22 or newer."; exit 1 }
 Say "  node:        $ver"
 
 # 2. data folder, launchers, config
@@ -285,7 +294,7 @@ if ($wanted.Count -eq 0) { Say 'No coding tool folder found (Claude Code, Codex 
 foreach ($t in $wanted) {
   if ($t -eq 'claude-code') {
     if (-not (Ask "Set up Claude Code in $ClaudeDir (agent team, /feature and /fix skills, a block in CLAUDE.md)?")) { continue }
-    $agentFiles = Get-ChildItem -LiteralPath (Join-Path $Repo 'agents') -File | Where-Object { $_.Name -like '*.md' -or $_.Name -eq 'labels.fa.json' } | ForEach-Object { $_.FullName }
+    $agentFiles = Get-ChildItem -LiteralPath (Join-Path $Repo 'agents') -File | Where-Object { $_.Name -like '*.md' -or $_.Name -eq 'labels.json' } | ForEach-Object { $_.FullName }
     Copy-SideBySide $agentFiles (Join-Path $Repo 'agents') (Join-Path $ClaudeDir 'agents') 'agent files'
     $skillSrc = Join-Path $Repo 'adapters\claude-code\skills'
     $skillFiles = Get-ChildItem -LiteralPath $skillSrc -File -Recurse | ForEach-Object { $_.FullName }

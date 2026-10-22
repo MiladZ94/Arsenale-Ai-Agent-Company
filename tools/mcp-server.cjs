@@ -117,21 +117,22 @@ const S = (props, required) => ({ type: 'object', properties: props, required: r
 const T = (type, description, extra) => Object.assign({ type, description }, extra || {})
 const TOOLS = [
   { name: 'hello', description: 'Say hello to Arsenale at the start of a conversation. Returns the company, its offices, unread counts and the house rules digest.', inputSchema: S({ client: T('string', 'Your name, optional'), note: T('string', 'Optional note') }) },
-  { name: 'start_job', description: 'Start a job before a distinct piece of work. Returns job_id and the budget verdict.', inputSchema: S({ team_member: T('string', 'Team member id doing the work (e.g. copywriter), or "supervisor" for yourself'), task: T('string', 'What the job is, one line'), project: T('string', 'Project name, optional'), office_id: T('string', 'Office id, optional'), task_id: T('string', 'Arsenale task id this job works on, e.g. BLU-4'), parent_job_id: T('string', 'The job that started this one, optional'), model: T('string', 'Model name, optional') }, ['team_member', 'task']) },
-  { name: 'log_step', description: 'Log one real step of a job, in a short line in the user\'s language.', inputSchema: S({ job_id: T('string', 'From start_job'), doing: T('string', 'What you are doing now') }, ['job_id', 'doing']) },
+  { name: 'start_job', description: 'Start a job before a distinct piece of work. Returns job_id and the budget verdict.', inputSchema: S({ team_member: T('string', 'Team member id doing the work (e.g. copywriter), or "supervisor" for yourself'), task: T('string', 'What the job is, one line'), project: T('string', 'Project name, optional'), office_id: T('string', 'Office id, optional'), kind: T('string', 'Kind of work, optional: ' + require('./kinds.cjs').KINDS.map((k) => k.id).join(', ') + ' (an unknown one is ignored)'), task_id: T('string', 'Arsenale task id this job works on, e.g. BLU-4'), parent_job_id: T('string', 'The job that started this one, optional'), model: T('string', 'Model name, optional') }, ['team_member', 'task']) },
+  { name: 'log_step', description: 'Log one real step of a job, in a short line in the user\'s language.', inputSchema: S({ job_id: T('string', 'From start_job'), doing: T('string', 'What you are doing now'), pct: T('number', 'Optional, 0-100: the whole job, or the current step once a plan is given'), plan: T('array', 'Optional, once: the steps, [{name, weight}]', { items: { type: 'object' } }), step: T('string', 'Optional: the step of the plan being done, its name or 1-based number'), files: T('number', 'Optional: how many files you changed so far'), tests: T('object', 'Optional: {run, of} tests run of those planned') }, ['job_id', 'doing']) },
   { name: 'finish_job', description: 'Finish a job with a plain one-line summary of what was done.', inputSchema: S({ job_id: T('string', 'From start_job'), status: T('string', 'ok | findings | failed | stopped', { enum: ['ok', 'findings', 'failed', 'stopped'] }), summary: T('string', 'What was done, one plain sentence'), what_was_done: T('array', 'Up to 10 short items', { items: { type: 'string' } }), findings: T('array', 'Up to 20 findings', { items: { type: 'string' } }), deliverable_ids: T('array', 'Ids from add_deliverable', { items: { type: 'string' } }), usage: T('object', '{tokens, input_tokens, output_tokens, duration_ms, model, estimated}') }, ['job_id', 'status', 'summary']) },
   { name: 'ask_you', description: 'Ask the owner on the dashboard (use when they may be away). kind: question (free answer), choice (2-8 choices), approval (yes/no). Read the answer later with get_answers.', inputSchema: S({ question: T('string', 'The question'), kind: T('string', 'question | choice | approval', { enum: ['question', 'choice', 'approval'] }), choices: T('array', '2 to 8 choices for kind choice', { items: { type: 'string' } }), project: T('string', 'optional'), job_id: T('string', 'optional'), task_id: T('string', 'optional') }, ['question', 'kind']) },
   { name: 'get_answers', description: 'Answers the owner gave to questions you asked, since your last read.', inputSchema: S({ question_ids: T('array', 'Only these questions (also ones asked before you connected)', { items: { type: 'string' } }), peek: T('boolean', 'Do not mark them read') }) },
   { name: 'get_inbox', description: 'New tasks, comments and changes the owner made on the dashboard since your last read.', inputSchema: S({ peek: T('boolean', 'Do not mark them read') }) },
   { name: 'list_tasks', description: 'List tasks (summaries).', inputSchema: S({ status: T('array', 'Filter: todo, in_progress, waiting_for_you, blocked, done, cancelled, backlog', { items: { type: 'string' } }), office_id: T('string', 'optional'), assignee: T('string', 'team member id, optional'), limit: T('number', 'at most 50') }) },
   { name: 'get_task', description: 'One task with its comments and links.', inputSchema: S({ task_id: T('string', 'e.g. BLU-4') }, ['task_id']) },
-  { name: 'create_task', description: 'Create a task, for example to split work. The owner sees it on the dashboard.', inputSchema: S({ title: T('string', '1-200 characters'), description: T('string', 'optional'), assignee: T('string', 'team member id, optional'), office_id: T('string', 'optional'), parent_id: T('string', 'optional parent task id') }, ['title']) },
+  { name: 'create_task', description: 'Create a task, for example to split work. The owner sees it on the dashboard.', inputSchema: S({ title: T('string', '1-200 characters'), description: T('string', 'optional'), assignee: T('string', 'team member id, optional'), office_id: T('string', 'optional'), kind: T('string', 'optional kind of work (see start_job); with no office_id the task goes to the office that holds it'), parent_id: T('string', 'optional parent task id') }, ['title']) },
   { name: 'update_task', description: 'Move a task (in_progress, waiting_for_you, blocked, done) and/or comment on it. A task that needs the owner\'s sign-off cannot be set done: set waiting_for_you.', inputSchema: S({ task_id: T('string', 'e.g. BLU-4'), status: T('string', 'in_progress | waiting_for_you | blocked | done', { enum: ['in_progress', 'waiting_for_you', 'blocked', 'done'] }), comment: T('string', 'optional'), job_id: T('string', 'optional: link this job') }, ['task_id']) },
   { name: 'add_comment', description: 'Comment on a task.', inputSchema: S({ task_id: T('string', 'e.g. BLU-4'), text: T('string', 'at most 4000 characters'), job_id: T('string', 'optional') }, ['task_id', 'text']) },
   { name: 'add_deliverable', description: 'Register something the team produced: a link (url), a file (path, copied only from the owner\'s deliverable folders) or content (text, or a base64 image with mime).', inputSchema: S({ title: T('string', 'at most 120 characters'), kind: T('string', 'document | image | link | file | text', { enum: ['document', 'image', 'link', 'file', 'text'] }), url: T('string', 'http(s) link'), path: T('string', 'absolute file path'), content: T('string', 'text, or base64 for an image'), mime: T('string', 'for content: text/markdown, text/plain, text/csv, image/png, image/jpeg, image/gif, image/webp'), job_id: T('string', 'optional'), task_id: T('string', 'optional'), team_member: T('string', 'optional'), note: T('string', 'optional') }, ['title', 'kind']) },
   { name: 'record_decision', description: 'Record a decision you took (or an open question you leave to the owner, with open true).', inputSchema: S({ text: T('string', 'The decision'), reason: T('string', 'optional'), job_id: T('string', 'optional'), project: T('string', 'optional'), open: T('boolean', 'optional') }, ['text']) },
   { name: 'check_action', description: 'Before any action that leaves this computer, ask whether it is allowed. Categories: message.send, post.public, payment, delete, share.external, account.change, other.external. Verdict allow, ask (+ question_id: wait for get_answers) or never.', inputSchema: S({ team_member: T('string', 'who acts'), category: T('string', 'the action category'), summary: T('string', 'what exactly, one line'), target: T('string', 'where or to whom, optional'), job_id: T('string', 'optional'), ask_now: T('boolean', 'default true: open the approval question now') }, ['team_member', 'category', 'summary']) },
   { name: 'check_budget', description: 'Read-only budget check for a team member before work: ok, warn or stop.', inputSchema: S({ team_member: T('string', 'team member id'), project: T('string', 'optional') }, ['team_member']) },
+  { name: 'get_office', description: 'Read-only: an office (name, colour, building, kinds of work), or for a team member their home office and where their next job would go, and why. Only the owner changes offices, on the dashboard.', inputSchema: S({ team_member: T('string', 'team member id, optional'), office_id: T('string', 'office id, optional'), project: T('string', 'optional, with team_member'), kind: T('string', 'optional, with team_member') }) },
   { name: 'list_team', description: 'The team: id, title, office, strength, one line, and the safety rules summary.', inputSchema: S({ office_id: T('string', 'optional') }) },
   { name: 'get_team_member', description: 'A team member\'s role brief to follow for a task, with their safety rules.', inputSchema: S({ team_member: T('string', 'team member id') }, ['team_member']) },
   { name: 'propose_hire', description: 'Propose a new team member when a role is missing. The owner approves it on the dashboard; nothing is created before that.', inputSchema: S({ name: T('string', 'display name'), title: T('string', 'job title'), office_id: T('string', 'office id'), instructions: T('string', 'plain-language instructions, at most 8000 characters'), description: T('string', 'one line, 10-300 characters'), tier: T('string', 'light | standard | heavy'), reports_to: T('string', 'optional'), why: T('string', 'why this role is needed') }, ['name', 'title', 'office_id', 'instructions', 'why']) },
@@ -197,12 +198,15 @@ function createSession(opts) {
       if (!member) return err('team_member is required')
       const open = (() => { try { return fs.readdirSync(P.ACTIVE).map((n) => readJson(path.join(P.ACTIVE, n), null)).filter((r) => r && r.clientId === s.clientId).length } catch { return 0 } })()
       if (open >= MAX_ACTIVE_PER_CLIENT) return err('You have ' + open + ' jobs open already. Finish some with finish_job before starting more.')
-      const r = L.startRun({ agent: member, task: str(a.task, 200), project: str(a.project, 80), officeId: a.office_id ? str(a.office_id, 40) : undefined, issue: a.task_id ? str(a.task_id, 20) : undefined, parent: a.parent_job_id ? str(a.parent_job_id, 80) : undefined, model: str(a.model, 60) }, actor())
+      const r = L.startRun({ agent: member, task: str(a.task, 200), project: str(a.project, 80), officeId: a.office_id ? str(a.office_id, 40) : undefined, kind: a.kind ? str(a.kind, 20) : undefined, issue: a.task_id ? str(a.task_id, 20) : undefined, parent: a.parent_job_id ? str(a.parent_job_id, 80) : undefined, model: str(a.model, 60) }, actor())
       const verdict = r.budget ? r.budget.level : 'ok'
       return ok('Job started: ' + r.id + '. Budget: ' + verdict + (r.warnings.length ? ' (' + r.warnings[0].replace(/^WARNING: /, '') + ')' : ''), { job_id: r.id, budget: verdict, budget_line: r.budget ? r.budget.lines.join('; ') : 'ok' })
     },
     log_step(a) {
-      L.progress({ id: str(a.job_id, 80), doing: str(a.doing, 300) }, actor())
+      // the optional fields of the CLI's --progress (spec 1.1, rule 9); runlog checks them
+      const extra = {}
+      for (const k of ['pct', 'step', 'plan', 'files', 'plannedFiles', 'tests', 'testsRun', 'plannedTests']) if (a[k] !== undefined) extra[k] = a[k]
+      L.progress(Object.assign(extra, { id: str(a.job_id, 80), doing: str(a.doing, 300) }), actor())
       return ok('ok', { ok: true })
     },
     finish_job(a) {
@@ -275,7 +279,7 @@ function createSession(opts) {
       return ok(t.id + ': ' + t.title + ' [' + view.status + ']' + (t.description ? '\n' + t.description : '') + (view.comments.length ? '\nComments:\n' + view.comments.map((c) => c.by + ': ' + c.text).join('\n') : ''), view)
     },
     create_task(a) {
-      const t = require('./tasks.cjs').createTask({ title: a.title, description: a.description, assignee: a.assignee, assigneeOfficeId: a.office_id, parentId: a.parent_id }, actor())
+      const t = require('./tasks.cjs').createTask({ title: a.title, description: a.description, assignee: a.assignee, assigneeOfficeId: a.office_id, kind: a.kind, parentId: a.parent_id }, actor())
       return ok('Task created: ' + t.id, { task_id: t.id })
     },
     update_task(a) {
@@ -318,6 +322,10 @@ function createSession(opts) {
     check_budget(a) {
       const r = L.budgetCheck({ agent: str(a.team_member, 60), project: str(a.project, 80) })
       return ok(r.lines.join('\n'), { verdict: r.level === 'stop' ? 'stop' : r.level === 'warn' ? 'warn' : 'ok', lines: r.lines })
+    },
+    get_office(a) {
+      const v = company().officeView(require('./build-agent-dashboard.cjs').collect(), { agent: a.team_member ? str(a.team_member, 60) : '', id: a.office_id ? str(a.office_id, 40) : '', project: str(a.project, 80), kind: a.kind ? str(a.kind, 20) : '' })
+      return ok(v.lines.join('\n'), v.data)
     },
     list_team(a) {
       const list = team(a.office_id ? str(a.office_id, 40) : '')
@@ -413,7 +421,37 @@ function createSession(opts) {
     try { return handle(parsed) } catch { return { jsonrpc: '2.0', id: parsed && parsed.id != null ? parsed.id : null, error: { code: -32603, message: 'Internal error' } } }
   }
 
-  return { handle, handleAny, state: s }
+  /** The task and job files the calls of a message will lock, so the HTTP
+   *  transport can take them first without blocking the dashboard server. A
+   *  file missed here is still locked by the call itself, only blocking. */
+  function locksFor(parsed) {
+    const Tk = require('./tasks.cjs')
+    const out = []
+    for (const m of Array.isArray(parsed) ? parsed : [parsed]) {
+      if (!m || m.method !== 'tools/call' || !m.params || typeof m.params !== 'object') continue
+      const a = m.params.arguments && typeof m.params.arguments === 'object' ? m.params.arguments : {}
+      try {
+        switch (String(m.params.name || '')) {
+          case 'log_step': out.push(L.activeFileFor(str(a.job_id, 80))); break
+          case 'finish_job': {
+            const run = L.readActive(str(a.job_id, 80))
+            if (run) out.push(L.activeFileFor(run.id), ...Tk.lockFilesOf(run.issue))
+            break
+          }
+          case 'start_job': case 'get_task': case 'update_task': out.push(...Tk.lockFilesOf(str(a.task_id, 20))); break
+          case 'get_inbox': {
+            // the tasks get_inbox marks seen: those of the unread lines
+            const fresh = readLinesOf(company().fileOf('inbox')).slice(Number(pointer(s.clientId).inboxLines) || 0)
+            out.push(...Tk.lockFilesOf(fresh.filter((l) => l && /^(task|comment)\./.test(l.type) && l.id).map((l) => l.id)))
+            break
+          }
+        }
+      } catch { /* the call itself answers what is wrong */ }
+    }
+    return out.filter((f) => fs.existsSync(f))
+  }
+
+  return { handle, handleAny, locksFor, state: s }
 }
 
 /** The stdio transport: newline-delimited JSON-RPC on stdin and stdout. */
@@ -524,9 +562,12 @@ function httpTransport() {
       entry = sessions.get(sid)
       if (!entry) return send(res, 404, { error: 'session expired: send initialize again' })
       entry.at = now
-      const out = entry.session.handleAny(parsed)
-      if (out === null) return send(res, 202)
-      return send(res, 200, out)
+      // a held task or job lock is waited for with timers (store.cjs): the
+      // dashboard keeps answering meanwhile
+      require('./store.cjs').withLockAsync(entry.session.locksFor(parsed), () => entry.session.handleAny(parsed)).then((out) => {
+        if (out === null) return send(res, 202)
+        send(res, 200, out)
+      }, (e) => send(res, 503, { error: String(e && e.message || e) }, { 'Retry-After': '1' }))
     })
   }
   return { handle, sessions }

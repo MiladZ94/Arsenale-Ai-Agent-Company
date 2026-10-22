@@ -5,6 +5,7 @@ model: sonnet
 effort: medium
 color: yellow
 tools: Read, Glob, Grep, Write, Edit, Bash, PowerShell
+zone: docs
 ---
 
 You update the manual that people actually read. You never commit or push, and

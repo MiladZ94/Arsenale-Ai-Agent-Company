@@ -16,7 +16,7 @@ models (the bundled definitions use Claude Code's `opus` and `sonnet`).
 |---|---|---|---|
 | Expensive to get wrong | heavy | `medium` | spec-writer, ui-designer, security-reviewer, data-migration, domain-validator, the tech plan |
 | Ordinary work | standard | `medium` or `low` | implementer, code-reviewer, tester, visual-qa, ux-reviewer, feature-scout, seo-specialist, user-guide, performance, release-builder, release-manager, dev-docs, docs-explainer (`low`), agent-builder, office-lead and the three heads |
-| Lookups | light | `low` | finding things, collecting lists, reading logs |
+| Lookups | light | `low` | finding things, collecting lists, reading logs, `finding-verifier` on ordinary findings |
 | Whole-app review, used rarely | heavy | `high` | architecture-reviewer |
 
 When a run is heavier than usual, raise it to the heavy tier for that run only: an
@@ -39,7 +39,7 @@ project: desktop apps, websites, mobile apps and design work.
 | 4 | Tech plan | supervisor (heavy tier, `medium`), or a planning agent if the tool has one. Ask `architecture-reviewer` only for large structural changes | the spec, the chosen mockup, the code | the files to touch, the order, the data and compatibility steps, the tests to write |
 | 5 | Build | `implementer`, then `tester` | the spec, the plan and the mockup | a working, uncommitted change, with tests. A regression test is proven to fail on the old code in a temporary worktree |
 | 6 | Visual QA | `visual-qa` | the running app, and the chosen mockup | screenshots, a table of differences, and fix verification. For a website, captures at 375, 768 and 1280px, with mobile problems ranked high |
-| 7 | Review and security | `code-reviewer` (always); `security-reviewer` when roles, restricted views, crypto, file format, licence, IPC or packaging are touched; `ux-reviewer` when a flow changed (on a website, walked on mobile first); `seo-specialist` when public website pages, routes, meta, structured data, the sitemap or the prerender changed; `data-migration` when anything saved changed (file format, fields, identity keys, encryption envelope, local storage, project files); `performance` when the change scales with data or speed was the complaint | the diff | findings, most serious first; a compatibility matrix and upgrade notes from `data-migration`; before and after numbers from `performance` |
+| 7 | Review and security | `code-reviewer` (always); `finding-verifier` re-checks the findings against the code before a fix round (autonomous mode, large reviews); `security-reviewer` when roles, restricted views, crypto, file format, licence, IPC or packaging are touched; `ux-reviewer` when a flow changed (on a website, walked on mobile first); `seo-specialist` when public website pages, routes, meta, structured data, the sitemap or the prerender changed; `data-migration` when anything saved changed (file format, fields, identity keys, encryption envelope, local storage, project files); `performance` when the change scales with data or speed was the complaint | the diff | findings, most serious first; a compatibility matrix and upgrade notes from `data-migration`; before and after numbers from `performance` |
 | 8 | Domain validation | `domain-validator`, for calculation apps only, whenever results could have changed | the reference workbook, report or standard | a comparison table with tolerances, and root causes |
 | 9 | Docs | `dev-docs` (README, PROJECT.md, notes); `user-guide` (manual and screenshots); `docs-explainer` (plain-language explanation for the user, and a hand-over note) | the finished change | updated documents, and the recap with a glossary in the user's language |
 | | **Gate C: permission to commit and release** | **user** | the review verdict, validation, visual QA, the release plan | "commit", "release", or neither. Given separately for each repo and each action |
@@ -141,9 +141,45 @@ rule 8 of `AGENT-RULES.md`), one short line per real step, in the user's
 language. When the agent is done, the supervisor closes the run with
 `arsenale finish --stdin` and the result.
 
+## Autonomous mode (a whole version, one planning session)
+
+A separate mode: `/version-run <app> <version>`. It does not change `/feature`
+or `/fix`. Short digest of the rules: `autonomous/RULES.md` (installed to `<data folder>/autonomous/RULES.md`).
+
+1. **Plan** (the only interactive part): specs, questions in batches of 5,
+   mockups, test baseline, phase plan with risk tiers and a token budget. The
+   owner's own "start" message is the run authorisation.
+2. **State file** `docs/specs/<version>-list.md`: requests, phases, decisions,
+   gates, review log, token ledger. It is all a resumed run needs.
+3. **Phases** run in git worktrees on `auto/<version>/<phase>/<request>`.
+   Agents commit only on their branch; the supervisor merges into
+   `auto/<version>/integration`, never `main`, and runs the suite after each.
+4. **Gates per phase:** `code-reviewer`, `finding-verifier`, fix round, then
+   the data, security, visual and performance gates when they apply. Only
+   confirmed findings are fixed. Three rounds at most.
+   Which pack provides which gate:
+
+   | Gate | Pack | Agent |
+   |---|---|---|
+   | review | `verification` | `code-reviewer` |
+   | finding check | `verification` | `finding-verifier` |
+   | visual | `verification` | `visual-qa` |
+   | data | `data-integrity` | `data-migration` |
+   | security | `security` | `security-reviewer` |
+   | release | `release` | `release-manager`, `release-builder` |
+   
+   The core team pack (`core-team`) holds every one of these agents; the packs add the office and helpers for the gate.
+
+5. **Owner gates are the only stops:** release, listed project gates, budget
+   at 100 %, a blocked phase, an `ask` or `never` action.
+6. **Never:** push, tag or publish; kill by name; throwaway executables; real
+   data.
+7. **Final report:** what was delivered, decisions, gates, findings, tokens,
+   what was not done, the next owner actions.
+
 ## Adding to this set
 
 A recurring job with no agent goes to `agent-builder`. It adds the definition
-and a row in this file (and a line in `labels.fa.json` if the user keeps
-translated labels). New agent types become available after the session
+and a row in this file (and a line in `labels.json` if the user keeps
+desk labels). New agent types become available after the session
 restarts.

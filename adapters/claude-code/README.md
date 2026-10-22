@@ -9,7 +9,7 @@ an optional pair of hooks.
 | Step | What changes | Undo |
 |---|---|---|
 | Agent team | copies `agents/*.md` into `~/.claude/agents/`, file by file, next to your own agents. A file with the same name and different content is overwritten only if you say yes, and it is backed up first to `~/.arsenale/backups/<time>/` | delete the files listed in `~/.arsenale/installed.txt`; restore from the backup |
-| Skills | copies `skills/feature` and `skills/fix` into `~/.claude/skills/` the same way | the same |
+| Skills | copies `skills/feature`, `skills/fix`, `skills/version-run` and `skills/version-resume` into `~/.claude/skills/` the same way | the same |
 | Instructions | adds the block from `adapters/instructions.md` to `~/.claude/CLAUDE.md`, between `<!-- arsenale:begin -->` and `<!-- arsenale:end -->`, after backing the file up | `install.ps1 -Uninstall` / `install.sh --uninstall` removes exactly that block |
 | Dashboard settings | writes `~/.arsenale/config.json` so the dashboard reads `~/.claude/agents` and `~/.claude/projects` (transcripts) | edit or delete the file |
 

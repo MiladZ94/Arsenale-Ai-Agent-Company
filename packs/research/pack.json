@@ -4,14 +4,11 @@
   "id": "research",
   "version": "1.0.0",
   "name": "Research",
-  "nameFa": "پژوهش",
   "description": "Turn questions into research plans, gather and summarise sources with citations, compare competitors and prices, and check claims against their sources.",
-  "descriptionFa": "تبدیل پرسش‌ها به برنامه‌ی پژوهش، جمع‌آوری و خلاصه‌سازی منابع با ارجاع، مقایسه‌ی رقبا و قیمت‌ها و بررسی ادعاها با منابع آن‌ها.",
   "minArsenale": "1.0.0",
   "office": {
     "id": "research",
     "name": "Research",
-    "nameFa": "پژوهش",
     "theme": "violet",
     "profile": "research",
     "lead": "research-lead"
@@ -22,7 +19,6 @@
       "id": "research-lead",
       "zone": "lead",
       "title": "Research Lead",
-      "titleFa": "سرپرست پژوهش",
       "tier": "standard"
     },
     {
@@ -30,7 +26,6 @@
       "id": "desk-researcher",
       "zone": "build",
       "title": "Desk Researcher",
-      "titleFa": "پژوهشگر منابع",
       "tier": "standard"
     },
     {
@@ -38,7 +33,6 @@
       "id": "market-analyst",
       "zone": "build",
       "title": "Market Analyst",
-      "titleFa": "تحلیلگر بازار",
       "tier": "standard"
     },
     {
@@ -46,7 +40,6 @@
       "id": "fact-checker",
       "zone": "review",
       "title": "Fact-Checker",
-      "titleFa": "بررسی‌کننده‌ی صحت",
       "tier": "light"
     }
   ],

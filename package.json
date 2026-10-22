@@ -1,7 +1,7 @@
 {
   "name": "arsenale",
-  "version": "1.0.0",
-  "description": "Run a company of AI agents you can watch at work: a local dashboard and run log for any coding agent.",
+  "version": "1.2.0",
+  "description": "Hire agents. Watch them work. Stay in charge. A local dashboard and run log for any coding agent.",
   "license": "MIT",
   "author": "Emad Barandan",
   "repository": {
@@ -17,10 +17,21 @@
   "files": [
     "bin/",
     "tools/*.cjs",
+    "tools/pages/",
     "tools/model-prices.json",
+    "tools/OFFICE-WORLD-NOTE.md",
+    "tools/vendor/",
+    "tools/characters/",
+    "!tools/characters/build-sprites.cjs",
+    "!tools/characters/build-characters.cjs",
     "agents/",
+    "autonomous/",
     "adapters/",
     "packs/",
+    "docs/guide/src/",
+    "docs/screenshots/",
+    "docs/media/*.png",
+    "docs/brand/*.svg",
     "company.example/",
     "install.ps1",
     "install.sh",
@@ -30,11 +41,13 @@
     "SECURITY.md"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "start": "node bin/arsenale.cjs serve",
     "demo": "node bin/arsenale.cjs demo",
-    "test": "node tools/test/run.cjs"
+    "test": "node tools/test/run.cjs fast",
+    "test:ui": "node tools/test/run.cjs ui",
+    "test:all": "node tools/test/run.cjs all"
   }
 }

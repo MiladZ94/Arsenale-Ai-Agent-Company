@@ -22,13 +22,13 @@ const AGENTS = {
 const SEED = {
   company: { name: 'Northwind Labs', issuePrefix: 'NW' },
   offices: [
-    { id: 'engineering', name: 'Engineering', nameFa: 'مهندسی', leadEmployeeId: 'engineering-lead', theme: 'blue' },
-    { id: 'studio', name: 'Studio', nameFa: 'استودیو', leadEmployeeId: 'product-lead', theme: 'teal' },
+    { id: 'engineering', name: 'Engineering', leadEmployeeId: 'engineering-lead', theme: 'blue' },
+    { id: 'studio', name: 'Studio', leadEmployeeId: 'product-lead', theme: 'teal' },
     { id: 'hq', name: 'HQ', leadEmployeeId: 'supervisor', theme: 'coral' },
   ],
   projects: [
     { id: 'demo-calc', name: 'Demo Calc', key: 'DCALC', officeId: 'engineering', aliases: ['democalc', 'Demo Calc'] },
-    { id: 'tide-app', name: 'Tide app', key: 'TIDE', officeId: 'studio', aliases: ['tide', 'داشبورد'] },
+    { id: 'tide-app', name: 'Tide app', key: 'TIDE', officeId: 'studio', aliases: ['tide', 'dashboard'] },
   ],
   employees: {
     'implementer': { homeOfficeId: 'studio' },
@@ -45,18 +45,65 @@ function thisMonth(day, hour) {
   return new Date(d.getFullYear(), d.getMonth(), day || 2, hour || 12, 0, 0).toISOString()
 }
 
+/** A copy of a folder made of hard links where it can be: copying a few
+ *  hundred kilobytes per test, with a virus scanner reading every file, was
+ *  the bulk of a test's set-up. Nothing writes into the copied tools. */
+function linkTree(from, to) {
+  fs.mkdirSync(to, { recursive: true })
+  for (const e of fs.readdirSync(from, { withFileTypes: true })) {
+    const a = path.join(from, e.name), b = path.join(to, e.name)
+    if (e.isDirectory()) { linkTree(a, b); continue }
+    try { fs.linkSync(a, b) } catch { fs.copyFileSync(a, b) }
+  }
+}
+
+/** A child the test started that must not keep the test file alive if the
+ *  test failed before it could stop it: the file ends, and the child is killed
+ *  as the file's process exits. */
+const children = new Set()
+process.on('exit', () => { for (const c of children) { try { c.kill() } catch { /* gone */ } } })
+function track(child) {
+  children.add(child)
+  child.on('exit', () => children.delete(child))
+  child.unref()
+  for (const s of [child.stdin, child.stdout, child.stderr]) if (s && typeof s.unref === 'function') s.unref()
+  return child
+}
+/** The exit code of a tracked child. As nothing of the child holds the event
+ *  loop, a test waiting on its exit alone was cancelled on macOS and Linux
+ *  ("the event loop has already resolved"): a timer holds the loop while it
+ *  waits, for at most `ms`, so a stuck child still lets the file end. */
+function exitOf(child, ms) {
+  return new Promise((res) => {
+    if (child.exitCode !== null || child.signalCode !== null) return res(child.exitCode)
+    const hold = setTimeout(() => {}, ms || 120000)
+    child.on('exit', (code) => { clearTimeout(hold); res(code) })
+  })
+}
+
 function makeSandbox(opts = {}) {
-  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-company-test-'))
+  // the real path: on macOS the temp folder is behind a symlink (/var ->
+  // /private/var), and require() keys its cache by the real path, so mod()
+  // would not find the copies it must drop and hand back stale modules
+  const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'agent-company-test-')))
   const root = path.join(base, 'arsenale-home')
   const tools = path.join(root, 'tools')
   fs.mkdirSync(tools, { recursive: true })
-  for (const f of fs.readdirSync(TOOLS)) if (f.endsWith('.cjs')) fs.copyFileSync(path.join(TOOLS, f), path.join(tools, f))
+  for (const f of fs.readdirSync(TOOLS)) if (f.endsWith('.cjs')) { try { fs.linkSync(path.join(TOOLS, f), path.join(tools, f)) } catch { fs.copyFileSync(path.join(TOOLS, f), path.join(tools, f)) } }
+  // the page builders' modules and fragments (tools/pages)
+  linkTree(path.join(TOOLS, 'pages'), path.join(tools, 'pages'))
+  // the 3D pages' pinned three.js and the characters (office-world.cjs); opts.flat leaves them out
+  if (!opts.flat) for (const d of ['vendor', 'characters']) if (fs.existsSync(path.join(TOOLS, d))) linkTree(path.join(TOOLS, d), path.join(tools, d))
   fs.writeFileSync(path.join(root, 'model-prices.json'), JSON.stringify({ models: opts.prices || {} }))
   // the user's own settings never leak in: no agent or transcript folders from the environment
   const env = Object.assign({}, process.env, { ARSENALE_HOME: root }, opts.env || {})
   delete env.ARSENALE_AGENT_DIRS
   delete env.ARSENALE_TRANSCRIPT_ROOTS
   if (opts.env) Object.assign(env, opts.env)
+  // the owner's launch key, so a CLI call saying "by":"board" can prove it (tests of the refusal use cliWithoutKey)
+  const boardKey = crypto.randomBytes(32).toString('hex')
+  fs.writeFileSync(path.join(root, 'launch-key'), boardKey + '\n')
+  env.ARSENALE_BOARD_TOKEN = boardKey
   const agents = path.join(root, 'agents')
   fs.mkdirSync(agents)
   for (const [name, model] of Object.entries(AGENTS)) {
@@ -66,7 +113,11 @@ function makeSandbox(opts = {}) {
   // the bundled office packs live next to tools/ in a checkout; in the
   // sandbox that is <root>/packs (the installed-state file sits there too,
   // which is harmless: it is not a pack folder)
-  if (opts.packs) fs.cpSync(path.join(TOOLS, '..', 'packs'), path.join(root, 'packs'), { recursive: true })
+  if (opts.packs) {
+    fs.cpSync(path.join(TOOLS, '..', 'packs'), path.join(root, 'packs'), { recursive: true })
+    // the core team's definitions are read from the repo's agents/, not from the sandbox's invented ones
+    process.env.ARSENALE_CORE_DIR = env.ARSENALE_CORE_DIR = path.join(TOOLS, '..', 'agents')
+  }
   const runs = path.join(root, 'agent-runs')
   fs.mkdirSync(path.join(runs, 'active'), { recursive: true })
   fs.mkdirSync(path.join(runs, 'gates'))
@@ -96,6 +147,14 @@ function makeSandbox(opts = {}) {
       const r = spawnSync(process.execPath, [path.join(tools, 'log-agent-run.cjs'), ...args], { encoding: 'utf8', cwd: base, env, input: sb.stdin })
       return { code: r.status, out: r.stdout.trim(), err: r.stderr.trim() }
     },
+    /** The CLI as a process that does not hold the owner's key (an agent with a shell). */
+    cliWithoutKey(...args) {
+      const bare = Object.assign({}, env)
+      delete bare.ARSENALE_BOARD_TOKEN
+      const r = spawnSync(process.execPath, [path.join(tools, 'log-agent-run.cjs'), ...args], { encoding: 'utf8', cwd: base, env: bare, input: sb.stdin })
+      return { code: r.status, out: r.stdout.trim(), err: r.stderr.trim() }
+    },
+    boardKey,
     /** Fresh copies of the modules, bound to this sandbox. */
     mod(name) {
       for (const k of Object.keys(require.cache)) if (k.startsWith(tools)) delete require.cache[k]
@@ -127,7 +186,7 @@ function hashTree(dir) {
  *  speaks newline-delimited JSON-RPC to it. */
 function mcpClient(sb, name, extraEnv) {
   const { spawn } = require('child_process')
-  const child = spawn(process.execPath, [path.join(sb.tools, 'mcp-server.cjs')], { env: Object.assign({}, sb.env, extraEnv || {}), stdio: ['pipe', 'pipe', 'pipe'] })
+  const child = track(spawn(process.execPath, [path.join(sb.tools, 'mcp-server.cjs')], { env: Object.assign({}, sb.env, extraEnv || {}), stdio: ['pipe', 'pipe', 'pipe'] }))
   let buf = '', next = 1, stderr = ''
   const waiting = new Map()
   const raw = []
@@ -173,16 +232,23 @@ function mcpClient(sb, name, extraEnv) {
  *  key URL), cookie ("name=value" for a Cookie header), token (the page's
  *  write token), setCookie (the whole header), base }. The caller stops only
  *  this child. */
-function startServer(sb, opts = {}) {
+async function startServer(sb, opts = {}) {
+  // a random port can be in use already (on Linux the ports the system hands
+  // out for outgoing connections overlap these): another one is tried
+  for (let n = 1; ; n++) {
+    try { return await startOnce(sb, opts) } catch (e) { if (n >= 4 || !/is taken/.test(e.message)) throw e }
+  }
+}
+function startOnce(sb, opts) {
   const { spawn } = require('child_process')
   const http = require('http')
   const port = (opts.portBase || 46000) + Math.floor(Math.random() * 3000)
-  const child = spawn(process.execPath, [path.join(sb.tools, 'agent-dashboard-server.cjs'), String(port)], { env: Object.assign({}, sb.env, opts.env || {}), stdio: ['ignore', 'pipe', 'pipe'] })
+  const child = track(spawn(process.execPath, [path.join(sb.tools, 'agent-dashboard-server.cjs'), String(port)], { env: Object.assign({}, sb.env, opts.env || {}), stdio: ['ignore', 'pipe', 'pipe'] }))
   return new Promise((resolve, fail) => {
     // a server that did not come up right is stopped, not left running
     const reject = (e) => { child.kill(); fail(e) }
     let out = '', seen = false
-    const t = setTimeout(() => reject(new Error('server did not start: ' + out)), 10000)
+    const t = setTimeout(() => reject(new Error('server did not start: ' + out)), 30000)
     child.stdout.on('data', (d) => {
       out += d
       const m = /Arsenale dashboard: (\S+)/.exec(out)
@@ -205,4 +271,4 @@ function startServer(sb, opts = {}) {
   })
 }
 
-module.exports = { makeSandbox, hashTree, thisMonth, SEED, AGENTS, mcpClient, startServer }
+module.exports = { track, exitOf, linkTree, makeSandbox, hashTree, thisMonth, SEED, AGENTS, mcpClient, startServer }

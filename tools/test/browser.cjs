@@ -33,21 +33,79 @@ function unavailable() {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-async function launch() {
-  const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-company-browser-'))
-  const child = spawn(findBrowser(), [
-    '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-    '--remote-debugging-port=0', '--user-data-dir=' + profile, '--window-size=1600,950', 'about:blank',
+/* One Chrome per test file, not per test, and its tabs are reused: starting
+ * Chrome costs 5 to 13 seconds and a new tab's renderer another 4 to 7 on a
+ * machine with a virus scanner, while a file often opens a dozen pages one
+ * after another. A closed page goes back to a pool (what a test sets,
+ * such as emulation or injected scripts, belongs to its DevTools session and
+ * goes with it; every test has its own server port, and the dashboard's key
+ * cookie and storage are named or keyed by port, so nothing is shared). The browser holds no open
+ * handle between pages (its DevTools socket is opened per call), so a file can
+ * finish; it is killed when the process exits. */
+let shared = null
+function killShared() {
+  if (!shared) return
+  const { child, profile } = shared
+  shared = null
+  try { child.kill() } catch { /* gone */ }
+  try { fs.rmSync(profile, { recursive: true, force: true }) } catch { /* Windows may still hold it; the temp folder is cleaned later */ }
+}
+process.on('exit', killShared)
+
+async function sharedBrowser() {
+  if (shared) return shared.ready
+  const me = { idle: [] }
+  me.ready = (async () => {
+    // a Chrome that does not open its port in time under load is started once
+    // more before the test fails (spec autonomous-mode 16, rule 3)
+    for (let attempt = 1; ; attempt++) {
+      const port = await startBrowser(me)
+      if (port) return port
+      try { me.child.kill() } catch { /* gone */ }
+      try { fs.rmSync(me.profile, { recursive: true, force: true }) } catch { /* Windows may still hold it */ }
+      if (attempt >= 2) { if (shared === me) shared = null; throw new Error('the browser did not open a DevTools port') }
+    }
+  })()
+  shared = me
+  return me.ready
+}
+async function startBrowser(me) {
+  me.profile = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-company-browser-'))
+  me.child = spawn(findBrowser(), [
+    // with no GPU, WebGL needs a software renderer: Windows has WARP, macOS
+    // and Linux only SwiftShader, which Chrome no longer falls back to unasked.
+    // Not on Windows: there the flag makes Chrome take SwiftShader over WARP,
+    // which ran the 3D office tests about a fifth slower here.
+    '--headless=new', '--disable-gpu', ...(process.platform === 'win32' ? [] : ['--enable-unsafe-swiftshader']), '--no-first-run', '--no-default-browser-check',
+    '--remote-debugging-port=0', '--user-data-dir=' + me.profile, '--window-size=1600,950', 'about:blank',
   ], { stdio: 'ignore' })
-  const portFile = path.join(profile, 'DevToolsActivePort')
-  let port = 0
-  for (let i = 0; i < 100 && !port; i++) {
-    try { port = Number(fs.readFileSync(portFile, 'utf8').split('\n')[0]) || 0 } catch { /* not written yet */ }
-    if (!port) await sleep(100)
+  me.child.unref()
+  const portFile = path.join(me.profile, 'DevToolsActivePort')
+  for (let i = 0; i < 300; i++) {
+    try { const port = Number(fs.readFileSync(portFile, 'utf8').split('\n')[0]) || 0; if (port) return port } catch { /* not written yet */ }
+    await sleep(100)
   }
-  if (!port) { child.kill(); throw new Error('the browser did not open a DevTools port') }
+  return 0
+}
+
+/** One protocol call on the browser itself, over a socket that is closed again. */
+async function browserCall(port, method, params) {
+  const info = await (await fetch('http://127.0.0.1:' + port + '/json/version')).json()
+  const ws = new WebSocket(info.webSocketDebuggerUrl)
+  await new Promise((res, rej) => { ws.onopen = res; ws.onerror = () => rej(new Error('DevTools socket failed')) })
+  try {
+    return await new Promise((res, rej) => {
+      ws.onmessage = (m) => { const msg = JSON.parse(m.data); if (msg.id === 1) msg.error ? rej(new Error(msg.error.message)) : res(msg.result) }
+      ws.send(JSON.stringify({ id: 1, method, params: params || {} }))
+    })
+  } finally { ws.close() }
+}
+
+async function launch() {
+  const port = await sharedBrowser()
+  const targetId = shared.idle.pop() || (await browserCall(port, 'Target.createTarget', { url: 'about:blank' })).targetId
   const list = await (await fetch('http://127.0.0.1:' + port + '/json/list')).json()
-  const target = list.find((t) => t.type === 'page')
+  const target = list.find((t) => t.id === targetId)
   const ws = new WebSocket(target.webSocketDebuggerUrl)
   await new Promise((res, rej) => { ws.onopen = res; ws.onerror = () => rej(new Error('DevTools socket failed')) })
   let id = 0
@@ -60,14 +118,20 @@ async function launch() {
   const send = (method, params) => new Promise((res, rej) => { const n = ++id; waiting.set(n, { res, rej }); ws.send(JSON.stringify({ id: n, method, params: params || {} })) })
   await send('Page.enable')
   await send('Runtime.enable')
+  // the pages follow the system's reduced-motion setting, which a CI runner
+  // turns on (the 3D office then puts people in place without walking);
+  // the tests check the motion, so the tab asks for it
+  await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] })
 
   const api = {
-    /** Open an address and wait for the load event and one second of drawing. */
+    /** Open an address and wait for the load event and half a second of drawing. */
     async goto(url) {
+      // tabs share one browser: a tab in the background draws no animation frames
+      try { await browserCall(port, 'Target.activateTarget', { targetId }) } catch { /* the browser is already gone */ }
       const loaded = new Promise((res) => { const l = (msg) => { if (msg.method === 'Page.loadEventFired') { listeners.splice(listeners.indexOf(l), 1); res() } }; listeners.push(l) })
       await send('Page.navigate', { url })
       await loaded
-      await sleep(1000)
+      await sleep(500)
     },
     /** Run an expression in the page; the value comes back as plain data. */
     async eval(expr) {
@@ -88,7 +152,8 @@ async function launch() {
     },
     /** Wait until an expression is true in the page. */
     async waitFor(expr, ms) {
-      const end = Date.now() + (ms || 8000)
+      // a CI runner draws WebGL in software on two cores: three times the time
+      const end = Date.now() + Math.max(ms || 0, 20000) * (process.env.CI ? 3 : 1)
       while (Date.now() < end) { if (await api.eval('!!(' + expr + ')')) return; await sleep(100) }
       throw new Error('the page never became: ' + expr)
     },
@@ -107,14 +172,53 @@ async function launch() {
       listeners.push((msg) => { if (msg.method === 'Log.entryAdded' || msg.method === 'Runtime.exceptionThrown' || msg.method === 'Runtime.consoleAPICalled') seen.push(msg) })
       return seen
     },
+    /** Run a script in every page this tab opens from now on, before the page's own (to take WebGL away, say). */
+    async onNewDocument(source) { await send('Page.addScriptToEvaluateOnNewDocument', { source }) },
     async close() {
+      // off the page first: a 3D office left running would keep the CPU busy
+      try { await send('Page.navigate', { url: 'about:blank' }) } catch { /* already gone */ }
       try { ws.close() } catch { /* already gone */ }
-      child.kill()
-      await sleep(300)
-      try { fs.rmSync(profile, { recursive: true, force: true }) } catch { /* Windows may still hold the profile; the temp folder is cleaned later */ }
+      if (shared) shared.idle.push(targetId)
     },
   }
   return api
+}
+
+/* The 3D office and campus need WebGL 2 (three.js). Where the browser has
+ * none, the page draws the flat office instead, so a 3D test can only wait
+ * for nothing: it is skipped, saying why. Asked once per file. */
+let glWhy = null
+function webglUnavailable() {
+  if (!glWhy) {
+    glWhy = (async () => {
+      const p = await launch()
+      try {
+        await p.goto('about:blank')
+        return (await p.eval("!!document.createElement('canvas').getContext('webgl2')")) ? '' : 'this browser has no WebGL 2 (no GPU and no software renderer), so the 3D view cannot start'
+      } finally { await p.close() }
+    })()
+  }
+  return glWhy
+}
+/** In a 3D test: true (and the test skipped) when the 3D view cannot start here. */
+async function skipWithout3d(t) {
+  const why = await webglUnavailable()
+  if (why) t.skip(why)
+  return !!why
+}
+
+/** In a 3D test: waits for the 3D view to be ready, true when it is. On a CI
+ *  runner that draws WebGL in software (no GPU), a view that does not load in
+ *  time skips the test, saying so, and false comes back; anywhere else, and
+ *  with a GPU, the wait fails the test as usual. */
+async function ready3d(t, page, expr, ms) {
+  try { await page.waitFor(expr, ms); return true } catch (e) {
+    if (!process.env.CI) throw e
+    const gl = await page.eval(`(() => { const g = document.createElement('canvas').getContext('webgl2'); const d = g && g.getExtension('WEBGL_debug_renderer_info'); return d ? String(g.getParameter(d.UNMASKED_RENDERER_WEBGL)) : '' })()`).catch(() => '')
+    if (!/swiftshader|basic render|llvmpipe|software|warp/i.test(gl)) throw e
+    t.skip('the 3D view did not load in time on this CI runner, which draws WebGL in software (' + gl + ')')
+    return false
+  }
 }
 
 /** What a person can read on the page: every text, plus the words in tooltips,
@@ -136,4 +240,4 @@ const READABLE = `(() => {
   return out.join('\\n')
 })()`
 
-module.exports = { launch, unavailable, READABLE }
+module.exports = { launch, unavailable, webglUnavailable, skipWithout3d, ready3d, READABLE }
